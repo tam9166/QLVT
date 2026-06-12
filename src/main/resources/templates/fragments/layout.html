@@ -15,7 +15,7 @@
 <body>
 <div class="void-grid" aria-hidden="true"></div>
 
-<nav th:fragment="navbar" class="app-frame">
+<nav th:fragment="navbar" class="app-frame" th:with="currentPath=${currentPath ?: ''}">
     <header class="app-topbar">
         <div class="topbar-left">
             <button class="sidebar-toggle d-lg-none" type="button" data-bs-toggle="collapse" data-bs-target="#sidebarNav" aria-label="Mở menu">

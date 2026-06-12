@@ -41,3 +41,13 @@
 
 - Kiểm thử thủ công các URL chính theo `TEST_CHECKLIST.md`.
 - `.\mvnw.cmd test` đang bị chặn bởi lỗi chứng chỉ môi trường khi Maven tải `org.apache.maven.surefire:surefire-junit-platform:3.2.5` từ Maven Central (`PKIX path building failed`).
+
+## 2026-06-13 - Tiếp tục giai đoạn 2
+
+- Sửa chi tiết thu hồi để nạp sẵn `RecallOrder.lines`, tránh `LazyInitializationException` khi `spring.jpa.open-in-view=false`.
+- Bổ sung lịch sử phản hồi khoa trên trang chi tiết thu hồi.
+- Khi khoa trả hàng theo lệnh thu hồi, hệ thống trừ `department_stocks`, ghi `department_stock_movements` loại `RECALL_RETURN`, đồng thời tăng lại tồn kho/lô và ghi `stock_movements`.
+- Chặn phản hồi thu hồi vượt số đã cấp khi có nhiều lần trả hàng.
+- Thêm alias `/requests/my` và `/requests/my-department` cho người dùng khoa xem phiếu của phạm vi mình.
+- Sửa layout để trang lỗi không bị 500 kép khi `currentPath` không có trong model.
+- Smoke trên database dựng lại từ `database/01_create_schema.sql`, `02_seed_master_data.sql`, `03_seed_demo_data.sql`: các trang giai đoạn 2 và role mẫu đều trả 200.

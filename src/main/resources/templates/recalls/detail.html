@@ -1,1 +1,128 @@
-<!doctype html><html lang="vi" xmlns:th="http://www.thymeleaf.org"><head th:replace="~{fragments/layout :: head('Chi tiết thu hồi')}"></head><body><div th:replace="~{fragments/layout :: navbar}"></div><main class="container-fluid py-4"><div class="d-flex justify-content-between mb-3"><div><h1 class="h3" th:text="${item.recallCode}"></h1><span class="badge text-bg-warning" th:text="${item.status}"></span></div><div class="d-flex gap-2"><form th:action="@{/recalls/{id}/activate(id=${item.id})}" method="post" onsubmit="return confirm('Kích hoạt thu hồi và khóa lô?')"><button class="btn btn-warning">Kích hoạt</button></form><form th:action="@{/recalls/{id}/complete(id=${item.id})}" method="post"><button class="btn btn-success">Hoàn tất</button></form></div></div><table class="table table-hover"><thead><tr><th>Khoa</th><th>Đã cấp</th><th>Còn lại</th><th>Trả về</th><th>Trạng thái</th></tr></thead><tbody><tr th:each="l:${item.lines}"><td th:text="${l.department}"></td><td th:text="${l.issuedQuantity}"></td><td th:text="${l.remainingQuantity}"></td><td th:text="${l.returnedQuantity}"></td><td th:text="${l.status}"></td></tr></tbody></table><h2 class="h5 mt-4">Khoa phản hồi</h2><form th:action="@{/recalls/{id}/department-response(id=${item.id})}" method="post" class="row g-2"><div class="col-md-3"><input class="form-control" name="department" placeholder="Khoa" required></div><div class="col-md-2"><input class="form-control" type="number" min="0" name="remainingQuantity" placeholder="Còn"></div><div class="col-md-2"><input class="form-control" type="number" min="0" name="usedQuantity" placeholder="Đã dùng"></div><div class="col-md-2"><input class="form-control" type="number" min="0" name="returnedQuantity" placeholder="Trả"></div><div class="col-md-3"><button class="btn btn-primary">Gửi phản hồi</button></div></form></main></body></html>
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Chi tiết thu hồi')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: navbar}"></div>
+<main class="container-fluid py-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+        <div>
+            <h1 class="h3 mb-1" th:text="${item.recallCode}">TH-001</h1>
+            <div class="text-secondary">
+                <span th:text="${item.material.code + ' - ' + item.material.name}">VT001</span>
+                <span> / Lô </span>
+                <span th:text="${item.batch.batchNumber}">LO-001</span>
+            </div>
+            <span class="badge text-bg-warning mt-2" th:text="${item.status}">ACTIVE</span>
+        </div>
+        <div class="d-flex gap-2">
+            <form th:if="${item.status.name() == 'DRAFT'}"
+                  th:action="@{/recalls/{id}/activate(id=${item.id})}"
+                  method="post"
+                  onsubmit="return confirm('Kích hoạt thu hồi và khóa lô?')">
+                <button class="btn btn-warning">Kích hoạt</button>
+            </form>
+            <form th:if="${item.status.name() == 'ACTIVE'}"
+                  th:action="@{/recalls/{id}/complete(id=${item.id})}"
+                  method="post"
+                  onsubmit="return confirm('Hoàn tất lệnh thu hồi?')">
+                <button class="btn btn-success">Hoàn tất</button>
+            </form>
+            <a class="btn btn-outline-secondary" th:href="@{/recalls}">Quay lại</a>
+        </div>
+    </div>
+
+    <section class="mb-4">
+        <h2 class="h5">Các khoa đã cấp lô này</h2>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead>
+                <tr>
+                    <th>Khoa</th>
+                    <th class="text-end">Đã cấp</th>
+                    <th class="text-end">Còn lại</th>
+                    <th class="text-end">Trả về</th>
+                    <th>Trạng thái</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="l:${item.lines}">
+                    <td th:text="${l.department}">Khoa</td>
+                    <td class="text-end" th:text="${l.issuedQuantity}">0</td>
+                    <td class="text-end" th:text="${l.remainingQuantity}">0</td>
+                    <td class="text-end" th:text="${l.returnedQuantity}">0</td>
+                    <td><span class="badge text-bg-secondary" th:text="${l.status}">PENDING</span></td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(item.lines)}">
+                    <td colspan="5" class="text-center text-secondary py-4">Chưa có khoa nào từng nhận lô này.</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section th:if="${item.status.name() == 'ACTIVE'}" class="mb-4">
+        <h2 class="h5">Ghi nhận phản hồi khoa</h2>
+        <form th:action="@{/recalls/{id}/department-response(id=${item.id})}" method="post" class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">Khoa</label>
+                <select class="form-select" name="department" required>
+                    <option th:each="l:${item.lines}" th:value="${l.department}" th:text="${l.department}"></option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Còn lại</label>
+                <input class="form-control text-end" type="number" min="0" name="remainingQuantity" value="0" required>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Đã dùng</label>
+                <input class="form-control text-end" type="number" min="0" name="usedQuantity" value="0" required>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Trả thêm về kho</label>
+                <input class="form-control text-end" type="number" min="0" name="returnedQuantity" value="0" required>
+            </div>
+            <div class="col-md-10">
+                <label class="form-label">Ghi chú</label>
+                <input class="form-control" name="note">
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button class="btn btn-primary w-100">Lưu phản hồi</button>
+            </div>
+        </form>
+    </section>
+
+    <section>
+        <h2 class="h5">Lịch sử phản hồi</h2>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead>
+                <tr>
+                    <th>Thời điểm</th>
+                    <th>Khoa</th>
+                    <th>Người ghi nhận</th>
+                    <th class="text-end">Còn</th>
+                    <th class="text-end">Đã dùng</th>
+                    <th class="text-end">Trả</th>
+                    <th>Ghi chú</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="r:${responses}">
+                    <td th:text="${#temporals.format(r.respondedAt, 'dd/MM/yyyy HH:mm')}">01/01/2026</td>
+                    <td th:text="${r.department}">Khoa</td>
+                    <td th:text="${r.respondedBy}">user</td>
+                    <td class="text-end" th:text="${r.remainingQuantity}">0</td>
+                    <td class="text-end" th:text="${r.usedQuantity}">0</td>
+                    <td class="text-end" th:text="${r.returnedQuantity}">0</td>
+                    <td th:text="${r.note}"></td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(responses)}">
+                    <td colspan="7" class="text-center text-secondary py-4">Chưa có phản hồi.</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+</main>
+</body>
+</html>

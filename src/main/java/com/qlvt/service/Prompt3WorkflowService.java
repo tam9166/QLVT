@@ -33,6 +33,7 @@ public class Prompt3WorkflowService {
     private final AuditService auditService;
     private final NotificationService notificationService;
     private final InventorySyncService inventorySyncService;
+    private final DepartmentStockService departmentStockService;
 
     public Prompt3WorkflowService(InventoryCountRepository inventoryCountRepository,
                                   InventoryCountLineRepository inventoryCountLineRepository,
@@ -54,7 +55,8 @@ public class Prompt3WorkflowService {
                                   AppUserRepository userRepository,
                                   AuditService auditService,
                                   NotificationService notificationService,
-                                  InventorySyncService inventorySyncService) {
+                                  InventorySyncService inventorySyncService,
+                                  DepartmentStockService departmentStockService) {
         this.inventoryCountRepository = inventoryCountRepository;
         this.inventoryCountLineRepository = inventoryCountLineRepository;
         this.stockAdjustmentRepository = stockAdjustmentRepository;
@@ -76,6 +78,7 @@ public class Prompt3WorkflowService {
         this.auditService = auditService;
         this.notificationService = notificationService;
         this.inventorySyncService = inventorySyncService;
+        this.departmentStockService = departmentStockService;
     }
 
     @Transactional
@@ -356,6 +359,13 @@ public class Prompt3WorkflowService {
         ensure(remaining >= 0 && used >= 0 && returned >= 0, "Số lượng phản hồi không được âm");
         RecallOrder recall = recallOrderRepository.findById(recallId).orElseThrow();
         ensure(recall.getStatus() == RecallStatus.ACTIVE, "Lệnh thu hồi chưa active");
+        RecallOrderLine recallLine = recall.getLines().stream()
+                .filter(line -> line.getDepartment().equals(department))
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("Khoa " + department + " không nằm trong lệnh thu hồi này"));
+        int cumulativeReturned = recallLine.getReturnedQuantity() + returned;
+        ensure(remaining + used + cumulativeReturned <= recallLine.getIssuedQuantity(),
+                "Tổng số còn lại, đã dùng và trả về không được vượt số lượng đã cấp");
         RecallDepartmentResponse response = new RecallDepartmentResponse();
         response.setRecallOrder(recall);
         response.setDepartment(department);
@@ -365,15 +375,13 @@ public class Prompt3WorkflowService {
         response.setReturnedQuantity(returned);
         response.setNote(note);
         recallResponseRepository.save(response);
-        for (RecallOrderLine line : recall.getLines()) {
-            if (line.getDepartment().equals(department)) {
-                line.setRemainingQuantity(remaining);
-                line.setReturnedQuantity(returned);
-                line.setStatus("RESPONDED");
-            }
-        }
+        recallLine.setRemainingQuantity(remaining);
+        recallLine.setReturnedQuantity(cumulativeReturned);
+        recallLine.setStatus("RESPONDED");
         if (returned > 0) {
             MaterialBatch batch = recall.getBatch();
+            departmentStockService.recordRecallReturn(recallId, recall.getRecallCode(), department, recall.getMaterial(), batch,
+                    returned, note, username);
             applyQuantityDelta(recall.getMaterial(), batch, batch.getWarehouse(), batch.getLocation(), returned, username,
                     MovementType.RECALL, "RECALL", recall.getRecallCode());
         }

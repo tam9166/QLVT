@@ -113,6 +113,25 @@ public class DepartmentStockService {
     }
 
     @Transactional
+    public void recordRecallReturn(Long recallId, String recallCode, String department, Material material, MaterialBatch batch,
+                                   int quantity, String note, String username) {
+        DepartmentStock stock = stockRepository.findByDepartmentAndMaterial_IdAndBatch_Id(department, material.getId(), batch.getId())
+                .orElseThrow(() -> new IllegalStateException("Khoa " + department + " không còn tồn lô "
+                        + batch.getBatchNumber() + " để trả theo lệnh thu hồi"));
+        ensureQuantity(stock, quantity);
+        int before = stock.getQuantityOnHand();
+        stock.setQuantityOnHand(before - quantity);
+        stock.setQuantityReturned(stock.getQuantityReturned() + quantity);
+        stock.setUpdatedAt(LocalDateTime.now());
+        stock.validate();
+        stockRepository.save(stock);
+        saveMovement(DepartmentStockMovementType.RECALL_RETURN, department, material, batch, -quantity,
+                before, stock.getQuantityOnHand(), "RECALL", recallId, note, username);
+        auditService.log(username, "DEPARTMENT_RECALL_RETURN", "RECALL_ORDER", recallCode,
+                "Khoa trả " + quantity + " " + material.getUnit() + " theo lệnh thu hồi");
+    }
+
+    @Transactional
     public DepartmentReturn createReturn(Long stockId, Long warehouseId, Long locationId, int quantity, String reason, String username) {
         DepartmentStock stock = stockRepository.findById(stockId).orElseThrow();
         ensureQuantity(stock, quantity);

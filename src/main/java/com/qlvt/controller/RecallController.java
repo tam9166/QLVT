@@ -1,6 +1,7 @@
 package com.qlvt.controller;
 
 import com.qlvt.repository.MaterialBatchRepository;
+import com.qlvt.repository.RecallDepartmentResponseRepository;
 import com.qlvt.repository.RecallOrderRepository;
 import com.qlvt.service.Prompt3WorkflowService;
 import org.springframework.security.core.Authentication;
@@ -13,11 +14,15 @@ import org.springframework.web.bind.annotation.*;
 public class RecallController {
     private final RecallOrderRepository repository;
     private final MaterialBatchRepository batchRepository;
+    private final RecallDepartmentResponseRepository responseRepository;
     private final Prompt3WorkflowService workflowService;
 
-    public RecallController(RecallOrderRepository repository, MaterialBatchRepository batchRepository, Prompt3WorkflowService workflowService) {
+    public RecallController(RecallOrderRepository repository, MaterialBatchRepository batchRepository,
+                            RecallDepartmentResponseRepository responseRepository,
+                            Prompt3WorkflowService workflowService) {
         this.repository = repository;
         this.batchRepository = batchRepository;
+        this.responseRepository = responseRepository;
         this.workflowService = workflowService;
     }
 
@@ -31,7 +36,11 @@ public class RecallController {
         return "redirect:/recalls/" + recall.getId();
     }
     @GetMapping("/{id}")
-    public String detail(@PathVariable Long id, Model model) { model.addAttribute("item", repository.findById(id).orElseThrow()); return "recalls/detail"; }
+    public String detail(@PathVariable Long id, Model model) {
+        model.addAttribute("item", repository.findDetailById(id).orElseThrow());
+        model.addAttribute("responses", responseRepository.findByRecallOrder_IdOrderByRespondedAtDesc(id));
+        return "recalls/detail";
+    }
     @PostMapping("/{id}/activate")
     public String activate(@PathVariable Long id, Authentication authentication) { workflowService.activateRecall(id, authentication.getName()); return "redirect:/recalls/" + id; }
     @PostMapping("/{id}/department-response")

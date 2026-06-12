@@ -66,6 +66,17 @@ public class RequestController {
         return "requests/list";
     }
 
+    @GetMapping({"/my", "/my-department"})
+    public String myRequests(Model model) {
+        var user = dataPermissionService.currentUser();
+        if (user.getDepartment() != null && !user.getDepartment().isBlank()) {
+            model.addAttribute("requests", requestRepository.findTop20ByDepartmentOrderByCreatedAtDesc(user.getDepartment()));
+        } else {
+            model.addAttribute("requests", requestRepository.findTop20ByRequesterOrderByCreatedAtDesc(user.getUsername()));
+        }
+        return "requests/list";
+    }
+
     @GetMapping("/{id}")
     @Transactional(readOnly = true)
     public String detail(@PathVariable Long id, Model model) {
