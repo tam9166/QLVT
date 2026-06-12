@@ -24,11 +24,23 @@ Không lưu mật khẩu SQL Server thật trong source. Cấu hình qua biến 
 
 ## Cấu hình SQL Server
 
+Ứng dụng đang cấu hình `spring.jpa.hibernate.ddl-auto=none`, vì vậy database trống phải được tạo schema và seed bằng script SQL trước khi chạy app.
+
 Tạo database nếu chưa có:
 
 ```sql
 CREATE DATABASE qlvt;
 ```
+
+Sau đó chạy các script theo đúng thứ tự:
+
+```text
+database/01_create_schema.sql
+database/02_seed_master_data.sql
+database/03_seed_demo_data.sql
+```
+
+`01_create_schema.sql` có thể chạy lại từ đầu vì script sẽ drop FK/bảng ứng dụng rồi tạo lại schema. `02_seed_master_data.sql` nạp role, người dùng, khoa, kho, vị trí, nhà cung cấp và danh mục vật tư. `03_seed_demo_data.sql` nạp dữ liệu nghiệp vụ demo như lô, tồn kho, yêu cầu cấp phát, nhập/xuất, kiểm kê, chuyển kho, thu hồi, hủy, audit log và thông báo.
 
 Ứng dụng đọc cấu hình từ `src/main/resources/application.properties` và các biến môi trường:
 
@@ -67,6 +79,8 @@ Mở `http://localhost:8080/login`.
 .\mvnw.cmd clean test
 .\mvnw.cmd clean package
 ```
+
+Project có Maven Wrapper chuẩn trong `.mvn/wrapper`. Launcher ưu tiên Maven local nếu đã có sẵn để tránh lỗi truststore Java trên môi trường Windows hiện tại; trên máy chưa cài Maven, `mvnw` sẽ dùng wrapper để tải Maven 3.9.15 từ Maven Central.
 
 Nếu Maven báo `PKIX path building failed` khi tải Surefire từ Maven Central, đây là lỗi chứng chỉ môi trường Java/Maven. Có thể kiểm tra compile/package tạm thời bằng:
 

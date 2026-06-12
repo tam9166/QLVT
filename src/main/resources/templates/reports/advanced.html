@@ -1,5 +1,173 @@
-<!doctype html><html lang="vi" xmlns:th="http://www.thymeleaf.org"><head th:replace="~{fragments/layout :: head('Báo cáo nâng cao')}"></head><body><div th:replace="~{fragments/layout :: navbar}"></div><main class="container-fluid py-4"><h1 class="h3 mb-3">Báo cáo nâng cao</h1><div class="row g-3 mb-4"><div class="col-md-3"><div class="metric-card"><span>Vật tư</span><strong th:text="${materials.size()}"></strong></div></div><div class="col-md-3"><div class="metric-card"><span>Tồn theo lô</span><strong th:text="${balances.size()}"></strong></div></div><div class="col-md-3"><div class="metric-card"><span>Sắp hết hạn</span><strong th:text="${expiringBatches.size()}"></strong></div></div><div class="col-md-3"><div class="metric-card"><span>Đơn hàng trễ</span><strong th:text="${lateOrders.size()}"></strong></div></div></div>
-<h2 class="h5">Tồn kho hiện tại theo lô</h2><table class="table table-sm table-hover"><thead><tr><th>Vật tư</th><th>Lô</th><th>Kho</th><th>Tồn</th><th>Khả dụng</th></tr></thead><tbody><tr th:each="b:${balances}"><td th:text="${b.material.code + ' - ' + b.material.name}"></td><td th:text="${b.batch.batchNumber}"></td><td th:text="${b.warehouse.name}"></td><td th:text="${b.actualQuantity}"></td><td th:text="${b.availableQuantity}"></td></tr></tbody></table>
-<h2 class="h5 mt-4">Lô sắp hết hạn</h2><table class="table table-sm table-hover"><thead><tr><th>Lô</th><th>Vật tư</th><th>HSD</th><th>Tồn</th></tr></thead><tbody><tr th:each="b:${expiringBatches}"><td th:text="${b.batchNumber}"></td><td th:text="${b.material.name}"></td><td th:text="${b.expiryDate}"></td><td th:text="${b.quantity}"></td></tr></tbody></table>
-<h2 class="h5 mt-4">Kiểm kê chênh lệch</h2><table class="table table-sm table-hover"><thead><tr><th>Mã</th><th>Kho</th><th>Trạng thái</th><th>Dòng</th></tr></thead><tbody><tr th:each="c:${counts}"><td th:text="${c.countCode}"></td><td th:text="${c.warehouse.name}"></td><td th:text="${c.status}"></td><td th:text="${c.lines.size()}"></td></tr></tbody></table>
-<h2 class="h5 mt-4">Hủy và thu hồi</h2><div class="row"><div class="col-md-6"><table class="table table-sm"><thead><tr><th>Phiếu hủy</th><th>Trạng thái</th></tr></thead><tbody><tr th:each="d:${destructions}"><td th:text="${d.destructionCode}"></td><td th:text="${d.status}"></td></tr></tbody></table></div><div class="col-md-6"><table class="table table-sm"><thead><tr><th>Thu hồi</th><th>Trạng thái</th></tr></thead><tbody><tr th:each="r:${recalls}"><td th:text="${r.recallCode}"></td><td th:text="${r.status}"></td></tr></tbody></table></div></div></main></body></html>
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Báo cáo nâng cao')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: navbar}"></div>
+<main class="container-fluid app-shell">
+    <div class="d-flex justify-content-between align-items-start gap-3 mb-4">
+        <div>
+            <span class="eyebrow">Báo cáo quản trị</span>
+            <h1 class="h3 mb-1">Báo cáo nâng cao</h1>
+            <p class="text-secondary mb-0">Tổng hợp tồn kho theo lô, hạn dùng, kiểm kê, hủy/thu hồi và đơn hàng trễ.</p>
+        </div>
+        <a class="btn btn-outline-light" th:href="@{/reports}"><i class="bi bi-arrow-left"></i> Báo cáo</a>
+    </div>
+
+    <div class="metric-grid">
+        <div class="metric-card">
+            <span class="metric-icon"><i class="bi bi-capsule"></i></span>
+            <span class="metric-label">Vật tư</span>
+            <strong th:text="${report.materialCount()}">0</strong>
+        </div>
+        <div class="metric-card">
+            <span class="metric-icon"><i class="bi bi-boxes"></i></span>
+            <span class="metric-label">Tồn theo lô</span>
+            <strong th:text="${report.balanceCount()}">0</strong>
+        </div>
+        <div class="metric-card warning">
+            <span class="metric-icon"><i class="bi bi-calendar2-x"></i></span>
+            <span class="metric-label">Sắp hết hạn</span>
+            <strong th:text="${#lists.size(report.expiringBatches())}">0</strong>
+        </div>
+        <div class="metric-card danger">
+            <span class="metric-icon"><i class="bi bi-truck"></i></span>
+            <span class="metric-label">Đơn hàng trễ</span>
+            <strong th:text="${#lists.size(report.lateOrders())}">0</strong>
+        </div>
+    </div>
+
+    <section class="data-panel mb-4">
+        <div class="panel-heading">
+            <div><span class="eyebrow">Tồn kho</span><h2>Tồn hiện tại theo lô</h2></div>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-modern align-middle">
+                <thead><tr><th>Vật tư</th><th>Lô</th><th>Kho</th><th>Tồn</th><th>Khả dụng</th></tr></thead>
+                <tbody>
+                <tr th:each="b:${report.balances()}">
+                    <td th:text="${b.materialText()}">VT001 - Vật tư</td>
+                    <td><span class="code-pill" th:text="${b.batchNumber()}">LO</span></td>
+                    <td th:text="${b.warehouseName()}">Kho</td>
+                    <td th:text="${b.actualQuantity()}">0</td>
+                    <td th:text="${b.availableQuantity()}">0</td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(report.balances())}">
+                    <td colspan="5" class="text-center text-muted py-4">Chưa có dữ liệu tồn theo lô.</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <div class="content-grid mb-4">
+        <section class="data-panel">
+            <div class="panel-heading">
+                <div><span class="eyebrow">FEFO</span><h2>Lô sắp hết hạn</h2></div>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-modern align-middle">
+                    <thead><tr><th>Lô</th><th>Vật tư</th><th>HSD</th><th>Tồn</th></tr></thead>
+                    <tbody>
+                    <tr th:each="b:${report.expiringBatches()}">
+                        <td><span class="code-pill" th:text="${b.batchNumber()}">LO</span></td>
+                        <td th:text="${b.materialName()}">Vật tư</td>
+                        <td th:text="${b.expiryDate() != null ? #temporals.format(b.expiryDate(), 'dd/MM/yyyy') : '-'}">-</td>
+                        <td th:text="${b.quantity()}">0</td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(report.expiringBatches())}">
+                        <td colspan="4" class="text-center text-muted py-4">Không có lô sắp hết hạn.</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="data-panel">
+            <div class="panel-heading">
+                <div><span class="eyebrow">Quá hạn</span><h2>Lô đã hết hạn</h2></div>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-modern align-middle">
+                    <thead><tr><th>Lô</th><th>Vật tư</th><th>HSD</th><th>Tồn</th></tr></thead>
+                    <tbody>
+                    <tr th:each="b:${report.expiredBatches()}">
+                        <td><span class="code-pill" th:text="${b.batchNumber()}">LO</span></td>
+                        <td th:text="${b.materialName()}">Vật tư</td>
+                        <td th:text="${b.expiryDate() != null ? #temporals.format(b.expiryDate(), 'dd/MM/yyyy') : '-'}">-</td>
+                        <td th:text="${b.quantity()}">0</td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(report.expiredBatches())}">
+                        <td colspan="4" class="text-center text-muted py-4">Không có lô hết hạn.</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+
+    <section class="data-panel mb-4">
+        <div class="panel-heading">
+            <div><span class="eyebrow">Kiểm kê</span><h2>Đợt kiểm kê gần đây</h2></div>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-modern align-middle">
+                <thead><tr><th>Mã</th><th>Kho</th><th>Trạng thái</th><th>Số dòng</th></tr></thead>
+                <tbody>
+                <tr th:each="c:${report.counts()}">
+                    <td><span class="code-pill" th:text="${c.countCode()}">KK</span></td>
+                    <td th:text="${c.warehouseName()}">Kho</td>
+                    <td><span class="badge text-bg-info" th:text="${c.status()}">DRAFT</span></td>
+                    <td th:text="${c.lineCount()}">0</td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(report.counts())}">
+                    <td colspan="4" class="text-center text-muted py-4">Chưa có dữ liệu kiểm kê.</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <div class="content-grid">
+        <section class="data-panel">
+            <div class="panel-heading">
+                <div><span class="eyebrow">Hủy vật tư</span><h2>Phiếu hủy</h2></div>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-modern align-middle">
+                    <thead><tr><th>Mã phiếu</th><th>Trạng thái</th></tr></thead>
+                    <tbody>
+                    <tr th:each="d:${report.destructions()}">
+                        <td><span class="code-pill" th:text="${d.code()}">HUY</span></td>
+                        <td th:text="${d.status()}">DRAFT</td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(report.destructions())}">
+                        <td colspan="2" class="text-center text-muted py-4">Chưa có phiếu hủy.</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+        <section class="data-panel">
+            <div class="panel-heading">
+                <div><span class="eyebrow">Thu hồi</span><h2>Lệnh thu hồi</h2></div>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-modern align-middle">
+                    <thead><tr><th>Mã lệnh</th><th>Trạng thái</th></tr></thead>
+                    <tbody>
+                    <tr th:each="r:${report.recalls()}">
+                        <td><span class="code-pill" th:text="${r.code()}">TH</span></td>
+                        <td th:text="${r.status()}">ACTIVE</td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(report.recalls())}">
+                        <td colspan="2" class="text-center text-muted py-4">Chưa có lệnh thu hồi.</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+</main>
+<div th:replace="~{fragments/layout :: chatbot}"></div>
+</body>
+</html>
