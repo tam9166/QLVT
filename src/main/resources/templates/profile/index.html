@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Trang cá nhân')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: navbar}"></div>
+<main class="container-fluid app-shell">
+    <div class="profile-hero">
+        <span class="avatar profile-avatar"><i class="bi bi-person"></i></span>
+        <div>
+            <span class="eyebrow">Trang cá nhân</span>
+            <h1 th:text="${profile.fullName}">Người dùng</h1>
+            <p th:text="${profile.username + ' · ' + profile.role}">Tên đăng nhập</p>
+        </div>
+    </div>
+
+    <div th:if="${success}" class="alert alert-success mt-3" th:text="${success}"></div>
+    <div th:if="${error}" class="alert alert-danger mt-3" th:text="${error}"></div>
+
+    <section class="data-panel mt-3">
+        <div class="panel-heading">
+            <div>
+                <span class="eyebrow">Tài khoản</span>
+                <h2>Thông tin tài khoản</h2>
+            </div>
+        </div>
+        <div class="row g-3">
+            <div class="col-md-4"><div class="metric-card"><span>Tên đăng nhập</span><strong th:text="${profile.username}"></strong></div></div>
+            <div class="col-md-4"><div class="metric-card"><span>Vai trò</span><strong th:text="${profile.role}"></strong></div></div>
+            <div class="col-md-4"><div class="metric-card"><span>Khoa</span><strong th:text="${profile.department ?: '-'}"></strong></div></div>
+        </div>
+    </section>
+
+    <div class="content-grid mt-3">
+        <section class="data-panel">
+            <div class="panel-heading">
+                <div>
+                    <span class="eyebrow">Hồ sơ</span>
+                    <h2>Cập nhật thông tin cá nhân</h2>
+                </div>
+            </div>
+            <form th:action="@{/profile}" method="post" class="row g-3">
+                <div class="col-12">
+                    <label class="form-label">Họ tên</label>
+                    <input class="form-control" name="fullName" th:value="${profile.fullName}" required>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Email</label>
+                    <input class="form-control" type="email" name="email" th:value="${profile.email}">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Điện thoại</label>
+                    <input class="form-control" name="phone" th:value="${profile.phone}">
+                </div>
+                <div class="col-12">
+                    <button class="btn btn-primary" type="submit"><i class="bi bi-save"></i> Lưu thông tin</button>
+                </div>
+            </form>
+        </section>
+
+        <section class="data-panel">
+            <div class="panel-heading">
+                <div>
+                    <span class="eyebrow">Bảo mật</span>
+                    <h2>Đổi mật khẩu</h2>
+                </div>
+            </div>
+            <form th:action="@{/profile/password}" method="post" class="row g-3">
+                <div class="col-12">
+                    <label class="form-label">Mật khẩu mới</label>
+                    <input class="form-control" type="password" name="newPassword" minlength="6" required>
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Nhập lại mật khẩu mới</label>
+                    <input class="form-control" type="password" name="confirmPassword" minlength="6" required>
+                </div>
+                <div class="col-12">
+                    <button class="btn btn-primary" type="submit"><i class="bi bi-shield-lock"></i> Đổi mật khẩu</button>
+                </div>
+            </form>
+        </section>
+    </div>
+</main>
+<div th:replace="~{fragments/layout :: chatbot}"></div>
+</body>
+</html>

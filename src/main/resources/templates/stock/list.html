@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Tồn kho')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: navbar}"></div>
+<main class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="h3">Tồn kho</h1>
+        <div class="d-flex gap-2">
+            <a class="btn btn-outline-primary" th:href="@{/receipts/new}"><i class="bi bi-box-arrow-in-down"></i> Nhập bằng phiếu</a>
+            <a class="btn btn-primary" th:href="@{/issues/new}"><i class="bi bi-box-arrow-up"></i> Tạo phiếu xuất</a>
+        </div>
+    </div>
+    <table class="table table-hover align-middle">
+        <thead><tr><th>Mã</th><th>Tên</th><th>Tồn thực tế</th><th>Đang giữ</th><th>Chờ xuất</th><th>Khả dụng</th></tr></thead>
+        <tbody><tr th:each="m:${materials}"><td th:text="${m.code}"></td><td th:text="${m.name}"></td><td th:text="${m.actualQuantity}"></td><td th:text="${m.reservedQuantity}"></td><td th:text="${m.pendingIssueQuantity}"></td><td class="fw-semibold" th:text="${m.availableQuantity}"></td></tr></tbody>
+    </table>
+    <h2 class="h5 mt-4">Tồn theo lô / kho / vị trí</h2>
+    <table class="table table-sm align-middle">
+        <thead><tr><th>Vật tư</th><th>Lô</th><th>Kho</th><th>Vị trí</th><th>Tồn</th><th>Giữ</th><th>Chờ xuất</th><th>Khả dụng</th></tr></thead>
+        <tbody><tr th:each="b:${balances}">
+            <td th:text="${b.material.code + ' - ' + b.material.name}"></td><td th:text="${b.batch.batchNumber}"></td><td th:text="${b.warehouse.name}"></td><td th:text="${b.location.code}"></td>
+            <td th:text="${b.actualQuantity}"></td><td th:text="${b.reservedQuantity}"></td><td th:text="${b.pendingIssueQuantity}"></td><td th:text="${b.availableQuantity}"></td>
+        </tr></tbody>
+    </table>
+</main>
+<div th:replace="~{fragments/layout :: chatbot}"></div>
+</body>
+</html>

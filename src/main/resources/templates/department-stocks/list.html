@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Tồn tại khoa')}"></head>
+<body><div th:replace="~{fragments/layout :: navbar}"></div>
+<main class="container-fluid py-4">
+    <div class="d-flex justify-content-between mb-3">
+        <h1 class="h3">Tồn tại khoa</h1>
+        <div class="d-flex gap-2">
+            <a class="btn btn-outline-primary" th:href="@{/department-stocks/use}">Báo sử dụng</a>
+            <a class="btn btn-outline-danger" th:href="@{/department-stocks/report-issue}">Báo sự cố</a>
+            <a class="btn btn-primary" th:href="@{/department-returns/new}">Tạo phiếu trả</a>
+        </div>
+    </div>
+    <table class="table table-hover align-middle">
+        <thead><tr><th>Khoa</th><th>Vật tư</th><th>Lô</th><th>Hạn dùng</th><th>Còn tại khoa</th><th>Đã dùng</th><th>Hỏng/mất</th><th></th></tr></thead>
+        <tbody>
+        <tr th:each="i:${items}">
+            <td th:text="${i.department}"></td>
+            <td th:text="${i.material.code + ' - ' + i.material.name}"></td>
+            <td th:text="${i.batch.batchNumber}"></td>
+            <td th:text="${i.batch.expiryDate != null ? #temporals.format(i.batch.expiryDate,'dd/MM/yyyy') : '-'}"></td>
+            <td th:text="${i.quantityOnHand}"></td>
+            <td th:text="${i.quantityUsed}"></td>
+            <td th:text="${i.quantityDamaged + i.quantityLost}"></td>
+            <td class="text-end"><a class="btn btn-sm btn-outline-primary" th:href="@{/department-stocks/{id}(id=${i.id})}">Chi tiết</a></td>
+        </tr>
+        </tbody>
+    </table>
+</main></body></html>

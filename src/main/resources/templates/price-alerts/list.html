@@ -1,0 +1,9 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Cảnh báo giá bất thường')}"></head>
+<body><div th:replace="~{fragments/layout :: navbar}"></div>
+<main class="container-fluid py-4">
+    <div class="d-flex justify-content-between mb-3"><h1 class="h3">Cảnh báo giá bất thường</h1><span class="badge text-bg-danger" th:text="${unresolvedCount + ' chưa xử lý'}"></span></div>
+    <table class="table table-hover"><thead><tr><th>Thời gian</th><th>Vật tư</th><th>Nhà cung cấp</th><th>Giá cũ</th><th>Giá mới</th><th>Tăng</th><th>Mức</th><th>Trạng thái</th><th></th></tr></thead>
+        <tbody><tr th:each="i:${items}"><td th:text="${#temporals.format(i.createdAt,'dd/MM/yyyy HH:mm')}"></td><td th:text="${i.material.code + ' - ' + i.material.name}"></td><td th:text="${i.supplier != null ? i.supplier.name : '-'}"></td><td th:text="${i.oldPrice}"></td><td th:text="${i.newPrice}"></td><td th:text="${i.differencePercent + '%'}"></td><td><span class="badge text-bg-warning" th:text="${i.alertLevel}"></span></td><td th:text="${i.resolved ? 'Đã xử lý' : 'Chưa xử lý'}"></td><td class="text-end"><form th:if="${!i.resolved}" th:action="@{/price-alerts/{id}/resolve(id=${i.id})}" method="post"><button class="btn btn-sm btn-success">Đánh dấu xử lý</button></form></td></tr></tbody></table>
+</main></body></html>

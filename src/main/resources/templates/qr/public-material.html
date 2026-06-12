@@ -1,0 +1,50 @@
+﻿<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Thông tin vật tư')}"></head>
+<body>
+<main class="container py-5">
+    <section class="data-panel mx-auto" style="max-width: 720px">
+        <div class="d-flex align-items-center gap-3 mb-4">
+            <span class="brand-mark"><i class="bi bi-shield-check"></i></span>
+            <div>
+                <span class="eyebrow">QR công khai</span>
+                <h1 class="h3 mb-0" th:text="${material.name}">Tên vật tư</h1>
+            </div>
+        </div>
+
+        <div class="row g-3">
+            <div class="col-sm-6">
+                <div class="metric-card">
+                    <span>Mã vật tư</span>
+                    <strong th:text="${material.code}">VT001</strong>
+                </div>
+            </div>
+            <div class="col-sm-6">
+                <div class="metric-card">
+                    <span>Trạng thái</span>
+                    <strong th:text="${material.status == 'ACTIVE' ? 'Đang sử dụng' : 'Ngừng sử dụng'}">Đang sử dụng</strong>
+                </div>
+            </div>
+            <div class="col-sm-6">
+                <div class="metric-card">
+                    <span>Loại vật tư</span>
+                    <strong th:text="${material.category ?: '-'}">Tiêu hao</strong>
+                </div>
+            </div>
+            <div class="col-sm-6">
+                <div class="metric-card">
+                    <span>Đơn vị tính</span>
+                    <strong th:text="${material.unit ?: '-'}">Hộp</strong>
+                </div>
+            </div>
+            <div class="col-12" th:if="${material.storageCondition != null and !#strings.isEmpty(material.storageCondition)}">
+                <div class="alert alert-info mb-0">
+                    <strong>Ghi chú an toàn:</strong>
+                    <span th:text="${material.storageCondition}">Bảo quản nơi khô ráo.</span>
+                </div>
+            </div>
+        </div>
+    </section>
+</main>
+</body>
+</html>

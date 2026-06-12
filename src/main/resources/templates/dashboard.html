@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" xmlns:sec="https://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments/layout :: head('Bảng điều khiển')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: navbar}"></div>
+<main class="container-fluid app-shell">
+    <section class="hero-band dashboard-hero">
+        <div class="hero-copy">
+            <span class="eyebrow"><span class="live-dot"></span> Bảng điều khiển vận hành</span>
+            <h1>Điều phối kho vật tư y tế theo tồn kho, lô và rủi ro bảo quản</h1>
+            <p>Ưu tiên xử lý vật tư tồn thấp, lô sắp hết hạn, cảnh báo kho lạnh và đề xuất mua hàng từ dữ liệu thực tế.</p>
+            <div class="hero-actions">
+                <a class="btn btn-primary" th:href="@{/receipts}"><i class="bi bi-box-arrow-in-down"></i> Nhập kho</a>
+                <a class="btn btn-outline-light" th:href="@{/requests}"><i class="bi bi-clipboard2-pulse"></i> Yêu cầu vật tư</a>
+                <a class="btn btn-outline-light" th:href="@{/storage-monitoring}"><i class="bi bi-thermometer-snow"></i> Bảo quản</a>
+            </div>
+        </div>
+    </section>
+
+    <div class="metric-grid">
+        <a class="metric-card dashboard-link-card" th:href="@{/materials}">
+            <span class="metric-icon"><i class="bi bi-capsule"></i></span>
+            <span class="metric-label">Vật tư</span>
+            <strong th:text="${materialCount}">0</strong>
+        </a>
+        <a class="metric-card dashboard-link-card" th:href="@{/warehouses}">
+            <span class="metric-icon"><i class="bi bi-grid-3x3-gap"></i></span>
+            <span class="metric-label">Kho</span>
+            <strong th:text="${warehouseCount}">0</strong>
+        </a>
+        <a class="metric-card dashboard-link-card" th:href="@{/reports}">
+            <span class="metric-icon"><i class="bi bi-cash-stack"></i></span>
+            <span class="metric-label">Giá trị tồn</span>
+            <strong th:text="${#numbers.formatDecimal(totalInventoryValue, 0, 'COMMA', 0, 'POINT') + ' đ'}">0 đ</strong>
+        </a>
+        <a class="metric-card dashboard-link-card warning" th:href="@{/alerts#stock-alerts}">
+            <span class="metric-icon"><i class="bi bi-exclamation-triangle"></i></span>
+            <span class="metric-label">Tồn thấp</span>
+            <strong th:text="${#lists.size(lowStocks)}">0</strong>
+        </a>
+        <a class="metric-card dashboard-link-card danger" th:href="@{/alerts#expiry-alerts}">
+            <span class="metric-icon"><i class="bi bi-calendar2-x"></i></span>
+            <span class="metric-label">Hết hạn 30 ngày</span>
+            <strong th:text="${#lists.size(expiringBatches30)}">0</strong>
+        </a>
+        <a class="metric-card dashboard-link-card warning" th:href="@{/alerts#expiry-alerts}">
+            <span class="metric-icon"><i class="bi bi-hourglass-bottom"></i></span>
+            <span class="metric-label">Giá trị sắp hết hạn</span>
+            <strong th:text="${#numbers.formatDecimal(expiringInventoryValue, 0, 'COMMA', 0, 'POINT') + ' đ'}">0 đ</strong>
+        </a>
+        <a class="metric-card dashboard-link-card danger" th:href="@{/batches}">
+            <span class="metric-icon"><i class="bi bi-shield-exclamation"></i></span>
+            <span class="metric-label">Lô khóa/rủi ro</span>
+            <strong th:text="${lockedBatchCount}">0</strong>
+        </a>
+        <a class="metric-card dashboard-link-card danger" th:href="@{/storage-monitoring}">
+            <span class="metric-icon"><i class="bi bi-thermometer-high"></i></span>
+            <span class="metric-label">Cảnh báo bảo quản</span>
+            <strong th:text="${storageRiskCount}">0</strong>
+        </a>
+        <a class="metric-card dashboard-link-card" sec:authorize="hasRole('ADMIN')" th:href="@{/users}">
+            <span class="metric-icon"><i class="bi bi-people"></i></span>
+            <span class="metric-label">Người dùng</span>
+            <strong th:text="${userCount}">0</strong>
+        </a>
+        <a class="metric-card dashboard-link-card" sec:authorize="hasRole('ADMIN')" th:href="@{/departments}">
+            <span class="metric-icon"><i class="bi bi-building"></i></span>
+            <span class="metric-label">Khoa/phòng</span>
+            <strong th:text="${departmentCount}">0</strong>
+        </a>
+        <a class="metric-card dashboard-link-card" sec:authorize="hasAnyRole('ACCOUNTANT','MANAGER','ADMIN')" th:href="@{/price-alerts}">
+            <span class="metric-icon"><i class="bi bi-graph-up-arrow"></i></span>
+            <span class="metric-label">Cảnh báo giá</span>
+            <strong th:text="${priceAlertCount}">0</strong>
+        </a>
+        <a class="metric-card dashboard-link-card" sec:authorize="hasAnyRole('WAREHOUSE_STAFF','ADMIN','MANAGER')" th:href="@{/requests}">
+            <span class="metric-icon"><i class="bi bi-hourglass-split"></i></span>
+            <span class="metric-label">Chờ kho xử lý</span>
+            <strong th:text="${warehousePending}">0</strong>
+        </a>
+    </div>
+
+    <div class="content-grid dashboard-grid">
+        <section class="data-panel corner-node dashboard-panel-wide">
+            <div class="panel-heading">
+                <div><span class="eyebrow">Mua hàng</span><h2>Vật tư cần nhập thêm</h2></div>
+                <a class="btn btn-sm btn-outline-light" th:href="@{/purchases/requests}">Đề nghị mua</a>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-modern align-middle">
+                    <thead><tr><th>Vật tư</th><th>Tồn</th><th>Dùng TB/ngày</th><th>Còn dùng được</th><th>Đề xuất</th><th>Mức</th></tr></thead>
+                    <tbody>
+                    <tr th:each="s:${purchaseSuggestions}">
+                        <td>
+                            <span class="code-pill" th:text="${s.code}">VT001</span>
+                            <div class="small text-secondary" th:text="${s.name}">Tên vật tư</div>
+                        </td>
+                        <td th:text="${s.available + ' / min ' + s.minStock}">0</td>
+                        <td th:text="${s.averageDailyUsage + ' ' + s.unit}">0</td>
+                        <td th:text="${s.estimatedDaysLeft}">0 ngày</td>
+                        <td th:text="${s.suggestedQuantity + ' ' + s.unit}">0</td>
+                        <td>
+                            <span class="badge" th:classappend="${s.priority == 'Cao' ? ' text-bg-danger' : ' text-bg-warning'}" th:text="${s.priority}">Cao</span>
+                            <div class="small text-secondary" th:text="${s.reason}">Lý do</div>
+                        </td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(purchaseSuggestions)}">
+                        <td colspan="6" class="text-center text-muted py-4">Chưa có vật tư cần đề xuất mua trong 30 ngày gần đây.</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="data-panel corner-node">
+            <div class="panel-heading">
+                <div><span class="eyebrow">Kho lạnh</span><h2>Rủi ro bảo quản</h2></div>
+                <a class="btn btn-sm btn-outline-light" th:href="@{/storage-monitoring}">Ghi nhận</a>
+            </div>
+            <div class="alert-list">
+                <a class="alert-row" th:each="log:${storageRiskLogs}" th:href="@{/storage-monitoring}">
+                    <span class="alert-icon" th:classappend="${log.status == 'RISK' ? ' danger' : ' warning'}"><i class="bi bi-thermometer-half"></i></span>
+                    <span>
+                        <strong th:text="${log.warehouse.code + ' - ' + log.warehouse.name}">KHO001</strong>
+                        <small th:text="${#temporals.format(log.recordedAt, 'dd/MM/yyyy HH:mm') + ' | ' + (log.temperature != null ? log.temperature + ' C' : '-') + ' | ' + (log.humidity != null ? log.humidity + '%' : '-')}">24 C</small>
+                    </span>
+                    <span class="badge" th:classappend="${log.status == 'RISK' ? ' text-bg-danger' : ' text-bg-warning'}" th:text="${log.status == 'RISK' ? 'Rủi ro' : 'Theo dõi'}">Rủi ro</span>
+                </a>
+                <div class="empty-state compact" th:if="${#lists.isEmpty(storageRiskLogs)}">Không có cảnh báo bảo quản cần xử lý.</div>
+            </div>
+        </section>
+
+        <section class="data-panel corner-node">
+            <div class="panel-heading">
+                <div><span class="eyebrow">30 ngày</span><h2>Top vật tư xuất nhiều</h2></div>
+                <a class="btn btn-sm btn-outline-light" th:href="@{/reports/advanced}">Báo cáo</a>
+            </div>
+            <div class="rank-list">
+                <div class="rank-row" th:each="item:${topIssuedMaterials}">
+                    <div class="rank-main">
+                        <strong th:text="${item.code + ' - ' + item.name}">VT001 - Vật tư</strong>
+                        <small th:text="${item.quantity + ' ' + item.unit}">0</small>
+                    </div>
+                    <div class="rank-bar"><span th:style="${'width:' + item.percent + '%'}"></span></div>
+                </div>
+                <div class="empty-state compact" th:if="${#lists.isEmpty(topIssuedMaterials)}">Chưa có dữ liệu xuất kho trong 30 ngày gần đây.</div>
+            </div>
+        </section>
+
+        <section class="data-panel corner-node">
+            <div class="panel-heading">
+                <div><span class="eyebrow">Kiểm soát lô</span><h2>Lô khóa hoặc hết hạn</h2></div>
+                <a class="btn btn-sm btn-outline-light" th:href="@{/batches}">Xem lô</a>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-modern align-middle">
+                    <thead><tr><th>Lô</th><th>Vật tư</th><th>HSD</th><th>Trạng thái</th></tr></thead>
+                    <tbody>
+                    <tr th:each="b:${lockedBatches}">
+                        <td><span class="code-pill" th:text="${b.batchNumber}">LO</span></td>
+                        <td th:text="${b.material.name}">Vật tư</td>
+                        <td th:text="${b.expiryDate != null ? #temporals.format(b.expiryDate, 'dd/MM/yyyy') : '-'}">-</td>
+                        <td><span class="badge" th:classappend="${b.status.name() == 'AVAILABLE' ? ' text-bg-warning' : ' text-bg-danger'}" th:text="${b.status}">Trạng thái</span></td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(lockedBatches)}">
+                        <td colspan="4" class="text-center text-muted py-4">Không có lô khóa hoặc hết hạn.</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="data-panel corner-node" sec:authorize="hasAnyRole('DEPARTMENT_STAFF','DEPARTMENT_HEAD')">
+            <div class="panel-heading">
+                <div><span class="eyebrow">Khoa/phòng</span><h2>Phiếu của tôi</h2></div>
+                <a class="btn btn-sm btn-outline-light" th:href="@{/requests}">Xem tất cả</a>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-modern align-middle">
+                    <thead><tr><th>Mã</th><th>Trạng thái</th><th>Ngày tạo</th></tr></thead>
+                    <tbody>
+                    <tr th:each="r:${myRequests}">
+                        <td><a th:href="@{/requests/{id}(id=${r.id})}" th:text="${r.code}">YC</a></td>
+                        <td th:text="${r.status}">DRAFT</td>
+                        <td th:text="${r.createdAt != null ? #temporals.format(r.createdAt, 'dd/MM/yyyy HH:mm') : '-'}">-</td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(myRequests)}">
+                        <td colspan="3" class="text-center text-muted py-4">Chưa có phiếu yêu cầu.</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="data-panel corner-node" sec:authorize="hasAnyRole('DEPARTMENT_STAFF','DEPARTMENT_HEAD')">
+            <div class="panel-heading">
+                <div><span class="eyebrow">Tồn tại khoa</span><h2>Vật tư khoa đang giữ</h2></div>
+                <a class="btn btn-sm btn-outline-light" th:href="@{/department-stocks/my-department}">Chi tiết</a>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-modern align-middle">
+                    <thead><tr><th>Vật tư</th><th>Lô</th><th>Còn</th></tr></thead>
+                    <tbody>
+                    <tr th:each="s:${departmentStocks}">
+                        <td th:text="${s.material.code + ' - ' + s.material.name}">VT001</td>
+                        <td th:text="${s.batch.batchNumber}">LO</td>
+                        <td th:text="${s.quantityOnHand}">0</td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(departmentStocks)}">
+                        <td colspan="3" class="text-center text-muted py-4">Chưa có tồn tại khoa.</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="data-panel corner-node">
+            <div class="panel-heading">
+                <div><span class="eyebrow">Cảnh báo</span><h2>Tồn thấp</h2></div>
+                <a class="btn btn-sm btn-outline-light" th:href="@{/alerts#stock-alerts}">Xem cảnh báo</a>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-modern align-middle">
+                    <thead><tr><th>Mã</th><th>Tên vật tư</th><th>Tồn</th><th>Tối thiểu</th></tr></thead>
+                    <tbody>
+                    <tr th:each="m:${lowStocks}">
+                        <td><span class="code-pill" th:text="${m.code}">VT001</span></td>
+                        <td th:text="${m.name}">Vật tư</td>
+                        <td th:text="${m.actualQuantity}">0</td>
+                        <td th:text="${m.minStock}">0</td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(lowStocks)}">
+                        <td colspan="4" class="text-center text-muted py-4">Không có vật tư tồn thấp.</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="data-panel corner-node">
+            <div class="panel-heading">
+                <div><span class="eyebrow">FEFO</span><h2>Lô sắp hết hạn</h2></div>
+                <a class="btn btn-sm btn-outline-light" th:href="@{/alerts#expiry-alerts}">Xem lô</a>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-modern align-middle">
+                    <thead><tr><th>Lô</th><th>Vật tư</th><th>Hạn sử dụng</th><th>SL</th></tr></thead>
+                    <tbody>
+                    <tr th:each="b:${expiringBatches}">
+                        <td><span class="code-pill" th:text="${b.batchNumber}">LO</span></td>
+                        <td th:text="${b.material.name}">Vật tư</td>
+                        <td th:text="${b.expiryDate != null ? #temporals.format(b.expiryDate, 'dd/MM/yyyy') : '-'}">-</td>
+                        <td th:text="${b.quantity}">0</td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(expiringBatches)}">
+                        <td colspan="4" class="text-center text-muted py-4">Không có lô sắp hết hạn.</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="data-panel corner-node">
+            <div class="panel-heading">
+                <div><span class="eyebrow">Vận hành</span><h2>Biến động gần đây</h2></div>
+                <a class="btn btn-sm btn-outline-light" th:href="@{/reports/movements.csv}">Xuất CSV</a>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-modern align-middle">
+                    <thead><tr><th>Thời gian</th><th>Loại</th><th>Vật tư</th><th>SL</th></tr></thead>
+                    <tbody>
+                    <tr th:each="mv:${movements}">
+                        <td th:text="${mv.createdAt != null ? #temporals.format(mv.createdAt, 'dd/MM/yyyy HH:mm') : '-'}">-</td>
+                        <td th:text="${mv.movementType}">IN</td>
+                        <td th:text="${mv.material.code + ' - ' + mv.material.name}">VT001</td>
+                        <td th:text="${mv.quantity}">0</td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(movements)}">
+                        <td colspan="4" class="text-center text-muted py-4">Chưa có biến động kho.</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="data-panel corner-node" sec:authorize="hasAnyRole('ADMIN','MANAGER')">
+            <div class="panel-heading">
+                <div><span class="eyebrow">Kiểm soát</span><h2>Nhật ký hệ thống</h2></div>
+                <a class="btn btn-sm btn-outline-light" th:href="@{/admin/audit-logs}">Xem nhật ký</a>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-modern align-middle">
+                    <thead><tr><th>Thời gian</th><th>Người dùng</th><th>Hành động</th><th>Đối tượng</th></tr></thead>
+                    <tbody>
+                    <tr th:each="a:${auditLogs}">
+                        <td th:text="${a.createdAt != null ? #temporals.format(a.createdAt, 'dd/MM/yyyy HH:mm') : '-'}">-</td>
+                        <td th:text="${a.actorUsername}">user</td>
+                        <td th:text="${a.action}">ACTION</td>
+                        <td th:text="${a.entityId}">ID</td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(auditLogs)}">
+                        <td colspan="4" class="text-center text-muted py-4">Chưa có nhật ký hệ thống.</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+</main>
+<div th:replace="~{fragments/layout :: chatbot}"></div>
+</body>
+</html>

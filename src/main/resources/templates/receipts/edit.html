@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Sửa phiếu nhập')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: navbar}"></div>
+<main class="container-fluid app-shell">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <span class="eyebrow">Phiếu nhập kho</span>
+            <h1 class="h3 mb-1" th:text="${receipt.receiptCode}"></h1>
+            <p class="text-secondary mb-0">Số lô được hệ thống tự sinh và không sửa thủ công.</p>
+        </div>
+        <a class="btn btn-outline-light" th:href="@{/receipts/{id}(id=${receipt.id})}">Quay lại</a>
+    </div>
+
+    <form class="data-panel" th:action="@{/receipts/{id}/edit(id=${receipt.id})}" method="post">
+        <div class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">Kho nhập</label>
+                <select class="form-select" name="warehouseId" required>
+                    <option th:each="w:${warehouses}" th:value="${w.id}" th:selected="${receipt.warehouse != null and receipt.warehouse.id == w.id}" th:text="${w.name}"></option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Nhà cung cấp</label>
+                <select class="form-select" name="supplierId">
+                    <option value="">Không chọn</option>
+                    <option th:each="s:${suppliers}" th:value="${s.id}" th:selected="${receipt.supplier != null and receipt.supplier.id == s.id}" th:text="${s.name}"></option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Số lô</label>
+                <input class="form-control" th:value="${line != null ? line.batchNumber : 'Tự sinh khi lưu'}" readonly>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Vật tư</label>
+                <select class="form-select" name="materialId" required>
+                    <option th:each="m:${materials}" th:value="${m.id}" th:selected="${line != null and line.material.id == m.id}" th:text="${m.code + ' - ' + m.name}"></option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Vị trí</label>
+                <select class="form-select" name="locationId" required>
+                    <option th:each="l:${locations}" th:value="${l.id}" th:selected="${line != null and line.location != null and line.location.id == l.id}" th:text="${l.code + ' - ' + l.name}"></option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Số lượng nhập</label>
+                <input class="form-control" type="number" min="1" name="quantity" th:value="${line != null ? line.quantity : 1}" required>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Đơn giá</label>
+                <input class="form-control" type="number" min="0" name="unitPrice" th:value="${line != null ? line.unitPrice : 0}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Ngày sản xuất</label>
+                <input class="form-control" type="date" name="manufactureDate" th:value="${line != null and line.manufacturingDate != null ? line.manufacturingDate : ''}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Hạn dùng</label>
+                <input class="form-control" type="date" name="expiryDate" th:value="${line != null and line.expiryDate != null ? line.expiryDate : ''}">
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Ghi chú</label>
+                <input class="form-control" name="note" th:value="${receipt.note}">
+            </div>
+            <div class="col-12 d-flex gap-2">
+                <button class="btn btn-primary">Lưu thay đổi</button>
+                <a class="btn btn-outline-light" th:href="@{/receipts/{id}(id=${receipt.id})}">Hủy</a>
+            </div>
+        </div>
+    </form>
+</main>
+<div th:replace="~{fragments/layout :: chatbot}"></div>
+</body>
+</html>

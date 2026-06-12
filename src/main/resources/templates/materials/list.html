@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments/layout :: head('Danh mục vật tư')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: navbar}"></div>
+<main class="container-fluid app-shell">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="h3">Danh mục vật tư</h1>
+        <a class="btn btn-primary" sec:authorize="hasAnyRole('ADMIN','WAREHOUSE_STAFF')" th:href="@{/materials/new}">
+            <i class="bi bi-plus-lg"></i> Thêm
+        </a>
+    </div>
+
+    <form class="row g-2 mb-3">
+        <div class="col-sm-8 col-md-5">
+            <input class="form-control" name="q" th:value="${q}" placeholder="Tìm theo mã hoặc tên vật tư">
+        </div>
+        <div class="col-auto">
+            <button class="btn btn-outline-primary">Tìm</button>
+        </div>
+    </form>
+
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead>
+            <tr>
+                <th>Mã</th>
+                <th>Tên</th>
+                <th>Loại</th>
+                <th>Cảnh báo</th>
+                <th>ĐVT</th>
+                <th></th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="m : ${materials}">
+                <td th:text="${m.code}"></td>
+                <td th:text="${m.name}"></td>
+                <td th:text="${m.category}"></td>
+                <td>
+                    <span th:with="level=${alertService.stockLevel(m)}"
+                          th:class="${'badge text-bg-' + level.badgeClass}"
+                          th:text="${level.label}"></span>
+                </td>
+                <td th:text="${m.unit}"></td>
+                <td class="text-end">
+                    <a class="btn btn-sm btn-outline-primary" th:href="@{/qr/public/material/{code}(code=${m.code})}" title="QR công khai">
+                        <i class="bi bi-qr-code"></i>
+                    </a>
+                    <a class="btn btn-sm btn-outline-secondary"
+                       sec:authorize="hasAnyRole('ADMIN','WAREHOUSE_STAFF','MANAGER')"
+                       th:href="@{/qr/internal/material/{code}(code=${m.code})}" title="QR nội bộ">
+                        <i class="bi bi-shield-lock"></i>
+                    </a>
+                    <a class="btn btn-sm btn-outline-secondary"
+                       sec:authorize="hasAnyRole('ADMIN','WAREHOUSE_STAFF')"
+                       th:href="@{/materials/{id}/edit(id=${m.id})}" title="Sửa">
+                        <i class="bi bi-pencil"></i>
+                    </a>
+                    <form th:action="@{/materials/{id}/delete(id=${m.id})}" method="post" class="d-inline"
+                          sec:authorize="hasRole('ADMIN')"
+                          onsubmit="return confirm('Xóa mềm vật tư này?')">
+                        <button class="btn btn-sm btn-outline-danger" title="Xóa"><i class="bi bi-trash"></i></button>
+                    </form>
+                </td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(materials)}">
+                <td colspan="6" class="text-center text-muted py-4">Chưa có vật tư.</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</main>
+<div th:replace="~{fragments/layout :: chatbot}"></div>
+</body>
+</html>

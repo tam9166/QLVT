@@ -1,0 +1,35 @@
+package com.qlvt;
+
+import com.qlvt.entity.InventoryCountLine;
+import com.qlvt.entity.StockBalance;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
+
+class Prompt3BusinessRuleTest {
+    @Test
+    void inventoryCountLineCalculatesDifference() {
+        InventoryCountLine line = new InventoryCountLine();
+        line.setSystemQuantity(20);
+        line.setActualQuantity(17);
+
+        assertEquals(-3, line.getDifferenceQuantity());
+    }
+
+    @Test
+    void stockBalanceRejectsNegativeAfterDestructionOrTransfer() {
+        StockBalance balance = new StockBalance();
+        balance.setActualQuantity(-1);
+
+        assertThrows(IllegalStateException.class, balance::validate);
+    }
+
+    @Test
+    void stockBalancePreventsDestroyingReservedQuantity() {
+        StockBalance balance = new StockBalance();
+        balance.setActualQuantity(10);
+        balance.setReservedQuantity(8);
+        balance.setPendingIssueQuantity(3);
+
+        assertThrows(IllegalStateException.class, balance::validate);
+    }
+}

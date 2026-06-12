@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Lỗi')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: navbar}"></div>
+<main class="container py-4">
+    <section class="data-panel">
+        <span class="eyebrow">Thông báo</span>
+        <h1 class="h4" th:text="${title ?: 'Không thể xử lý yêu cầu'}">Không thể xử lý yêu cầu</h1>
+        <p class="text-secondary mb-0" th:text="${message ?: 'Đã xảy ra lỗi, vui lòng kiểm tra lại thông tin.'}">Đã xảy ra lỗi, vui lòng kiểm tra lại thông tin.</p>
+    </section>
+    <div class="d-flex gap-2 mt-3">
+        <button class="btn btn-outline-secondary" type="button" onclick="history.back()">Quay lại</button>
+        <a class="btn btn-primary" th:href="@{/}">Về dashboard</a>
+    </div>
+</main>
+</body>
+</html>

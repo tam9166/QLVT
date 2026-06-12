@@ -1,0 +1,134 @@
+package com.qlvt.service;
+
+import com.qlvt.entity.StorageLocation;
+import com.qlvt.entity.Warehouse;
+import com.qlvt.enums.LocationType;
+import com.qlvt.enums.WarehouseType;
+import com.qlvt.form.StorageLocationForm;
+import com.qlvt.form.WarehouseForm;
+import com.qlvt.repository.StorageLocationRepository;
+import com.qlvt.repository.WarehouseRepository;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.validation.BindingResult;
+import java.time.LocalDateTime;
+import java.util.List;
+
+@Service
+public class WarehouseAdminService {
+    private final WarehouseRepository warehouseRepository;
+    private final StorageLocationRepository locationRepository;
+    private final AuditService auditService;
+
+    public WarehouseAdminService(WarehouseRepository warehouseRepository, StorageLocationRepository locationRepository, AuditService auditService) {
+        this.warehouseRepository = warehouseRepository;
+        this.locationRepository = locationRepository;
+        this.auditService = auditService;
+    }
+
+    public List<Warehouse> searchWarehouses(String q) {
+        if (q == null || q.isBlank()) {
+            return warehouseRepository.findByDeletedFalseOrderByCodeAsc();
+        }
+        return warehouseRepository.findByDeletedFalseAndCodeContainingIgnoreCaseOrDeletedFalseAndNameContainingIgnoreCase(q, q);
+    }
+
+    public List<StorageLocation> locations(Long warehouseId) {
+        if (warehouseId == null) {
+            return locationRepository.findByDeletedFalseOrderByCodeAsc();
+        }
+        return locationRepository.findByWarehouse_IdAndDeletedFalseOrderByCodeAsc(warehouseId);
+    }
+
+    public WarehouseForm toForm(Warehouse warehouse) {
+        WarehouseForm form = new WarehouseForm();
+        form.setId(warehouse.getId());
+        form.setCode(warehouse.getCode());
+        form.setName(warehouse.getName());
+        form.setAddress(warehouse.getAddress());
+        form.setDescription(warehouse.getDescription());
+        form.setActive(warehouse.isActive());
+        form.setType(warehouse.getType() == null ? null : WarehouseType.valueOf(warehouse.getType()));
+        return form;
+    }
+
+    public StorageLocationForm toForm(StorageLocation location) {
+        StorageLocationForm form = new StorageLocationForm();
+        form.setId(location.getId());
+        form.setWarehouseId(location.getWarehouse().getId());
+        form.setParentId(location.getParent() == null ? null : location.getParent().getId());
+        form.setCode(location.getCode());
+        form.setName(location.getName());
+        form.setDescription(location.getDescription());
+        form.setActive(location.isActive());
+        form.setLocationType(location.getLocationType() == null ? null : LocationType.valueOf(location.getLocationType()));
+        return form;
+    }
+
+    @Transactional
+    public boolean saveWarehouse(WarehouseForm form, BindingResult bindingResult, String actor) {
+        Long id = form.getId() == null ? -1L : form.getId();
+        if ((form.getId() == null && warehouseRepository.existsByCode(form.getCode()))
+                || (form.getId() != null && warehouseRepository.existsByCodeAndIdNot(form.getCode(), id))) {
+            bindingResult.rejectValue("code", "duplicate", "Mã kho đã tồn tại");
+        }
+        if (bindingResult.hasErrors()) {
+            return false;
+        }
+        Warehouse warehouse = form.getId() == null ? new Warehouse() : warehouseRepository.findById(form.getId()).orElseThrow();
+        warehouse.setCode(form.getCode());
+        warehouse.setName(form.getName());
+        warehouse.setType(form.getType().name());
+        warehouse.setAddress(form.getAddress());
+        warehouse.setDescription(form.getDescription());
+        warehouse.setActive(form.isActive());
+        warehouse.setUpdatedAt(LocalDateTime.now());
+        warehouseRepository.save(warehouse);
+        auditService.log(actor, form.getId() == null ? "CREATE_WAREHOUSE" : "UPDATE_WAREHOUSE", "Warehouse", warehouse.getCode(), "Lưu kho " + warehouse.getName());
+        return true;
+    }
+
+    @Transactional
+    public boolean saveLocation(StorageLocationForm form, BindingResult bindingResult, String actor) {
+        Long id = form.getId() == null ? -1L : form.getId();
+        if (form.getWarehouseId() != null && ((form.getId() == null && locationRepository.existsByWarehouse_IdAndCode(form.getWarehouseId(), form.getCode()))
+                || (form.getId() != null && locationRepository.existsByWarehouse_IdAndCodeAndIdNot(form.getWarehouseId(), form.getCode(), id)))) {
+            bindingResult.rejectValue("code", "duplicate", "Mã vị trí đã tồn tại trong kho này");
+        }
+        if (bindingResult.hasErrors()) {
+            return false;
+        }
+        StorageLocation location = form.getId() == null ? new StorageLocation() : locationRepository.findById(form.getId()).orElseThrow();
+        Warehouse warehouse = warehouseRepository.findById(form.getWarehouseId()).orElseThrow();
+        location.setWarehouse(warehouse);
+        location.setParent(form.getParentId() == null ? null : locationRepository.findById(form.getParentId()).orElse(null));
+        location.setCode(form.getCode());
+        location.setName(form.getName());
+        location.setLocationType(form.getLocationType().name());
+        location.setDescription(form.getDescription());
+        location.setActive(form.isActive());
+        location.setUpdatedAt(LocalDateTime.now());
+        locationRepository.save(location);
+        auditService.log(actor, form.getId() == null ? "CREATE_LOCATION" : "UPDATE_LOCATION", "StorageLocation", location.getCode(), "Lưu vị trí " + location.getName());
+        return true;
+    }
+
+    @Transactional
+    public void deleteWarehouse(Long id, String actor) {
+        Warehouse warehouse = warehouseRepository.findById(id).orElseThrow();
+        warehouse.setDeleted(true);
+        warehouse.setActive(false);
+        auditService.log(actor, "DELETE_WAREHOUSE", "Warehouse", warehouse.getCode(), "Xóa mềm kho");
+    }
+
+    @Transactional
+    public void deleteLocation(Long id, String actor) {
+        StorageLocation location = locationRepository.findById(id).orElseThrow();
+        location.setDeleted(true);
+        location.setActive(false);
+        auditService.log(actor, "DELETE_LOCATION", "StorageLocation", location.getCode(), "Xóa mềm vị trí");
+    }
+
+    public WarehouseType[] warehouseTypes() { return WarehouseType.values(); }
+    public LocationType[] locationTypes() { return LocationType.values(); }
+}

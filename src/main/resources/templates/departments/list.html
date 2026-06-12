@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Khoa/phòng')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: navbar}"></div>
+<main class="container-fluid app-shell">
+    <section class="data-panel">
+        <div class="panel-heading">
+            <div><span class="eyebrow">Quản trị khoa/phòng</span><h1 class="h3">Khoa/phòng</h1></div>
+            <a class="btn btn-primary" th:href="@{/departments/new}"><i class="bi bi-plus-lg"></i> Thêm khoa</a>
+        </div>
+        <form class="row g-2 mb-3">
+            <div class="col-md-5"><input class="form-control" name="q" th:value="${q}" placeholder="Tìm mã hoặc tên khoa"></div>
+            <div class="col-auto"><button class="btn btn-outline-light">Tìm</button></div>
+        </form>
+        <div class="table-responsive">
+            <table class="table table-modern align-middle">
+                <thead><tr><th>Mã</th><th>Tên</th><th>Mô tả</th><th>Người dùng</th><th>Trạng thái</th><th></th></tr></thead>
+                <tbody>
+                <tr th:each="d:${departments}">
+                    <td><span class="code-pill" th:text="${d.code}"></span></td>
+                    <td th:text="${d.name}"></td>
+                    <td th:text="${d.description}"></td>
+                    <td class="font-mono" th:text="${userRepository.countByDepartmentAndDeletedFalse(d.name)}"></td>
+                    <td th:text="${d.active ? 'Đang dùng' : 'Tạm ngưng'}"></td>
+                    <td class="text-end">
+                        <a class="btn btn-sm btn-outline-light" th:href="@{/departments/{id}/edit(id=${d.id})}">Sửa</a>
+                        <form class="d-inline" method="post" th:action="@{/departments/{id}/delete(id=${d.id})}" onsubmit="return confirm('Xóa mềm khoa/phòng này?')"><button class="btn btn-sm btn-outline-light">Xóa</button></form>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+</main>
+</body>
+</html>

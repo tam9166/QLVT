@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Chi tiết yêu cầu')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: navbar}"></div>
+<main class="container-fluid app-shell">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <span class="eyebrow">Yêu cầu cấp vật tư</span>
+            <h1 class="h3 mb-1" th:text="${request.code}"></h1>
+            <span class="badge text-bg-info" th:text="${request.status}"></span>
+        </div>
+        <div class="d-flex gap-2 flex-wrap justify-content-end">
+            <a class="btn btn-outline-light" th:href="@{/requests}">Quay lại</a>
+            <form th:if="${request.status.name() == 'DEPARTMENT_APPROVED' || request.status.name() == 'WAREHOUSE_APPROVED'}"
+                  th:action="@{/requests/{id}/approve-warehouse(id=${request.id})}" method="post">
+                <button class="btn btn-primary">Kho xử lý và giữ hàng</button>
+            </form>
+            <form th:if="${request.status.name() == 'RESERVED' || request.status.name() == 'PARTIALLY_APPROVED'}"
+                  th:action="@{/issues/from-request/{id}(id=${request.id})}" method="post">
+                <button class="btn btn-primary">Tạo phiếu xuất</button>
+            </form>
+        </div>
+    </div>
+
+    <section class="data-panel mb-3">
+        <div class="row g-3">
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <span class="metric-label">Khoa/phòng</span>
+                    <strong th:text="${request.department ?: '-'}"></strong>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <span class="metric-label">Người tạo</span>
+                    <strong th:text="${request.requester ?: '-'}"></strong>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <span class="metric-label">Ưu tiên</span>
+                    <strong th:text="${request.priority ?: '-'}"></strong>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <span class="metric-label">Ngày tạo</span>
+                    <strong th:text="${request.createdAt != null ? #temporals.format(request.createdAt, 'dd/MM/yyyy HH:mm') : '-'}"></strong>
+                </div>
+            </div>
+        </div>
+        <div class="mt-3" th:if="${request.note != null and !request.note.isBlank()}">
+            <span class="metric-label">Ghi chú</span>
+            <p class="mb-0" th:text="${request.note}"></p>
+        </div>
+    </section>
+
+    <section class="data-panel mb-3">
+        <div class="panel-heading">
+            <h2>Chi tiết vật tư</h2>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-modern align-middle">
+                <thead>
+                <tr>
+                    <th>Vật tư</th>
+                    <th>Yêu cầu</th>
+                    <th>Duyệt/giữ</th>
+                    <th>Đã xuất</th>
+                    <th>Trạng thái</th>
+                    <th>Lý do</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="l:${lines}">
+                    <td th:text="${l.material.code + ' - ' + l.material.name}"></td>
+                    <td th:text="${l.requestedQuantity}"></td>
+                    <td th:text="${l.approvedQuantity}"></td>
+                    <td th:text="${l.issuedQuantity}"></td>
+                    <td th:text="${l.status ?: '-'}"></td>
+                    <td th:text="${l.reason ?: '-'}"></td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(lines)}">
+                    <td colspan="6" class="text-center text-muted py-4">Chưa có dòng vật tư trong yêu cầu.</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="data-panel">
+        <div class="panel-heading">
+            <h2>Lịch sử xử lý</h2>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-modern align-middle">
+                <thead>
+                <tr>
+                    <th>Thời gian</th>
+                    <th>Người thao tác</th>
+                    <th>Hành động</th>
+                    <th>Ghi chú</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="log:${logs}">
+                    <td th:text="${log.createdAt != null ? #temporals.format(log.createdAt, 'dd/MM/yyyy HH:mm') : '-'}"></td>
+                    <td th:text="${log.actor ?: '-'}"></td>
+                    <td th:text="${log.action ?: '-'}"></td>
+                    <td th:text="${log.note ?: '-'}"></td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(logs)}">
+                    <td colspan="4" class="text-center text-muted py-4">Chưa có lịch sử xử lý.</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+</main>
+<div th:replace="~{fragments/layout :: chatbot}"></div>
+</body>
+</html>

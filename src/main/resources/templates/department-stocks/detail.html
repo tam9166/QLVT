@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Chi tiết tồn tại khoa')}"></head>
+<body><div th:replace="~{fragments/layout :: navbar}"></div>
+<main class="container-fluid py-4">
+    <div class="d-flex justify-content-between mb-3">
+        <div><h1 class="h3" th:text="${item.material.code + ' - ' + item.material.name}"></h1><div class="text-muted" th:text="${item.department + ' / Lô ' + item.batch.batchNumber}"></div></div>
+        <a class="btn btn-outline-secondary" th:href="@{/department-stocks}">Quay lại</a>
+    </div>
+    <div class="row g-3 mb-4">
+        <div class="col-md-2"><div class="panel-card"><div class="text-muted">Còn tại khoa</div><div class="h3" th:text="${item.quantityOnHand}"></div></div></div>
+        <div class="col-md-2"><div class="panel-card"><div class="text-muted">Đã dùng</div><div class="h3" th:text="${item.quantityUsed}"></div></div></div>
+        <div class="col-md-2"><div class="panel-card"><div class="text-muted">Hỏng</div><div class="h3" th:text="${item.quantityDamaged}"></div></div></div>
+        <div class="col-md-2"><div class="panel-card"><div class="text-muted">Mất</div><div class="h3" th:text="${item.quantityLost}"></div></div></div>
+        <div class="col-md-2"><div class="panel-card"><div class="text-muted">Đã trả</div><div class="h3" th:text="${item.quantityReturned}"></div></div></div>
+    </div>
+    <h2 class="h5">Lịch sử biến động</h2>
+    <table class="table table-hover"><thead><tr><th>Thời gian</th><th>Loại</th><th>Số lượng</th><th>Trước</th><th>Sau</th><th>Ghi chú</th></tr></thead>
+        <tbody><tr th:each="m:${movements}"><td th:text="${#temporals.format(m.createdAt,'dd/MM/yyyy HH:mm')}"></td><td th:text="${m.movementType}"></td><td th:text="${m.quantity}"></td><td th:text="${m.beforeQuantity}"></td><td th:text="${m.afterQuantity}"></td><td th:text="${m.note}"></td></tr></tbody></table>
+</main></body></html>

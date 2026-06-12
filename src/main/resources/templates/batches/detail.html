@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Chi tiết lô')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: navbar}"></div>
+<main class="container-fluid app-shell">
+    <section class="data-panel mb-3">
+        <div class="panel-heading">
+            <div>
+                <span class="eyebrow">Chi tiết lô</span>
+                <h1 class="h3" th:text="${batch.batchNumber}"></h1>
+                <p class="text-secondary mb-0" th:text="${batch.material.code + ' - ' + batch.material.name}"></p>
+            </div>
+            <a class="btn btn-outline-light" th:href="@{/batches}">Quay lại</a>
+        </div>
+        <div class="row g-3">
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <span class="metric-label">Kho</span>
+                    <strong th:text="${batch.warehouse.name}"></strong>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <span class="metric-label">Vị trí</span>
+                    <strong th:text="${batch.location != null ? batch.location.code : '-'}"></strong>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <span class="metric-label">Hạn sử dụng</span>
+                    <strong th:text="${batch.expiryDate != null ? #temporals.format(batch.expiryDate, 'dd/MM/yyyy') : '-'}"></strong>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <span class="metric-label">Trạng thái</span>
+                    <strong th:text="${batch.status == null ? '-' : batch.status.label}"></strong>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="data-panel">
+        <div class="panel-heading">
+            <h2>Tồn theo vị trí</h2>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-modern align-middle">
+                <thead>
+                <tr>
+                    <th>Kho</th>
+                    <th>Vị trí</th>
+                    <th>Tồn thực tế</th>
+                    <th>Đã giữ</th>
+                    <th>Chờ xuất</th>
+                    <th>Khả dụng</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="b:${balances}">
+                    <td th:text="${b.warehouse.name}"></td>
+                    <td th:text="${b.location != null ? b.location.code : '-'}"></td>
+                    <td th:text="${b.actualQuantity}"></td>
+                    <td th:text="${b.reservedQuantity}"></td>
+                    <td th:text="${b.pendingIssueQuantity}"></td>
+                    <td th:text="${b.availableQuantity}"></td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(balances)}">
+                    <td colspan="6" class="text-center text-muted py-4">Chưa có số dư tồn theo vị trí.</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+</main>
+</body>
+</html>

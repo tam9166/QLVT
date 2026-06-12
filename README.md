@@ -1,0 +1,145 @@
+# QLVT - Quản lý vật tư y tế bệnh viện
+
+Ứng dụng quản lý vật tư y tế nội bộ cho bệnh viện, tập trung vào tồn kho theo lô, cấp phát FEFO, cảnh báo hạn dùng, tồn tại khoa, điều kiện bảo quản, lịch sử giá nhập, đề nghị mua, chứng từ đính kèm, dashboard vận hành và nhật ký thao tác.
+
+## Công nghệ
+
+- Java 17
+- Spring Boot 3.3.5
+- Spring Security
+- Spring Data JPA / Hibernate
+- SQL Server
+- Thymeleaf
+- Bootstrap 5
+- Maven Wrapper
+
+## Yêu cầu môi trường
+
+- JDK 17 trở lên
+- SQL Server đang chạy
+- Database `qlvt`
+- Tài khoản SQL Server có quyền đọc/ghi schema của database
+
+Không lưu mật khẩu SQL Server thật trong source. Cấu hình qua biến môi trường hoặc cấu hình local riêng trên máy chạy.
+
+## Cấu hình SQL Server
+
+Tạo database nếu chưa có:
+
+```sql
+CREATE DATABASE qlvt;
+```
+
+Ứng dụng đọc cấu hình từ `src/main/resources/application.properties` và các biến môi trường:
+
+- `DB_URL`
+- `DB_USERNAME`
+- `DB_PASSWORD`
+
+Ví dụ cấu hình local trên PowerShell:
+
+```powershell
+$env:DB_URL="jdbc:sqlserver://localhost:1433;databaseName=qlvt;encrypt=true;trustServerCertificate=true"
+$env:DB_USERNAME="tam"
+$env:DB_PASSWORD="<mat-khau-sql-server>"
+```
+
+## Chạy project
+
+```powershell
+cd E:\QLVT
+.\mvnw.cmd spring-boot:run
+```
+
+Hoặc build jar:
+
+```powershell
+cd E:\QLVT
+.\mvnw.cmd -DskipTests package
+java -jar target\qlvt-1.0.0.jar
+```
+
+Mở `http://localhost:8080/login`.
+
+## Build và test
+
+```powershell
+.\mvnw.cmd clean test
+.\mvnw.cmd clean package
+```
+
+Nếu Maven báo `PKIX path building failed` khi tải Surefire từ Maven Central, đây là lỗi chứng chỉ môi trường Java/Maven. Có thể kiểm tra compile/package tạm thời bằng:
+
+```powershell
+.\mvnw.cmd -DskipTests package
+```
+
+## Tài khoản mẫu
+
+Các tài khoản demo của ứng dụng dùng mật khẩu `123456`.
+
+- `admin`: quản trị hệ thống
+- `thukho`: thủ kho
+- `truongkhoa`: trưởng khoa Cấp cứu
+- `nhanvien`: nhân viên khoa Cấp cứu
+- `nhanvien2`: nhân viên khoa Nội tổng hợp
+- `ketoan`: kế toán vật tư
+- `lanhdao`: lãnh đạo bệnh viện
+
+## Role và quyền chính
+
+- `ADMIN`: toàn quyền hệ thống, quản trị người dùng, khoa/phòng, audit log.
+- `WAREHOUSE_STAFF`: nhập kho, xuất kho, quản lý lô, tồn kho, kiểm kê, điều chỉnh, thu hồi, hủy vật tư.
+- `DEPARTMENT_STAFF`: tạo yêu cầu cấp phát, xem/tác nghiệp tồn tại khoa theo phân quyền.
+- `DEPARTMENT_HEAD`: duyệt yêu cầu cấp phát ở cấp khoa.
+- `ACCOUNTANT`: xem báo cáo, lịch sử giá, cảnh báo giá, nghiệp vụ mua hàng/kế toán liên quan.
+- `PROCUREMENT`: đề nghị mua, đơn mua, lịch sử/cảnh báo giá.
+- `MANAGER`: dashboard, duyệt nghiệp vụ kho, kiểm kê, báo cáo.
+
+## Module chính
+
+- Người dùng, vai trò, khoa/phòng, kho, vị trí lưu trữ.
+- Vật tư, lô, hạn dùng, tồn theo kho/vị trí/lô.
+- Cảnh báo tồn thấp, hết hàng, sắp hết hạn.
+- Điều kiện bảo quản vật tư, ghi nhận nhiệt độ/độ ẩm kho, cảnh báo chuỗi lạnh.
+- Nhập kho, xác nhận nhập, lịch sử giá nhập.
+- Yêu cầu cấp vật tư, duyệt khoa, duyệt kho, giữ hàng.
+- Xuất kho FEFO, batch allocation, khoa xác nhận nhận.
+- Tồn tại khoa, báo sử dụng, báo hỏng/mất/hết hạn.
+- Kiểm kê, điều chỉnh tồn, chuyển kho, thu hồi, hủy vật tư.
+- Đề nghị mua, đơn mua, cảnh báo giá, lịch sử giá nhập.
+- Dashboard thông minh, báo cáo, chatbot nội bộ, thông báo, audit log.
+
+## Luồng nghiệp vụ chính
+
+1. Khoa/phòng tạo yêu cầu cấp phát, trưởng khoa duyệt, kho duyệt và xuất theo FEFO.
+2. Thủ kho nhập hàng theo lô, gán kho/vị trí, hệ thống đồng bộ tồn tổng từ lô hợp lệ.
+3. Kiểm kê ghi nhận chênh lệch, tạo phiếu điều chỉnh, quản lý/kế toán duyệt theo ngưỡng giá trị.
+4. Lô sắp hết hạn được ưu tiên xuất; lô hết hạn, cách ly, thu hồi hoặc hủy bị chặn cấp phát.
+5. Vật tư tồn thấp hoặc có tốc độ dùng cao được đưa vào đề xuất mua hàng trên dashboard.
+6. Kho ghi nhận nhiệt độ/độ ẩm; cảnh báo bảo quản xuất hiện trên dashboard và module bảo quản.
+
+## Quy tắc tồn kho
+
+- Tồn tổng của vật tư được đồng bộ từ các lô còn hiệu lực.
+- Lô hết hạn, cách ly, thu hồi hoặc hủy không được cấp phát.
+- Xuất kho dùng FEFO: ưu tiên lô có hạn dùng gần nhất trước.
+- Không cho số lượng âm và không cho xuất vượt tồn khả dụng.
+- Điều chỉnh tồn phải đi qua phiếu điều chỉnh hoặc kiểm kê.
+
+## QR vật tư
+
+- QR công khai chỉ hiển thị mã, tên, loại, đơn vị tính, ghi chú an toàn và trạng thái cơ bản.
+- QR nội bộ yêu cầu đăng nhập và quyền kho/quản lý/admin để xem tồn, lô, hạn dùng, vị trí và trạng thái.
+
+## Ghi chú vận hành
+
+- Khi dữ liệu cũ bị lệch giữa vật tư và lô, runner khởi động sẽ đồng bộ lại `materials.actual_quantity` từ các lô hợp lệ.
+- Không commit cấu hình local chứa mật khẩu thật.
+
+## Tài liệu bàn giao
+
+- `BUSINESS_FLOW.md`: mô tả luồng nghiệp vụ và điểm kiểm soát.
+- `UI_GUIDELINE.md`: chuẩn giao diện, spacing, typography và trạng thái.
+- `TEST_CHECKLIST.md`: checklist kiểm thử thủ công theo giai đoạn.
+- `CHANGELOG.md`: thay đổi đã hoàn thiện trong đợt nâng cấp.

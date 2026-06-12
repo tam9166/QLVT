@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" xmlns:sec="https://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments/layout :: head('Phiếu nhập kho')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: navbar}"></div>
+<main class="container-fluid app-shell">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="h3 mb-0">Phiếu nhập kho</h1>
+        <a class="btn btn-primary" th:href="@{/receipts/new}"><i class="bi bi-plus-lg"></i> Tạo phiếu nhập</a>
+    </div>
+    <section class="data-panel">
+        <div class="table-responsive">
+            <table class="table table-modern align-middle">
+                <thead>
+                <tr>
+                    <th>Mã phiếu</th>
+                    <th>Kho</th>
+                    <th>Nhà cung cấp</th>
+                    <th>Trạng thái</th>
+                    <th>Ngày tạo</th>
+                    <th></th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="r:${receipts}">
+                    <td><a th:href="@{/receipts/{id}(id=${r.id})}" th:text="${r.receiptCode}"></a></td>
+                    <td th:text="${r.warehouse != null ? r.warehouse.name : '-'}"></td>
+                    <td th:text="${r.supplier != null ? r.supplier.name : '-'}"></td>
+                    <td><span class="badge text-bg-info" th:text="${r.status}"></span></td>
+                    <td th:text="${r.createdAt != null ? #temporals.format(r.createdAt, 'dd/MM/yyyy HH:mm') : '-'}"></td>
+                    <td class="text-end d-flex gap-2 justify-content-end">
+                        <a class="btn btn-sm btn-outline-light" th:href="@{/receipts/{id}(id=${r.id})}">Chi tiết</a>
+                        <form sec:authorize="hasRole('ADMIN')"
+                              th:action="@{/receipts/{id}/delete(id=${r.id})}"
+                              method="post"
+                              onsubmit="return confirm('Xóa phiếu nhập này?')">
+                            <button class="btn btn-sm btn-danger">Xóa</button>
+                        </form>
+                    </td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(receipts)}">
+                    <td colspan="6" class="text-center text-muted py-4">Chưa có phiếu nhập kho.</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+</main>
+<div th:replace="~{fragments/layout :: chatbot}"></div>
+</body>
+</html>

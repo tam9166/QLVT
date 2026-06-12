@@ -1,0 +1,20 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "java",
+      "name": "QlvtApplication",
+      "request": "launch",
+      "mainClass": "com.qlvt.QlvtApplication",
+      "projectName": "medical-inventory-management"
+    },
+    {
+      "type": "java",
+      "name": "Run QLVT Spring Boot",
+      "request": "launch",
+      "mainClass": "com.qlvt.QlvtApplication",
+      "projectName": "qlvt",
+      "cwd": "${workspaceFolder}"
+    }
+  ]
+}

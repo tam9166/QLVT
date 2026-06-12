@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Vị trí lưu kho')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: navbar}"></div>
+<main class="container-fluid app-shell">
+    <section class="data-panel">
+        <div class="panel-heading">
+            <div><span class="eyebrow">Quản trị vị trí</span><h1 class="h3">Kệ, tủ, ngăn, vị trí</h1></div>
+            <a class="btn btn-primary" th:href="@{/locations/new}"><i class="bi bi-plus-lg"></i> Thêm vị trí</a>
+        </div>
+        <form class="row g-2 mb-3">
+            <div class="col-md-5">
+                <select class="form-select" name="warehouseId">
+                    <option value="">Tất cả kho</option>
+                    <option th:each="w:${warehouses}" th:value="${w.id}" th:selected="${warehouseId == w.id}" th:text="${w.code + ' - ' + w.name}"></option>
+                </select>
+            </div>
+            <div class="col-auto"><button class="btn btn-outline-light">Lọc</button></div>
+        </form>
+        <div class="table-responsive">
+            <table class="table table-modern align-middle">
+                <thead><tr><th>Mã</th><th>Tên vị trí</th><th>Kho</th><th>Vị trí cha</th><th>Loại</th><th></th></tr></thead>
+                <tbody>
+                <tr th:each="l:${locations}">
+                    <td><span class="code-pill" th:text="${l.code}"></span></td>
+                    <td th:text="${l.name}"></td>
+                    <td th:text="${l.warehouse.name}"></td>
+                    <td th:text="${l.parent == null ? '-' : l.parent.name}"></td>
+                    <td th:text="${l.locationType == null ? '-' : l.locationType}"></td>
+                    <td class="text-end">
+                        <a class="btn btn-sm btn-outline-light" th:href="@{/locations/{id}/edit(id=${l.id})}">Sửa</a>
+                        <form class="d-inline" method="post" th:action="@{/locations/{id}/delete(id=${l.id})}" onsubmit="return confirm('Xóa mềm vị trí này?')"><button class="btn btn-sm btn-outline-light">Xóa</button></form>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+</main>
+</body>
+</html>

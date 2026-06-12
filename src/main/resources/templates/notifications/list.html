@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Thông báo')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: navbar}"></div>
+<main class="container-fluid app-shell">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="h3 mb-0">Thông báo</h1>
+        <form th:action="@{/notifications/read-all}" method="post">
+            <button class="btn btn-outline-light">Đánh dấu đã đọc tất cả</button>
+        </form>
+    </div>
+
+    <section class="data-panel">
+        <div class="table-responsive">
+            <table class="table table-modern align-middle">
+                <thead>
+                <tr>
+                    <th>Tiêu đề</th>
+                    <th>Nội dung</th>
+                    <th>Loại</th>
+                    <th>Người nhận</th>
+                    <th>Trạng thái</th>
+                    <th></th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="i:${items}">
+                    <td><a th:href="${i.link}" th:text="${i.title}"></a></td>
+                    <td th:text="${i.content}"></td>
+                    <td th:text="${i.type}"></td>
+                    <td th:text="${i.receiver}"></td>
+                    <td>
+                        <span th:class="${i.readStatus ? 'badge text-bg-success' : 'badge text-bg-danger'}"
+                              th:text="${i.readStatus ? 'Đã đọc' : 'Chưa đọc'}"></span>
+                    </td>
+                    <td class="text-end">
+                        <form th:if="${!i.readStatus}" th:action="@{/notifications/{id}/read(id=${i.id})}" method="post">
+                            <button class="btn btn-sm btn-outline-light">Đã đọc</button>
+                        </form>
+                    </td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(items)}">
+                    <td colspan="6" class="text-center text-muted py-4">Chưa có thông báo.</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+</main>
+<div th:replace="~{fragments/layout :: chatbot}"></div>
+</body>
+</html>

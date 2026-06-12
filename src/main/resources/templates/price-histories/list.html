@@ -1,0 +1,9 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Lịch sử giá nhập')}"></head>
+<body><div th:replace="~{fragments/layout :: navbar}"></div>
+<main class="container-fluid py-4">
+    <div class="d-flex justify-content-between mb-3"><h1 class="h3">Lịch sử giá nhập</h1><a class="btn btn-outline-danger" th:href="@{/price-alerts}">Cảnh báo giá</a></div>
+    <table class="table table-hover"><thead><tr><th>Ngày nhập</th><th>Vật tư</th><th>Nhà cung cấp</th><th>Phiếu nhập</th><th>Số lượng</th><th>Đơn giá</th><th>Thành tiền</th><th></th></tr></thead>
+        <tbody><tr th:each="i:${items}"><td th:text="${i.receivedDate != null ? #temporals.format(i.receivedDate,'dd/MM/yyyy') : '-'}"></td><td th:text="${i.material.code + ' - ' + i.material.name}"></td><td th:text="${i.supplier != null ? i.supplier.name : '-'}"></td><td th:text="${i.receipt.receiptCode}"></td><td th:text="${i.quantity}"></td><td th:text="${i.unitPrice}"></td><td th:text="${i.totalAmount}"></td><td class="text-end"><a class="btn btn-sm btn-outline-primary" th:href="@{/price-histories/material/{id}(id=${i.material.id})}">Theo vật tư</a></td></tr></tbody></table>
+</main></body></html>

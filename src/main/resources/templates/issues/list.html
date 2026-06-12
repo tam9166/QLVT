@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" xmlns:sec="https://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments/layout :: head('Phiếu xuất kho')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: navbar}"></div>
+<main class="container-fluid app-shell">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="h3 mb-0">Phiếu xuất kho</h1>
+        <a class="btn btn-primary" th:href="@{/issues/new}">
+            <i class="bi bi-plus-lg"></i> Tạo phiếu xuất
+        </a>
+    </div>
+    <section class="data-panel">
+        <div class="table-responsive">
+            <table class="table table-modern align-middle">
+                <thead>
+                <tr>
+                    <th>Mã phiếu</th>
+                    <th>Yêu cầu</th>
+                    <th>Khoa nhận</th>
+                    <th>Kho</th>
+                    <th>Trạng thái</th>
+                    <th>Ngày tạo</th>
+                    <th></th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="i:${issues}">
+                    <td><a th:href="@{/issues/{id}(id=${i.id})}" th:text="${i.issueCode}"></a></td>
+                    <td th:text="${i.materialRequest != null ? i.materialRequest.code : '-'}"></td>
+                    <td th:text="${i.department ?: '-'}"></td>
+                    <td th:text="${i.warehouse != null ? i.warehouse.name : '-'}"></td>
+                    <td><span class="badge text-bg-info" th:text="${i.status}"></span></td>
+                    <td th:text="${i.createdAt != null ? #temporals.format(i.createdAt, 'dd/MM/yyyy HH:mm') : '-'}"></td>
+                    <td class="text-end d-flex gap-2 justify-content-end">
+                        <a class="btn btn-sm btn-outline-light" th:href="@{/issues/{id}(id=${i.id})}">Chi tiết</a>
+                        <form sec:authorize="hasRole('ADMIN')"
+                              th:action="@{/issues/{id}/delete(id=${i.id})}"
+                              method="post"
+                              onsubmit="return confirm('Xóa phiếu xuất này?')">
+                            <button class="btn btn-sm btn-danger">Xóa</button>
+                        </form>
+                    </td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(issues)}">
+                    <td colspan="7" class="text-center text-muted py-4">Chưa có phiếu xuất kho.</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+</main>
+<div th:replace="~{fragments/layout :: chatbot}"></div>
+</body>
+</html>

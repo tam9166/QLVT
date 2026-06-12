@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Tạo yêu cầu')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: navbar}"></div>
+<main class="container py-4">
+    <h1 class="h3 mb-3">Tạo yêu cầu cấp vật tư</h1>
+
+    <div class="alert alert-danger" th:if="${stockError != null}" th:text="${stockError}"></div>
+
+    <form id="requestForm" th:action="@{/requests}" method="post" class="row g-3">
+        <div class="col-md-4">
+            <label class="form-label">Khoa/phòng</label>
+            <input class="form-control" name="department" th:value="${selectedDepartment}" required>
+        </div>
+        <div class="col-md-8">
+            <label class="form-label">Vật tư</label>
+            <select id="materialSelect" class="form-select" name="materialId" required>
+                <option th:each="m:${materials}"
+                        th:value="${m.id}"
+                        th:selected="${selectedMaterialId != null and selectedMaterialId == m.id}"
+                        th:attr="data-available=${availableByMaterial[m.id]},data-unit=${m.unit ?: ''}"
+                        th:text="${m.code + ' - ' + m.name + ' | còn ' + availableByMaterial[m.id] + ' ' + (m.unit ?: '')}">
+                </option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Số lượng lấy</label>
+            <input id="quantityInput" class="form-control" type="number" min="1" name="quantity" th:value="${selectedQuantity}" required>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Mức ưu tiên</label>
+            <select class="form-select" name="priority">
+                <option value="BINH_THUONG" th:selected="${selectedPriority == null or selectedPriority == 'BINH_THUONG'}">Bình thường</option>
+                <option value="KHAN_CAP" th:selected="${selectedPriority == 'KHAN_CAP'}">Khẩn cấp</option>
+            </select>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Lý do</label>
+            <input class="form-control" name="reason" th:value="${selectedReason}">
+        </div>
+        <div class="col-12">
+            <div id="stockHint" class="alert alert-info mb-0"></div>
+        </div>
+        <div class="col-12">
+            <button id="submitBtn" class="btn btn-primary">Gửi yêu cầu</button>
+            <a class="btn btn-secondary" th:href="@{/requests}">Quay lại</a>
+        </div>
+    </form>
+</main>
+<script>
+    const materialSelect = document.getElementById('materialSelect');
+    const quantityInput = document.getElementById('quantityInput');
+    const stockHint = document.getElementById('stockHint');
+    const submitBtn = document.getElementById('submitBtn');
+
+    function updateStockHint() {
+        const selected = materialSelect.options[materialSelect.selectedIndex];
+        const available = Number.parseInt(selected?.dataset.available || '0', 10);
+        const unit = selected?.dataset.unit || '';
+        const quantity = Number.parseInt(quantityInput.value || '0', 10);
+        stockHint.className = 'alert mb-0 ' + (quantity > available ? 'alert-danger' : 'alert-info');
+        stockHint.textContent = quantity > available
+            ? `Không đủ tồn để lấy. Vật tư này chỉ còn ${available} ${unit}.`
+            : `Còn: ${available} ${unit}.`;
+        submitBtn.disabled = quantity > available;
+    }
+
+    materialSelect.addEventListener('change', updateStockHint);
+    quantityInput.addEventListener('input', updateStockHint);
+    updateStockHint();
+</script>
+</body>
+</html>

@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Quản lý lô và hạn sử dụng')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: navbar}"></div>
+<main class="container-fluid app-shell">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="h3 mb-0">Quản lý lô và hạn sử dụng</h1>
+        <a class="btn btn-outline-light" th:href="@{/alerts}">Xem cảnh báo</a>
+    </div>
+
+    <div class="alert alert-warning" th:if="${!#lists.isEmpty(expiring)}">
+        Có <strong th:text="${expiring.size()}"></strong> lô sắp hết hạn trong
+        <span th:text="${expiringDays}"></span> ngày.
+    </div>
+
+    <section class="data-panel">
+        <div class="table-responsive">
+            <table class="table table-modern align-middle">
+                <thead>
+                <tr>
+                    <th>Số lô</th>
+                    <th>Vật tư</th>
+                    <th>Kho</th>
+                    <th>Vị trí</th>
+                    <th>Tồn lô</th>
+                    <th>Hạn sử dụng</th>
+                    <th>Ngày còn lại</th>
+                    <th>Cảnh báo</th>
+                    <th>Trạng thái</th>
+                    <th></th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="b:${batches}">
+                    <td><span class="code-pill" th:text="${b.batchNumber}"></span></td>
+                    <td th:text="${b.material.code + ' - ' + b.material.name}"></td>
+                    <td th:text="${b.warehouse.name}"></td>
+                    <td th:text="${b.location != null ? b.location.code : '-'}"></td>
+                    <td th:text="${b.quantity}"></td>
+                    <td th:text="${b.expiryDate != null ? #temporals.format(b.expiryDate, 'dd/MM/yyyy') : '-'}"></td>
+                    <td th:with="days=${alertService.daysToExpiry(b)}" th:text="${days > 1000000 ? '-' : days}"></td>
+                    <td>
+                        <span th:with="level=${alertService.expiryLevel(b)}"
+                              th:class="${'badge text-bg-' + level.badgeClass}"
+                              th:text="${level.label}"></span>
+                    </td>
+                    <td><span class="badge text-bg-secondary" th:text="${b.status == null ? '-' : b.status.label}"></span></td>
+                    <td class="text-end">
+                        <a class="btn btn-sm btn-outline-light" th:href="@{/batches/{id}(id=${b.id})}">Chi tiết</a>
+                    </td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(batches)}">
+                    <td colspan="10" class="text-center text-muted py-4">Chưa có lô vật tư.</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+</main>
+</body>
+</html>

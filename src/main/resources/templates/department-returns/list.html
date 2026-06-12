@@ -1,0 +1,9 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Phiếu trả vật tư từ khoa')}"></head>
+<body><div th:replace="~{fragments/layout :: navbar}"></div>
+<main class="container-fluid py-4">
+    <div class="d-flex justify-content-between mb-3"><h1 class="h3">Phiếu trả vật tư từ khoa</h1><a class="btn btn-primary" th:href="@{/department-returns/new}">Tạo phiếu trả</a></div>
+    <table class="table table-hover"><thead><tr><th>Mã</th><th>Khoa</th><th>Kho nhận</th><th>Trạng thái</th><th>Ngày tạo</th><th></th></tr></thead>
+        <tbody><tr th:each="i:${items}"><td><a th:href="@{/department-returns/{id}(id=${i.id})}" th:text="${i.returnCode}"></a></td><td th:text="${i.department}"></td><td th:text="${i.warehouse.name}"></td><td><span class="badge text-bg-info" th:text="${i.status}"></span></td><td th:text="${#temporals.format(i.createdAt,'dd/MM/yyyy HH:mm')}"></td><td class="text-end"><a class="btn btn-sm btn-outline-primary" th:href="@{/department-returns/{id}(id=${i.id})}">Chi tiết</a></td></tr></tbody></table>
+</main></body></html>

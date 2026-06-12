@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Tạo phiếu trả từ khoa')}"></head>
+<body><div th:replace="~{fragments/layout :: navbar}"></div>
+<main class="container py-4">
+    <h1 class="h3 mb-3">Tạo phiếu trả vật tư về kho</h1>
+    <form method="post" th:action="@{/department-returns}" class="panel-card">
+        <label class="form-label">Vật tư/lô tại khoa</label><select class="form-select mb-3" name="stockId" required><option th:each="s:${stocks}" th:value="${s.id}" th:text="${s.department + ' - ' + s.material.code + ' - ' + s.material.name + ' / lô ' + s.batch.batchNumber + ' / còn ' + s.quantityOnHand}"></option></select>
+        <label class="form-label">Kho nhận lại</label><select class="form-select mb-3" name="warehouseId" required><option th:each="w:${warehouses}" th:value="${w.id}" th:text="${w.code + ' - ' + w.name}"></option></select>
+        <label class="form-label">Vị trí nhập lại</label><select class="form-select mb-3" name="locationId" required><option th:each="l:${locations}" th:value="${l.id}" th:text="${l.code}"></option></select>
+        <label class="form-label">Số lượng trả</label><input class="form-control mb-3" type="number" name="quantity" min="1" required>
+        <label class="form-label">Lý do</label><textarea class="form-control mb-3" name="reason"></textarea>
+        <button class="btn btn-primary">Gửi phiếu trả</button>
+    </form>
+</main></body></html>

@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Xuất kho FEFO')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: navbar}"></div>
+<main class="container py-4">
+    <h1 class="h3 mb-3">Xuất kho theo FEFO</h1>
+    <form th:action="@{/stock/issue}" method="post" class="row g-3">
+        <div class="col-md-7">
+            <label class="form-label">Vật tư</label>
+            <select class="form-select" name="materialId" required>
+                <option th:each="m:${materials}" th:value="${m.id}" th:text="${m.code + ' - ' + m.name}"></option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Số lượng</label>
+            <input class="form-control" type="number" min="1" name="quantity" required>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">Khoa nhận</label>
+            <input class="form-control" name="department" value="Khoa Cấp cứu" required>
+        </div>
+        <div class="col-12">
+            <button class="btn btn-primary">Xuất kho</button>
+            <a class="btn btn-secondary" th:href="@{/stock}">Quay lại</a>
+        </div>
+    </form>
+</main>
+</body>
+</html>

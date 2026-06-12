@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Sửa phiếu xuất')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: navbar}"></div>
+<main class="container-fluid app-shell">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <span class="eyebrow">Phiếu xuất kho</span>
+            <h1 class="h3 mb-1" th:text="${issue.issueCode}"></h1>
+            <p class="text-secondary mb-0">Chỉ sửa được khi phiếu chưa xuất kho.</p>
+        </div>
+        <a class="btn btn-outline-light" th:href="@{/issues/{id}(id=${issue.id})}">Quay lại</a>
+    </div>
+
+    <form class="data-panel" th:action="@{/issues/{id}/edit(id=${issue.id})}" method="post">
+        <div class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">Kho xuất</label>
+                <select class="form-select" name="warehouseId" required>
+                    <option th:each="w:${warehouses}" th:value="${w.id}" th:selected="${issue.warehouse != null and issue.warehouse.id == w.id}" th:text="${w.name}"></option>
+                </select>
+            </div>
+            <div class="col-md-5">
+                <label class="form-label">Vật tư</label>
+                <select class="form-select" name="materialId" required>
+                    <option th:each="m:${materials}" th:value="${m.id}" th:selected="${line != null and line.material.id == m.id}" th:text="${m.code + ' - ' + m.name}"></option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Số lượng xuất</label>
+                <input class="form-control" type="number" min="1" name="quantity" th:value="${line != null ? line.approvedQuantity : 1}" required>
+            </div>
+            <div class="col-12">
+                <label class="form-label">Ghi chú</label>
+                <input class="form-control" name="note" th:value="${issue.note}">
+            </div>
+            <div class="col-12 d-flex gap-2">
+                <button class="btn btn-primary">Lưu thay đổi</button>
+                <a class="btn btn-outline-light" th:href="@{/issues/{id}(id=${issue.id})}">Hủy</a>
+            </div>
+        </div>
+    </form>
+</main>
+<div th:replace="~{fragments/layout :: chatbot}"></div>
+</body>
+</html>

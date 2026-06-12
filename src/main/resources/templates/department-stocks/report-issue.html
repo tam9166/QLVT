@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Báo sự cố vật tư tại khoa')}"></head>
+<body><div th:replace="~{fragments/layout :: navbar}"></div>
+<main class="container py-4">
+    <h1 class="h3 mb-3">Báo hỏng, mất, hết hạn tại khoa</h1>
+    <form method="post" th:action="@{/department-stocks/report-issue}" class="panel-card">
+        <label class="form-label">Vật tư/lô</label><select class="form-select mb-3" name="stockId" required><option th:each="s:${stocks}" th:value="${s.id}" th:text="${s.department + ' - ' + s.material.code + ' - ' + s.material.name + ' / lô ' + s.batch.batchNumber + ' / còn ' + s.quantityOnHand}"></option></select>
+        <label class="form-label">Loại sự cố</label><select class="form-select mb-3" name="issueType" required><option th:each="t:${issueTypes}" th:value="${t}" th:text="${t.label}"></option></select>
+        <label class="form-label">Số lượng</label><input class="form-control mb-3" type="number" name="quantity" min="1" required>
+        <label class="form-label">Lý do/Ghi chú</label><textarea class="form-control mb-3" name="note"></textarea>
+        <button class="btn btn-danger">Ghi nhận sự cố</button>
+    </form>
+</main></body></html>

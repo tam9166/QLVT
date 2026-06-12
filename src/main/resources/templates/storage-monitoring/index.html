@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Điều kiện bảo quản')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: navbar}"></div>
+<main class="container-fluid app-shell">
+    <div class="d-flex justify-content-between align-items-start gap-3 mb-4">
+        <div>
+            <span class="eyebrow">Kho & điều kiện bảo quản</span>
+            <h1 class="h3 mb-1">Giám sát nhiệt độ, độ ẩm và chuỗi lạnh</h1>
+            <p class="text-secondary mb-0">Theo dõi điều kiện bảo quản vật tư và ghi nhận rủi ro môi trường kho.</p>
+        </div>
+        <a class="btn btn-outline-secondary" th:href="@{/alerts}"><i class="bi bi-bell"></i> Cảnh báo</a>
+    </div>
+
+    <section class="row g-3 mb-4">
+        <div class="col-lg-5">
+            <div class="data-panel h-100">
+                <h2 class="h5 mb-3">Cấu hình điều kiện vật tư</h2>
+                <form th:action="@{/storage-monitoring/conditions}" method="post" class="row g-3">
+                    <div class="col-12">
+                        <label class="form-label">Vật tư</label>
+                        <select class="form-select" name="materialId" required>
+                            <option th:each="m : ${materials}" th:value="${m.id}" th:text="${m.code + ' - ' + m.name}">VT001 - Vật tư</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Nhiệt độ tối thiểu (C)</label>
+                        <input class="form-control" name="minTemperature" type="number" step="0.1" placeholder="2">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Nhiệt độ tối đa (C)</label>
+                        <input class="form-control" name="maxTemperature" type="number" step="0.1" placeholder="8">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Độ ẩm tối thiểu (%)</label>
+                        <input class="form-control" name="minHumidity" type="number" step="0.1" placeholder="35">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Độ ẩm tối đa (%)</label>
+                        <input class="form-control" name="maxHumidity" type="number" step="0.1" placeholder="65">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-check">
+                            <input class="form-check-input" type="checkbox" name="coldChainRequired" value="true">
+                            <span class="form-check-label">Yêu cầu chuỗi lạnh</span>
+                        </label>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-check">
+                            <input class="form-check-input" type="checkbox" name="lightSensitive" value="true">
+                            <span class="form-check-label">Nhạy sáng</span>
+                        </label>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Ghi chú</label>
+                        <textarea class="form-control" name="note" rows="2" placeholder="Ví dụ: bảo quản trong thùng lạnh, tránh ánh sáng trực tiếp"></textarea>
+                    </div>
+                    <div class="col-12">
+                        <button class="btn btn-primary" type="submit"><i class="bi bi-save"></i> Lưu điều kiện</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <div class="col-lg-7">
+            <div class="data-panel h-100">
+                <h2 class="h5 mb-3">Ghi nhận nhiệt độ kho</h2>
+                <form th:action="@{/storage-monitoring/temperature-logs}" method="post" class="row g-3 mb-4">
+                    <div class="col-md-5">
+                        <label class="form-label">Kho</label>
+                        <select class="form-select" name="warehouseId" required>
+                            <option th:each="w : ${warehouses}" th:value="${w.id}" th:text="${w.code + ' - ' + w.name}">KHO001 - Kho</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Nhiệt độ</label>
+                        <input class="form-control" name="temperature" type="number" step="0.1" placeholder="24">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Độ ẩm</label>
+                        <input class="form-control" name="humidity" type="number" step="0.1" placeholder="60">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Ghi chú</label>
+                        <input class="form-control" name="note" placeholder="Ca trực sáng">
+                    </div>
+                    <div class="col-12">
+                        <button class="btn btn-primary" type="submit"><i class="bi bi-thermometer-half"></i> Ghi nhận</button>
+                    </div>
+                </form>
+
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead>
+                        <tr>
+                            <th>Thời điểm</th>
+                            <th>Kho</th>
+                            <th>Nhiệt độ</th>
+                            <th>Độ ẩm</th>
+                            <th>Trạng thái</th>
+                            <th>Người ghi</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="log : ${temperatureLogs}">
+                            <td th:text="${#temporals.format(log.recordedAt, 'dd/MM/yyyy HH:mm')}">12/06/2026 08:00</td>
+                            <td th:text="${log.warehouse.code + ' - ' + log.warehouse.name}">KHO001</td>
+                            <td th:text="${log.temperature != null ? log.temperature + ' C' : '-'}">24 C</td>
+                            <td th:text="${log.humidity != null ? log.humidity + '%' : '-'}">60%</td>
+                            <td>
+                                <span class="badge"
+                                      th:classappend="${log.status == 'RISK' ? ' text-bg-danger' : (log.status == 'WARNING' ? ' text-bg-warning' : ' text-bg-success')}"
+                                      th:text="${log.status == 'RISK' ? 'Rủi ro' : (log.status == 'WARNING' ? 'Cần theo dõi' : 'Ổn định')}">Ổn định</span>
+                            </td>
+                            <td th:text="${log.recordedBy ?: '-'}">thukho</td>
+                        </tr>
+                        <tr th:if="${#lists.isEmpty(temperatureLogs)}">
+                            <td colspan="6" class="text-center text-muted py-4">Chưa có bản ghi nhiệt độ kho.</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="data-panel">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2 class="h5 mb-0">Điều kiện bảo quản đã cấu hình</h2>
+            <span class="badge text-bg-info" th:text="${conditions.size() + ' vật tư'}">0 vật tư</span>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead>
+                <tr>
+                    <th>Vật tư</th>
+                    <th>Nhiệt độ</th>
+                    <th>Độ ẩm</th>
+                    <th>Yêu cầu</th>
+                    <th>Ghi chú</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="c : ${conditions}">
+                    <td>
+                        <strong th:text="${c.material.code}">VT001</strong>
+                        <div class="text-secondary small" th:text="${c.material.name}">Tên vật tư</div>
+                    </td>
+                    <td th:text="${(c.minTemperature != null ? c.minTemperature : '-') + ' - ' + (c.maxTemperature != null ? c.maxTemperature : '-') + ' C'}">2 - 8 C</td>
+                    <td th:text="${(c.minHumidity != null ? c.minHumidity : '-') + ' - ' + (c.maxHumidity != null ? c.maxHumidity : '-') + '%'}">35 - 65%</td>
+                    <td>
+                        <span class="badge text-bg-primary" th:if="${c.coldChainRequired}">Chuỗi lạnh</span>
+                        <span class="badge text-bg-warning" th:if="${c.lightSensitive}">Nhạy sáng</span>
+                        <span class="text-muted" th:if="${!c.coldChainRequired and !c.lightSensitive}">Tiêu chuẩn</span>
+                    </td>
+                    <td th:text="${c.note ?: '-'}">Ghi chú</td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(conditions)}">
+                    <td colspan="5" class="text-center text-muted py-4">Chưa cấu hình điều kiện bảo quản.</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+</main>
+<div th:replace="~{fragments/layout :: chatbot}"></div>
+</body>
+</html>

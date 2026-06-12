@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Đề nghị mua')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: navbar}"></div>
+<main class="container-fluid app-shell">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="h3 mb-0">Đề nghị mua</h1>
+        <div class="d-flex gap-2">
+            <a class="btn btn-outline-light" th:href="@{/purchases/orders}">Đơn đặt hàng</a>
+            <form th:action="@{/purchases/requests/from-low-stock}" method="post">
+                <button class="btn btn-primary">Tạo từ tồn thấp</button>
+            </form>
+        </div>
+    </div>
+
+    <section class="data-panel">
+        <div class="table-responsive">
+            <table class="table table-modern align-middle">
+                <thead>
+                <tr>
+                    <th>Mã đề nghị</th>
+                    <th>Lý do</th>
+                    <th>Người tạo</th>
+                    <th>Ngày tạo</th>
+                    <th>Trạng thái</th>
+                    <th></th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="i:${items}">
+                    <td><a th:href="@{/purchases/requests/{id}(id=${i.id})}" th:text="${i.requestCode}"></a></td>
+                    <td th:text="${i.reason}"></td>
+                    <td th:text="${i.createdBy}"></td>
+                    <td th:text="${i.createdAt != null ? #temporals.format(i.createdAt, 'dd/MM/yyyy HH:mm') : '-'}"></td>
+                    <td><span class="badge text-bg-info" th:text="${i.status}"></span></td>
+                    <td class="text-end">
+                        <a class="btn btn-sm btn-outline-light" th:href="@{/purchases/requests/{id}(id=${i.id})}">Chi tiết</a>
+                    </td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(items)}">
+                    <td colspan="6" class="text-center text-muted py-4">Chưa có đề nghị mua.</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+</main>
+</body>
+</html>

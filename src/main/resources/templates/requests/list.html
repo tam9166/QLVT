@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Yêu cầu cấp vật tư')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: navbar}"></div>
+<main class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="h3">Yêu cầu cấp vật tư</h1>
+        <a class="btn btn-primary" th:href="@{/requests/new}"><i class="bi bi-plus-lg"></i> Tạo yêu cầu</a>
+    </div>
+    <table class="table table-hover align-middle">
+        <thead><tr><th>Mã phiếu</th><th>Khoa</th><th>Người tạo</th><th>Ưu tiên</th><th>Trạng thái</th><th>Ngày tạo</th><th></th></tr></thead>
+        <tbody>
+        <tr th:each="r:${requests}">
+            <td><a th:href="@{/requests/{id}(id=${r.id})}" th:text="${r.code}"></a></td>
+            <td th:text="${r.department}"></td>
+            <td th:text="${r.requester}"></td>
+            <td th:text="${r.priority}"></td>
+            <td><span class="badge text-bg-info" th:text="${r.status}"></span></td>
+            <td th:text="${#temporals.format(r.createdAt,'dd/MM/yyyy HH:mm')}"></td>
+            <td class="text-end"><a class="btn btn-sm btn-outline-primary" th:href="@{/requests/{id}(id=${r.id})}">Chi tiết</a></td>
+        </tr>
+        </tbody>
+    </table>
+</main>
+</body>
+</html>

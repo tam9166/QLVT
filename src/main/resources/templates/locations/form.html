@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Thông tin vị trí')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: navbar}"></div>
+<main class="container app-shell">
+    <section class="data-panel">
+        <span class="eyebrow">Biểu mẫu vị trí</span>
+        <h1 class="h3 mb-3">Thông tin vị trí lưu kho</h1>
+        <form th:action="@{/locations}" th:object="${locationForm}" method="post" class="row g-3">
+            <input type="hidden" th:field="*{id}">
+            <div class="col-md-6">
+                <label class="form-label">Kho</label>
+                <select class="form-select" th:field="*{warehouseId}">
+                    <option value="">Chọn kho</option>
+                    <option th:each="w:${warehouses}" th:value="${w.id}" th:text="${w.code + ' - ' + w.name}"></option>
+                </select>
+                <div class="text-danger small" th:errors="*{warehouseId}"></div>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Vị trí cha</label>
+                <select class="form-select" th:field="*{parentId}">
+                    <option value="">Không có</option>
+                    <option th:each="p:${parents}" th:value="${p.id}" th:text="${p.code + ' - ' + p.name}"></option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Mã vị trí</label>
+                <input class="form-control" th:field="*{code}">
+                <div class="text-danger small" th:errors="*{code}"></div>
+            </div>
+            <div class="col-md-5">
+                <label class="form-label">Tên vị trí</label>
+                <input class="form-control" th:field="*{name}">
+                <div class="text-danger small" th:errors="*{name}"></div>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Loại</label>
+                <select class="form-select" th:field="*{locationType}">
+                    <option value="">Chọn loại</option>
+                    <option th:each="t:${types}" th:value="${t.name()}" th:text="${t.label}"></option>
+                </select>
+                <div class="text-danger small" th:errors="*{locationType}"></div>
+            </div>
+            <div class="col-12">
+                <label class="form-label">Mô tả</label>
+                <textarea class="form-control" th:field="*{description}"></textarea>
+            </div>
+            <div class="col-12 form-check ms-2">
+                <input class="form-check-input" type="checkbox" th:field="*{active}">
+                <label class="form-check-label">Đang hoạt động</label>
+            </div>
+            <div class="col-12">
+                <button class="btn btn-primary">Lưu</button>
+                <a class="btn btn-outline-light" th:href="@{/locations}">Quay lại</a>
+            </div>
+        </form>
+    </section>
+</main>
+</body>
+</html>

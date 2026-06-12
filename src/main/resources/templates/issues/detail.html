@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" xmlns:sec="https://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments/layout :: head('Chi tiết phiếu xuất')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: navbar}"></div>
+<main class="container-fluid app-shell">
+    <section class="data-panel">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <span class="eyebrow">Phiếu xuất kho</span>
+                <h1 class="h3 mb-1" th:text="${issue.issueCode}"></h1>
+                <span class="badge text-bg-info" th:text="${issue.status}"></span>
+            </div>
+            <div class="d-flex gap-2 flex-wrap justify-content-end">
+                <a class="btn btn-outline-light" th:href="@{/issues}">Quay lại</a>
+                <a class="btn btn-outline-light"
+                   th:if="${issue.status.name() == 'PREPARING' or issue.status.name() == 'DRAFT'}"
+                   th:href="@{/issues/{id}/edit(id=${issue.id})}">
+                    <i class="bi bi-pencil-square"></i> Sửa phiếu
+                </a>
+                <a class="btn btn-outline-light" th:href="@{/issues/{id}/invoice.pdf(id=${issue.id})}">
+                    <i class="bi bi-file-earmark-pdf"></i> Xuất hóa đơn PDF
+                </a>
+                <form th:if="${issue.status.name() == 'PREPARING' or issue.status.name() == 'DRAFT'}"
+                      th:action="@{/issues/{id}/issue(id=${issue.id})}" method="post">
+                    <button class="btn btn-primary"><i class="bi bi-box-arrow-up"></i> Xuất kho và chuyển về khoa</button>
+                </form>
+                <form th:if="${issue.status.name() == 'ISSUED'}" th:action="@{/issues/{id}/receive(id=${issue.id})}" method="post">
+                    <button class="btn btn-primary"><i class="bi bi-check2-circle"></i> Xác nhận nhận</button>
+                </form>
+                <form sec:authorize="hasRole('ADMIN')"
+                      th:action="@{/issues/{id}/delete(id=${issue.id})}"
+                      method="post"
+                      onsubmit="return confirm('Xóa phiếu xuất này? Nếu phiếu đã xuất, hệ thống sẽ đảo tồn trước khi xóa.')">
+                    <button class="btn btn-danger"><i class="bi bi-trash3"></i> Xóa phiếu</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="row g-3 mb-3">
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <span class="metric-label">Yêu cầu</span>
+                    <strong th:text="${issue.materialRequest != null ? issue.materialRequest.code : '-'}"></strong>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <span class="metric-label">Khoa nhận</span>
+                    <strong th:text="${issue.department ?: '-'}"></strong>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <span class="metric-label">Kho xuất</span>
+                    <strong th:text="${issue.warehouse != null ? issue.warehouse.name : '-'}"></strong>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <span class="metric-label">Ngày xuất</span>
+                    <strong th:text="${issue.issuedAt != null ? #temporals.format(issue.issuedAt, 'dd/MM/yyyy HH:mm') : '-'}"></strong>
+                </div>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-modern align-middle">
+                <thead>
+                <tr>
+                    <th>Vật tư</th>
+                    <th>Yêu cầu</th>
+                    <th>Duyệt</th>
+                    <th>Đã xuất</th>
+                    <th>Lô xuất</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="l:${lines}">
+                    <td th:text="${l.material.code + ' - ' + l.material.name}"></td>
+                    <td th:text="${l.requestedQuantity}"></td>
+                    <td th:text="${l.approvedQuantity}"></td>
+                    <td th:text="${l.issuedQuantity}"></td>
+                    <td>
+                        <span th:each="a:${l.allocations}"
+                              class="badge text-bg-secondary me-1"
+                              th:text="${a.batch.batchNumber + ': ' + a.quantity}"></span>
+                        <span th:if="${#lists.isEmpty(l.allocations)}">-</span>
+                    </td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(lines)}">
+                    <td colspan="5" class="text-center text-muted py-4">Chưa có dòng vật tư trong phiếu xuất.</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+</main>
+<div th:replace="~{fragments/layout :: chatbot}"></div>
+</body>
+</html>

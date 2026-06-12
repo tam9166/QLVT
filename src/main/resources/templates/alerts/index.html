@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Cảnh báo kho')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: navbar}"></div>
+<main class="container-fluid app-shell">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="h3 mb-0">Cảnh báo kho</h1>
+        <form th:action="@{/alerts/generate-notifications}" method="post">
+            <button class="btn btn-primary">Tạo thông báo hôm nay</button>
+        </form>
+    </div>
+
+    <section id="expiry-alerts" class="data-panel mb-3">
+        <div class="panel-heading">
+            <h2>Lô sắp hết hạn / đã hết hạn</h2>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead>
+                <tr>
+                    <th>Mã vật tư</th>
+                    <th>Tên vật tư</th>
+                    <th>Số lô</th>
+                    <th>Kho</th>
+                    <th>Vị trí</th>
+                    <th>Số lượng</th>
+                    <th>Hạn sử dụng</th>
+                    <th>Ngày còn lại</th>
+                    <th>Mức cảnh báo</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="b:${expiryAlerts}">
+                    <td th:text="${b.material.code}"></td>
+                    <td th:text="${b.material.name}"></td>
+                    <td><a th:href="@{/batches/{id}(id=${b.id})}" th:text="${b.batchNumber}"></a></td>
+                    <td th:text="${b.warehouse.name}"></td>
+                    <td th:text="${b.location != null ? b.location.name : '-'}"></td>
+                    <td th:text="${b.quantity}"></td>
+                    <td th:text="${b.expiryDate != null ? #temporals.format(b.expiryDate, 'dd/MM/yyyy') : '-'}"></td>
+                    <td th:with="days=${alertService.daysToExpiry(b)}" th:text="${days > 1000000 ? '-' : days}"></td>
+                    <td>
+                        <span th:with="level=${alertService.expiryLevel(b)}"
+                              th:class="${'badge text-bg-' + level.badgeClass}"
+                              th:text="${level.label}"></span>
+                    </td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(expiryAlerts)}">
+                    <td colspan="9" class="text-center text-muted py-4">Chưa có lô cần cảnh báo hạn sử dụng.</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section id="stock-alerts" class="data-panel">
+        <div class="panel-heading">
+            <h2>Cảnh báo tồn kho</h2>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead>
+                <tr>
+                    <th>Mã vật tư</th>
+                    <th>Tên vật tư</th>
+                    <th>Tồn thực tế</th>
+                    <th>Đang giữ</th>
+                    <th>Khả dụng</th>
+                    <th>Tồn tối thiểu</th>
+                    <th>Tồn tối đa</th>
+                    <th>Mức cảnh báo</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="m:${stockAlerts}">
+                    <td th:text="${m.code}"></td>
+                    <td th:text="${m.name}"></td>
+                    <td th:text="${m.actualQuantity}"></td>
+                    <td th:text="${m.reservedQuantity}"></td>
+                    <td th:text="${m.availableQuantity}"></td>
+                    <td th:text="${m.minStock}"></td>
+                    <td th:text="${m.maxStock}"></td>
+                    <td>
+                        <span th:with="level=${alertService.stockLevel(m)}"
+                              th:class="${'badge text-bg-' + level.badgeClass}"
+                              th:text="${level.label}"></span>
+                    </td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(stockAlerts)}">
+                    <td colspan="8" class="text-center text-muted py-4">Chưa có vật tư dưới ngưỡng tồn kho.</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+</main>
+<div th:replace="~{fragments/layout :: chatbot}"></div>
+</body>
+</html>

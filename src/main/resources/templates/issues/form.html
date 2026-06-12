@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Tạo phiếu xuất kho')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: navbar}"></div>
+<main class="container-fluid app-shell">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <span class="eyebrow">Xuất kho</span>
+            <h1 class="h3 mb-1">Tạo phiếu xuất kho</h1>
+        </div>
+        <a class="btn btn-outline-light" th:href="@{/issues}">Quay lại</a>
+    </div>
+
+    <form id="issueForm" class="data-panel" th:action="@{/issues}" method="post">
+        <div class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">Kho xuất</label>
+                <select id="warehouseSelect" class="form-select" name="warehouseId" required>
+                    <option th:each="w:${warehouses}" th:value="${w.id}" th:text="${w.name}"></option>
+                </select>
+            </div>
+            <div class="col-md-5">
+                <label class="form-label">Vật tư</label>
+                <select id="materialSelect" class="form-select" name="materialId" required>
+                    <option th:each="m:${materials}"
+                            th:value="${m.id}"
+                            th:attr="data-unit=${m.unit ?: ''}"
+                            th:text="${m.code + ' - ' + m.name}">
+                    </option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Số lượng xuất</label>
+                <input id="quantityInput" class="form-control" type="number" min="1" name="quantity" required>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Khoa nhận</label>
+                <input class="form-control" name="department" th:value="${selectedDepartment}" required>
+            </div>
+            <div class="col-md-8">
+                <label class="form-label">Ghi chú</label>
+                <input class="form-control" name="note">
+            </div>
+            <div class="col-12">
+                <div id="stockHint" class="alert alert-info mb-0"></div>
+            </div>
+            <div class="col-12 d-flex gap-2">
+                <button id="submitBtn" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Tạo phiếu xuất</button>
+                <a class="btn btn-outline-light" th:href="@{/issues}">Hủy</a>
+            </div>
+        </div>
+    </form>
+</main>
+<div th:replace="~{fragments/layout :: chatbot}"></div>
+<script th:inline="javascript">
+    const availableMap = /*[[${availableByWarehouseMaterial}]]*/ {};
+    const warehouseSelect = document.getElementById('warehouseSelect');
+    const materialSelect = document.getElementById('materialSelect');
+    const quantityInput = document.getElementById('quantityInput');
+    const stockHint = document.getElementById('stockHint');
+    const submitBtn = document.getElementById('submitBtn');
+
+    function updateStockHint() {
+        const warehouseId = warehouseSelect.value;
+        const materialId = materialSelect.value;
+        const selectedMaterial = materialSelect.options[materialSelect.selectedIndex];
+        const unit = selectedMaterial?.dataset.unit || '';
+        const available = Number.parseInt(availableMap[`${warehouseId}_${materialId}`] || '0', 10);
+        const quantity = Number.parseInt(quantityInput.value || '0', 10);
+        const notEnough = quantity > available;
+        stockHint.className = 'alert mb-0 ' + (notEnough ? 'alert-danger' : 'alert-info');
+        stockHint.textContent = notEnough
+            ? `Không đủ để xuất. Kho đã chọn còn ${available} ${unit}.`
+            : `Còn tại kho đã chọn: ${available} ${unit}.`;
+        submitBtn.disabled = notEnough;
+    }
+
+    warehouseSelect.addEventListener('change', updateStockHint);
+    materialSelect.addEventListener('change', updateStockHint);
+    quantityInput.addEventListener('input', updateStockHint);
+    updateStockHint();
+</script>
+</body>
+</html>

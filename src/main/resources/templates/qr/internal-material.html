@@ -1,0 +1,82 @@
+﻿<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('QR nội bộ vật tư')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: navbar}"></div>
+<main class="container-fluid app-shell">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <span class="eyebrow">QR nội bộ</span>
+            <h1 class="h3 mb-0" th:text="${material.code + ' - ' + material.name}">VT001 - Vật tư</h1>
+        </div>
+        <a class="btn btn-outline-secondary" th:href="@{/materials}">Quay lại danh mục</a>
+    </div>
+
+    <section class="row g-3 mb-3">
+        <div class="col-md-3">
+            <div class="metric-card">
+                <span>Tồn từ lô hợp lệ</span>
+                <strong th:text="${syncedActualQuantity}">0</strong>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="metric-card">
+                <span>Đang giữ</span>
+                <strong th:text="${material.reservedQuantity}">0</strong>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="metric-card">
+                <span>Chờ xuất</span>
+                <strong th:text="${material.pendingIssueQuantity}">0</strong>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="metric-card">
+                <span>Khả dụng</span>
+                <strong th:text="${syncedActualQuantity - material.reservedQuantity - material.pendingIssueQuantity > 0 ? syncedActualQuantity - material.reservedQuantity - material.pendingIssueQuantity : 0}">0</strong>
+            </div>
+        </div>
+    </section>
+
+    <section class="data-panel">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2 class="h5 mb-0">Tồn theo lô và vị trí</h2>
+            <a class="btn btn-sm btn-outline-primary" th:href="@{/batches}">Xem lô/HSD</a>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead>
+                <tr>
+                    <th>Lô</th>
+                    <th>Kho</th>
+                    <th>Vị trí</th>
+                    <th>HSD</th>
+                    <th>Trạng thái</th>
+                    <th class="text-end">Tồn</th>
+                    <th class="text-end">Giữ</th>
+                    <th class="text-end">Khả dụng</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="b : ${balances}">
+                    <td th:text="${b.batch.batchNumber}">LO-001</td>
+                    <td th:text="${b.warehouse.name}">Kho Trung tâm</td>
+                    <td th:text="${b.location != null ? b.location.code + ' - ' + b.location.name : '-'}">A1</td>
+                    <td th:text="${b.batch.expiryDate != null ? #temporals.format(b.batch.expiryDate, 'dd/MM/yyyy') : '-'}">31/12/2026</td>
+                    <td><span class="badge text-bg-primary" th:text="${b.batch.status.label}">Có thể cấp phát</span></td>
+                    <td class="text-end" th:text="${b.actualQuantity}">0</td>
+                    <td class="text-end" th:text="${b.reservedQuantity + b.pendingIssueQuantity}">0</td>
+                    <td class="text-end" th:text="${b.availableQuantity}">0</td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(balances)}">
+                    <td colspan="8" class="text-center text-muted py-4">Chưa có tồn kho theo lô.</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+</main>
+<div th:replace="~{fragments/layout :: chatbot}"></div>
+</body>
+</html>

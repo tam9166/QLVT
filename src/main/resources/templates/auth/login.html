@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Đăng nhập QLVT')}"></head>
+<body class="login-page">
+<div class="void-grid" aria-hidden="true"></div>
+<main class="login-shell">
+    <section class="login-visual">
+        <span class="eyebrow"><span class="live-dot"></span> Soft hospital inventory</span>
+        <h1>QLVT <span>2026</span></h1>
+        <div class="login-highlights">
+            <span><i class="bi bi-shield-check"></i> Phân quyền</span>
+            <span><i class="bi bi-lightning-charge"></i> FEFO</span>
+            <span><i class="bi bi-chat-dots"></i> Chatbot</span>
+        </div>
+    </section>
+    <section class="login-card">
+        <span class="brand-mark large"><i class="bi bi-shield-lock"></i></span>
+        <span class="eyebrow mt-4">Đăng nhập hệ thống</span>
+        <h2>Truy cập bảng điều phối</h2>
+        <form th:action="@{/login}" method="post" class="vstack gap-3">
+            <div>
+                <label class="form-label">Tài khoản</label>
+                <input class="form-control form-control-lg" name="username" autofocus required>
+            </div>
+            <div>
+                <label class="form-label">Mật khẩu</label>
+                <input class="form-control form-control-lg" type="password" name="password" required>
+            </div>
+            <div th:if="${param.error}" class="alert alert-danger py-2">Sai tài khoản hoặc mật khẩu.</div>
+            <button class="btn btn-primary btn-lg w-100" type="submit">Đăng nhập</button>
+        </form>
+        <div class="demo-account">Demo: <strong>admin</strong> / <strong>123456</strong></div>
+    </section>
+</main>
+</body>
+</html>

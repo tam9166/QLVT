@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Không có quyền')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: navbar}"></div>
+<main class="container py-4">
+    <section class="data-panel">
+        <span class="eyebrow">403</span>
+        <h1 class="h3 mt-2">Bạn không có quyền truy cập chức năng này</h1>
+        <p class="text-secondary">Vui lòng liên hệ quản trị hệ thống nếu bạn cần được cấp thêm quyền.</p>
+        <div class="d-flex gap-2 flex-wrap">
+            <button class="btn btn-outline-secondary" type="button" onclick="history.back()">Quay lại</button>
+            <a class="btn btn-primary" th:href="@{/}">Về dashboard</a>
+        </div>
+    </section>
+</main>
+</body>
+</html>
