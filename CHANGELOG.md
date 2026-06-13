@@ -51,3 +51,11 @@
 - Thêm alias `/requests/my` và `/requests/my-department` cho người dùng khoa xem phiếu của phạm vi mình.
 - Sửa layout để trang lỗi không bị 500 kép khi `currentPath` không có trong model.
 - Smoke trên database dựng lại từ `database/01_create_schema.sql`, `02_seed_master_data.sql`, `03_seed_demo_data.sql`: các trang giai đoạn 2 và role mẫu đều trả 200.
+
+## 2026-06-13 - Cải thiện giai đoạn 3
+
+- Sửa dashboard để top vật tư xuất nhiều và đề xuất mua hàng tính số lượng xuất theo trị tuyệt đối của biến động `OUT`, tránh mất dữ liệu khi phiếu xuất ghi số âm.
+- Tách số đếm lô hết hạn 30 ngày và lô khóa/rủi ro khỏi danh sách hiển thị giới hạn 10 dòng, giúp metric dashboard phản ánh toàn bộ dữ liệu.
+- Chỉnh rule chatbot để `vật tư ... còn không` ưu tiên kiểm tra tồn kho, không bị lệch sang vị trí vì từ khóa ngắn `tu`.
+- Chỉnh ngữ cảnh chatbot để không tự gắn vật tư gần nhất chỉ vì câu có chữ `còn/không`.
+- Smoke trên database dựng lại từ SQL: `/dashboard`, `/reports`, `/reports/advanced`, CSV tồn kho, CSV biến động và chatbot các câu checklist đều hoạt động.

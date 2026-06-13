@@ -41,7 +41,7 @@
         <a class="metric-card dashboard-link-card danger" th:href="@{/alerts#expiry-alerts}">
             <span class="metric-icon"><i class="bi bi-calendar2-x"></i></span>
             <span class="metric-label">Hết hạn 30 ngày</span>
-            <strong th:text="${#lists.size(expiringBatches30)}">0</strong>
+            <strong th:text="${expiringBatches30Count}">0</strong>
         </a>
         <a class="metric-card dashboard-link-card warning" th:href="@{/alerts#expiry-alerts}">
             <span class="metric-icon"><i class="bi bi-hourglass-bottom"></i></span>

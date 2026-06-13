@@ -154,7 +154,7 @@ public class ChatbotService {
 
     private String enrichWithRecentMaterial(String question, ChatSession session) {
         String normalized = VietnameseTextNormalizer.normalizeSearchText(question);
-        if (!VietnameseTextNormalizer.containsAnyKeyword(normalized, "no", "vat tu nay", "lo nay", "hang nay", "cai nay")) {
+        if (!VietnameseTextNormalizer.containsAnyKeyword(normalized, "vat tu nay", "lo nay", "hang nay", "cai nay")) {
             return question;
         }
         String recentText = messageRepository.findTop30BySession_IdOrderByCreatedAtAsc(session.getId()).stream()

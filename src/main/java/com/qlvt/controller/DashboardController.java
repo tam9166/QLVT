@@ -79,20 +79,17 @@ public class DashboardController {
                 .filter(batch -> !batch.getExpiryDate().isBefore(today))
                 .filter(batch -> !batch.getExpiryDate().isAfter(today.plusDays(30)))
                 .sorted(Comparator.comparing(batch -> batch.getExpiryDate()))
-                .limit(10)
                 .toList();
         var expiringBatches90 = batches.stream()
                 .filter(batch -> batch.getExpiryDate() != null)
                 .filter(batch -> !batch.getExpiryDate().isBefore(today))
                 .filter(batch -> !batch.getExpiryDate().isAfter(today.plusDays(90)))
                 .sorted(Comparator.comparing(batch -> batch.getExpiryDate()))
-                .limit(10)
                 .toList();
         var lockedBatches = batches.stream()
                 .filter(batch -> batch.getStatus() != BatchStatus.AVAILABLE
                         || (batch.getExpiryDate() != null && !batch.getExpiryDate().isAfter(today)))
                 .sorted(Comparator.comparing(batch -> batch.getExpiryDate(), Comparator.nullsLast(Comparator.naturalOrder())))
-                .limit(10)
                 .toList();
 
         model.addAttribute("currentUser", user);
@@ -107,8 +104,8 @@ public class DashboardController {
         model.addAttribute("priceAlertCount", priceAlertRepository.countByResolvedFalse());
         model.addAttribute("auditLogs", auditLogRepository.findTop30ByOrderByCreatedAtDesc().stream().limit(8).toList());
         model.addAttribute("lowStocks", lowStocks);
-        model.addAttribute("expiringBatches", expiringBatches90);
-        model.addAttribute("expiringBatches30", expiringBatches30);
+        model.addAttribute("expiringBatches", expiringBatches90.stream().limit(10).toList());
+        model.addAttribute("expiringBatches30Count", expiringBatches30.size());
         model.addAttribute("movements", movements.stream()
                 .sorted(Comparator.comparing(StockMovement::getCreatedAt, Comparator.nullsLast(Comparator.reverseOrder())))
                 .limit(12)
@@ -117,7 +114,7 @@ public class DashboardController {
         model.addAttribute("totalInventoryValue", totalInventoryValue(materials));
         model.addAttribute("expiringInventoryValue", batchValue(expiringBatches90));
         model.addAttribute("lockedBatchCount", lockedBatches.size());
-        model.addAttribute("lockedBatches", lockedBatches);
+        model.addAttribute("lockedBatches", lockedBatches.stream().limit(10).toList());
         model.addAttribute("topIssuedMaterials", topIssuedMaterials(movements, thirtyDaysAgo));
         model.addAttribute("purchaseSuggestions", purchaseSuggestions(materials, movements, thirtyDaysAgo));
         model.addAttribute("storageRiskCount", storageMonitoringService.recentRiskCount());
@@ -153,7 +150,7 @@ public class DashboardController {
                         return;
                     }
                     materialById.put(material.getId(), material);
-                    quantityByMaterial.merge(material.getId(), Math.max(0, movement.getQuantity()), Integer::sum);
+                    quantityByMaterial.merge(material.getId(), issuedQuantity(movement), Integer::sum);
                 });
         int max = quantityByMaterial.values().stream().mapToInt(Integer::intValue).max().orElse(0);
         return quantityByMaterial.entrySet().stream()
@@ -173,7 +170,7 @@ public class DashboardController {
                 .filter(movement -> movement.getMovementType() == MovementType.OUT)
                 .filter(movement -> movement.getMaterial() != null && movement.getMaterial().getId() != null)
                 .filter(movement -> movement.getCreatedAt() == null || !movement.getCreatedAt().isBefore(since))
-                .forEach(movement -> issuedByMaterial.merge(movement.getMaterial().getId(), Math.max(0, movement.getQuantity()), Integer::sum));
+                .forEach(movement -> issuedByMaterial.merge(movement.getMaterial().getId(), issuedQuantity(movement), Integer::sum));
 
         return materials.stream()
                 .map(material -> suggestion(material, issuedByMaterial.getOrDefault(material.getId(), 0)))
@@ -209,6 +206,10 @@ public class DashboardController {
                 reason,
                 lowStock || nearlyOut
         );
+    }
+
+    private int issuedQuantity(StockMovement movement) {
+        return Math.abs(movement.getQuantity());
     }
 
     private String decimal(double value) {

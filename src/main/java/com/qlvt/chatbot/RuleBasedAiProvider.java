@@ -19,7 +19,7 @@ public class RuleBasedAiProvider implements AiProvider {
         if (VietnameseTextNormalizer.containsAnyKeyword(text, "nha cung cap", "supplier", "cong ty cung cap")) return ChatIntent.CHECK_SUPPLIER;
         if (VietnameseTextNormalizer.containsAnyKeyword(text, "lo ", "so lo", "batch")) return ChatIntent.CHECK_BATCH;
         if (VietnameseTextNormalizer.containsAnyKeyword(text, "han dung", "het han", "hsd", "expiry")) return ChatIntent.CHECK_EXPIRY;
-        if (VietnameseTextNormalizer.containsAnyKeyword(text, "o dau", "nam o dau", "vi tri", "ke", "tu", "ngan")) return ChatIntent.CHECK_LOCATION;
+        if (VietnameseTextNormalizer.containsAnyKeyword(text, "o dau", "nam o dau", "vi tri", "ke", "tu do", "tu thuoc", "ngan tu", "ngan")) return ChatIntent.CHECK_LOCATION;
         if (VietnameseTextNormalizer.containsAnyKeyword(text, "con khong", "con bao nhieu", "con hang khong", "het hang chua", "het kho chua", "ton", "kha dung", "stock")) return ChatIntent.CHECK_STOCK;
         if (VietnameseTextNormalizer.containsAnyKeyword(text, "thay the", "tuong duong")) return ChatIntent.SUGGEST_ALTERNATIVE;
         return ChatIntent.SEARCH_MATERIAL;
