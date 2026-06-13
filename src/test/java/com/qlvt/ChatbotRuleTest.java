@@ -19,10 +19,15 @@ class ChatbotRuleTest {
         RuleBasedAiProvider provider = new RuleBasedAiProvider();
 
         assertEquals(ChatIntent.CHECK_STOCK, provider.detectIntent("VT001 còn bao nhiêu"));
+        assertEquals(ChatIntent.CHECK_STOCK, provider.detectIntent("VT001 còn cấp được bao nhiêu?"));
         assertEquals(ChatIntent.CHECK_STOCK, provider.detectIntent("kho còn hàng không"));
         assertEquals(ChatIntent.CHECK_LOCATION, provider.detectIntent("nó nằm ở đâu"));
+        assertEquals(ChatIntent.CHECK_LOCATION, provider.detectIntent("VT001 để ở kho nào?"));
         assertEquals(ChatIntent.CHECK_BATCH, provider.detectIntent("lô ABC123 hạn dùng khi nào"));
+        assertEquals(ChatIntent.CHECK_DEPARTMENT_EXPIRING_MATERIALS, provider.detectIntent("có lô nào gần hết date không?"));
         assertEquals(ChatIntent.CHECK_REQUEST_STATUS, provider.detectIntent("phiếu của tôi tới đâu rồi"));
+        assertEquals(ChatIntent.CHECK_REQUEST_STATUS, provider.detectIntent("phiếu của em kho duyệt chưa?"));
+        assertEquals(ChatIntent.CREATE_REQUEST_DRAFT, provider.detectIntent("mình cần xin 10 VT001"));
         assertEquals(ChatIntent.CHECK_DEPARTMENT_STOCK, provider.detectIntent("khoa tôi còn gì"));
     }
 
@@ -31,6 +36,7 @@ class ChatbotRuleTest {
         RuleBasedAiProvider provider = new RuleBasedAiProvider();
 
         assertEquals(ChatIntent.UNKNOWN, provider.detectIntent("thuốc này liều dùng bao nhiêu"));
+        assertEquals(ChatIntent.UNKNOWN, provider.detectIntent("uống thuốc này bao nhiêu lần một ngày?"));
         assertEquals(ChatIntent.UNKNOWN, provider.detectIntent("bệnh này điều trị thế nào"));
     }
 }

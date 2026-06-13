@@ -136,18 +136,19 @@ public class ChatbotService {
         String text = VietnameseTextNormalizer.normalizeSearchText(question);
         if (text.isBlank()) {
             return """
-                    Mình đây. Bạn muốn mình kiểm tra vật tư nào?
-                    Bạn có thể hỏi kiểu: "găng tay size M còn bao nhiêu", "lô nào sắp hết hạn", hoặc "phiếu của tôi đến đâu rồi".
+                    Mình đây. Bạn cứ hỏi như đang trao đổi với nhân viên kho.
+                    Ví dụ: "găng tay size M còn bao nhiêu", "VT001 để ở kho nào", "lô nào gần hết date", hoặc "phiếu của tôi đã duyệt chưa".
                     """;
         }
-        if (text.equals("xin chao") || text.equals("chao") || text.equals("hello") || text.equals("hi") || text.equals("alo")) {
+        if (text.equals("xin chao") || text.equals("chao") || text.equals("hello") || text.equals("hi")
+                || text.equals("alo") || text.equals("chao ban") || text.equals("em oi")) {
             return """
                     Chào bạn, mình đang sẵn sàng tra dữ liệu QLVT.
-                    Bạn cứ hỏi tự nhiên, ví dụ: "VT001 còn bao nhiêu?", "vật tư này ở kho nào?", hoặc "các lô sắp hết hạn".
+                    Bạn có thể hỏi tự nhiên như: "VT001 còn cấp được bao nhiêu?", "vật tư này ở kho nào?", hoặc "phiếu của em kho duyệt chưa?".
                     """;
         }
-        if (VietnameseTextNormalizer.containsAnyKeyword(text, "cam on", "thanks", "thank you", "ok roi", "duoc roi")) {
-            return "Không có gì. Khi cần kiểm tra vật tư, tồn kho, lô/HSD hoặc phiếu xuất nhập, bạn cứ nhắn mình nhé.";
+        if (VietnameseTextNormalizer.containsAnyKeyword(text, "cam on", "thanks", "thank you", "ok roi", "duoc roi", "ro roi")) {
+            return "Không có gì. Khi cần tra tồn kho, vị trí, lô/HSD hoặc trạng thái phiếu, bạn cứ nhắn theo cách tự nhiên nhé.";
         }
         return null;
     }
@@ -173,29 +174,31 @@ public class ChatbotService {
         List<Material> matches = materialSearchService.search(question, 5);
         if (matches.isEmpty()) {
             return """
-                    Mình chưa tìm thấy vật tư khớp với nội dung bạn nhập.
-                    Bạn thử nhập mã vật tư, tên đầy đủ hơn, hoặc một phần tên dễ nhận diện hơn nhé. Ví dụ: "găng tay size M" hoặc "VT002".
+                    Mình chưa tìm thấy vật tư khớp với câu hỏi này, nên mình không tự đoán.
+                    Bạn thử gửi mã vật tư, tên đầy đủ hơn, hoặc một cụm dễ nhận diện hơn nhé. Ví dụ: "găng tay size M", "khẩu trang y tế", hoặc "VT002".
                     """;
         }
         if (matches.size() > 1) {
             return "Mình thấy vài vật tư khá giống nhau. Bạn muốn xem loại nào?\n"
                     + numberedMaterials(matches)
-                    + "\nBạn có thể nhắn lại bằng mã vật tư, ví dụ: VT002.";
+                    + "\nBạn nhắn lại bằng mã vật tư để mình tra chính xác hơn, ví dụ: VT002.";
         }
-        return "Mình tìm thấy vật tư này:\n" + materialSummary(matches.get(0));
+        return "Mình tìm thấy vật tư này:\n" + materialSummary(matches.get(0))
+                + "\n\nBạn có thể hỏi tiếp: \"" + matches.get(0).getCode() + " còn bao nhiêu?\" hoặc \""
+                + matches.get(0).getCode() + " nằm ở đâu?\"";
     }
 
     private String checkStock(String question) {
         Material material = singleMaterial(question);
         if (material == null) {
-            return "Mình chưa xác định được bạn muốn kiểm tra tồn của vật tư nào. Bạn gửi giúp mình mã hoặc tên vật tư nhé.";
+            return "Mình chưa xác định được vật tư cần kiểm tra tồn. Bạn gửi giúp mình mã hoặc tên rõ hơn, ví dụ: \"VT001 còn cấp được bao nhiêu?\".";
         }
 
         List<StockBalance> balances = balanceRepository.findByMaterial_IdOrderByWarehouse_CodeAscLocation_CodeAsc(material.getId());
         int totalAvailable = balances.isEmpty()
                 ? material.getAvailableQuantity()
                 : balances.stream().mapToInt(balance -> Math.max(0, balance.getAvailableQuantity())).sum();
-        StringBuilder builder = new StringBuilder("Mình kiểm tra được như sau:\n")
+        StringBuilder builder = new StringBuilder("Mình kiểm tra tồn kho cho bạn:\n")
                 .append(materialLine(material))
                 .append("\n- Tổng còn có thể cấp: ").append(totalAvailable).append(" ").append(nullSafe(material.getUnit()));
 
@@ -205,9 +208,9 @@ public class ChatbotService {
 
         builder.append("\n\nTheo từng kho/vị trí:");
         balances.forEach(balance -> builder.append("\n- ")
-                .append(balance.getWarehouse().getName()).append(" / ")
-                .append(balance.getLocation().getName()).append(" / lô ")
-                .append(balance.getBatch().getBatchNumber())
+                .append(warehouseLabel(balance)).append(" / ")
+                .append(locationLabel(balance)).append(" / lô ")
+                .append(batchLabel(balance))
                 .append(": còn ").append(balance.getAvailableQuantity()).append(" ")
                 .append(nullSafe(material.getUnit()))
                 .append(" (thực tế ").append(balance.getActualQuantity())
@@ -218,7 +221,7 @@ public class ChatbotService {
     private String checkLocation(String question) {
         Material material = singleMaterial(question);
         if (material == null) {
-            return "Mình chưa biết bạn muốn tìm vị trí của vật tư nào. Bạn gửi mã hoặc tên vật tư giúp mình nhé.";
+            return "Mình chưa biết bạn muốn tìm vị trí của vật tư nào. Bạn gửi mã hoặc tên vật tư giúp mình nhé, ví dụ: \"VT001 để ở đâu?\".";
         }
         List<StockBalance> balances = balanceRepository.findByMaterial_IdOrderByWarehouse_CodeAscLocation_CodeAsc(material.getId());
         if (balances.isEmpty()) {
@@ -227,10 +230,10 @@ public class ChatbotService {
         StringBuilder builder = new StringBuilder("Mình thấy ")
                 .append(materialLine(material))
                 .append(" đang nằm ở:");
-        balances.forEach(balance -> builder.append("\n- Kho ")
-                .append(balance.getWarehouse().getName())
-                .append(", vị trí ").append(balance.getLocation().getName())
-                .append(", lô ").append(balance.getBatch().getBatchNumber())
+        balances.forEach(balance -> builder.append("\n- ")
+                .append(warehouseLabel(balance))
+                .append(", vị trí ").append(locationLabel(balance))
+                .append(", lô ").append(batchLabel(balance))
                 .append(", còn ").append(balance.getAvailableQuantity()).append(" ")
                 .append(nullSafe(material.getUnit())));
         return builder.toString();
@@ -246,7 +249,7 @@ public class ChatbotService {
             return material == null ? null : batchRepository.findIssuableBatchesFefo(material.getId(), LocalDate.now()).stream().findFirst().orElse(null);
         });
         if (batch == null) {
-            return "Mình chưa tìm thấy lô phù hợp. Bạn gửi thêm số lô hoặc mã vật tư để mình kiểm tra chính xác hơn nhé.";
+            return "Mình chưa tìm thấy lô phù hợp. Bạn gửi thêm số lô, mã vật tư hoặc tên vật tư để mình kiểm tra chính xác hơn nhé.";
         }
 
         String warning = "";
@@ -272,7 +275,7 @@ public class ChatbotService {
     private String checkSupplier(String question) {
         Material material = singleMaterial(question);
         if (material == null) {
-            return "Mình chưa xác định được vật tư hoặc lô cần kiểm tra nhà cung cấp. Bạn gửi mã vật tư hoặc số lô giúp mình nhé.";
+            return "Mình chưa xác định được vật tư hoặc lô cần kiểm tra nhà cung cấp. Bạn gửi mã vật tư, tên vật tư hoặc số lô giúp mình nhé.";
         }
         List<MaterialBatch> batches = batchRepository.findAll().stream()
                 .filter(batch -> batch.getMaterial().getId().equals(material.getId()))
@@ -295,7 +298,7 @@ public class ChatbotService {
     private String suggestAlternative(String question) {
         Material material = singleMaterial(question);
         if (material == null) {
-            return "Mình chưa biết bạn muốn tìm vật tư thay thế cho món nào. Bạn gửi mã hoặc tên vật tư giúp mình nhé.";
+            return "Mình chưa biết bạn muốn tìm vật tư thay thế cho món nào. Bạn gửi mã hoặc tên vật tư giúp mình nhé, ví dụ: \"hết VT001 thì dùng loại nào?\".";
         }
         List<Material> alternatives = materialSearchService.alternatives(material, 5);
         if (alternatives.isEmpty()) {
@@ -311,7 +314,7 @@ public class ChatbotService {
             requests = requestRepository.findTop10ByDepartmentOrderByCreatedAtDesc(department);
         }
         if (requests.isEmpty()) {
-            return "Mình chưa thấy phiếu yêu cầu nào trong phạm vi bạn được phép xem.";
+            return "Mình chưa thấy phiếu yêu cầu nào trong phạm vi bạn được phép xem. Nếu vừa cần xin vật tư, bạn có thể tạo yêu cầu tại /requests/new.";
         }
         StringBuilder builder = new StringBuilder("Mình thấy các phiếu gần đây như sau:");
         requests.forEach(request -> builder.append("\n- ")
@@ -328,23 +331,24 @@ public class ChatbotService {
         Integer quantity = extractFirstNumber(question);
         if (material == null || quantity == null) {
             return """
-                    Mình cần thêm một chút thông tin để mở đúng phiếu: vật tư nào và số lượng bao nhiêu.
-                    Ví dụ bạn có thể nhắn: "tạo phiếu xuất 20 hộp găng tay size M".
+                    Mình cần thêm một chút thông tin để lập đúng yêu cầu: vật tư nào và số lượng bao nhiêu.
+                    Ví dụ bạn có thể nhắn: "mình cần xin 20 hộp găng tay size M" hoặc "tạo yêu cầu 10 VT001".
                     """;
         }
         return "Mình hiểu là bạn muốn lấy "
                 + quantity + " " + nullSafe(material.getUnit())
                 + " của " + materialLine(material)
-                + ".\nBạn mở trang tạo phiếu xuất ở đây để kiểm tra kho nhận và gửi phiếu: /issues/new";
+                + ".\nBạn mở trang tạo yêu cầu tại /requests/new để kiểm tra khoa/phòng, ghi lý do và gửi duyệt.";
     }
 
     private String createRequestHelp() {
         return """
                 Bạn có thể nói tự nhiên kiểu:
-                - "tạo phiếu xuất 20 hộp găng tay size M"
-                - "VT001 còn bao nhiêu"
-                - "lô nào sắp hết hạn"
-                Mình sẽ tra dữ liệu và dẫn bạn tới đúng trang xử lý.
+                - "mình cần xin 20 hộp găng tay size M"
+                - "tạo yêu cầu 10 VT001"
+                - "VT001 còn cấp được bao nhiêu?"
+                - "lô nào gần hết date?"
+                Mình sẽ tra dữ liệu và dẫn bạn tới đúng trang tạo yêu cầu hoặc trang xử lý.
                 """;
     }
 
@@ -382,14 +386,15 @@ public class ChatbotService {
 
     private String help() {
         return """
-                Mình có thể hỗ trợ bạn tra dữ liệu QLVT bằng câu hỏi tự nhiên.
-                Bạn có thể hỏi:
-                - "VT001 còn bao nhiêu?"
-                - "găng tay size M nằm ở đâu?"
+                Mình có thể hỗ trợ bạn tra dữ liệu QLVT bằng câu hỏi tự nhiên, không cần nhớ đúng mẫu câu.
+                Bạn có thể hỏi như sau:
+                - "VT001 còn cấp được bao nhiêu?"
+                - "găng tay size M đang nằm ở kho nào?"
                 - "lô LO-001 hạn dùng khi nào?"
-                - "phiếu của tôi đến đâu rồi?"
-                - "vật tư nào sắp hết hạn?"
-                Mình chỉ dùng dữ liệu trong hệ thống, nên câu trả lời sẽ bám theo database hiện tại.
+                - "phiếu của em kho duyệt chưa?"
+                - "khoa tôi đang giữ những vật tư gì?"
+                - "mình cần xin 20 hộp khẩu trang"
+                Mình chỉ dùng dữ liệu trong hệ thống, nên nếu không đủ thông tin mình sẽ hỏi lại thay vì tự đoán.
                 """;
     }
 
@@ -461,6 +466,31 @@ public class ChatbotService {
 
     private String materialLine(Material material) {
         return material.getCode() + " - " + material.getName();
+    }
+
+    private String warehouseLabel(StockBalance balance) {
+        if (balance.getWarehouse() == null) {
+            return "Kho chưa rõ";
+        }
+        String name = nullSafe(balance.getWarehouse().getName());
+        if ("-".equals(name)) {
+            return "Kho chưa rõ";
+        }
+        return VietnameseTextNormalizer.normalizeSearchText(name).startsWith("kho ") ? name : "Kho " + name;
+    }
+
+    private String locationLabel(StockBalance balance) {
+        if (balance.getLocation() == null) {
+            return "vị trí chưa rõ";
+        }
+        return nullSafe(balance.getLocation().getName());
+    }
+
+    private String batchLabel(StockBalance balance) {
+        if (balance.getBatch() == null) {
+            return "chưa rõ";
+        }
+        return nullSafe(balance.getBatch().getBatchNumber());
     }
 
     private void saveMessage(ChatSession session, String sender, String message, ChatIntent intent, String response) {
