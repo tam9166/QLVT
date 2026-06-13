@@ -38,7 +38,7 @@ public class StockAdjustmentController {
     }
 
     @GetMapping("/{id}")
-    public String detail(@PathVariable Long id, Model model) { model.addAttribute("item", repository.findById(id).orElseThrow()); model.addAttribute("attachments", attachmentService.list(AttachmentReferenceType.STOCK_ADJUSTMENT, id)); model.addAttribute("attachmentType", AttachmentReferenceType.STOCK_ADJUSTMENT); return "stock-adjustments/detail"; }
+    public String detail(@PathVariable Long id, Model model) { model.addAttribute("item", repository.findWithLinesById(id).orElseThrow()); model.addAttribute("attachments", attachmentService.list(AttachmentReferenceType.STOCK_ADJUSTMENT, id)); model.addAttribute("attachmentType", AttachmentReferenceType.STOCK_ADJUSTMENT); return "stock-adjustments/detail"; }
 
     @PostMapping("/{id}/submit")
     public String submit(@PathVariable Long id, Authentication authentication) { workflowService.submitAdjustment(id, authentication.getName()); return "redirect:/stock-adjustments/" + id; }

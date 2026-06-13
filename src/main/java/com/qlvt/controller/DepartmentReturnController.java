@@ -66,7 +66,7 @@ public class DepartmentReturnController {
 
     @GetMapping("/{id}")
     public String detail(@PathVariable Long id, Model model) {
-        model.addAttribute("item", returnRepository.findById(id).orElseThrow());
+        model.addAttribute("item", returnRepository.findWithLinesById(id).orElseThrow());
         model.addAttribute("attachments", attachmentService.list(AttachmentReferenceType.DEPARTMENT_RETURN, id));
         model.addAttribute("attachmentType", AttachmentReferenceType.DEPARTMENT_RETURN);
         return "department-returns/detail";

@@ -44,7 +44,7 @@ public class StockTransferController {
     }
 
     @GetMapping("/{id}")
-    public String detail(@PathVariable Long id, Model model) { model.addAttribute("item", repository.findById(id).orElseThrow()); return "stock-transfers/detail"; }
+    public String detail(@PathVariable Long id, Model model) { model.addAttribute("item", repository.findWithLinesById(id).orElseThrow()); return "stock-transfers/detail"; }
     @PostMapping("/{id}/submit")
     public String submit(@PathVariable Long id, Authentication authentication) { workflowService.submitTransfer(id, authentication.getName()); return "redirect:/stock-transfers/" + id; }
     @PostMapping("/{id}/approve")

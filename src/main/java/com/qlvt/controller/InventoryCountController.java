@@ -43,13 +43,13 @@ public class InventoryCountController {
 
     @GetMapping("/{id}")
     public String detail(@PathVariable Long id, Model model) {
-        model.addAttribute("item", inventoryCountRepository.findById(id).orElseThrow());
+        model.addAttribute("item", inventoryCountRepository.findWithLinesById(id).orElseThrow());
         return "inventory-counts/detail";
     }
 
     @GetMapping("/{id}/lines")
     public String lines(@PathVariable Long id, Model model) {
-        model.addAttribute("item", inventoryCountRepository.findById(id).orElseThrow());
+        model.addAttribute("item", inventoryCountRepository.findWithLinesById(id).orElseThrow());
         return "inventory-counts/lines";
     }
 

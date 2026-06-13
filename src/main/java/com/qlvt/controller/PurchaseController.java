@@ -35,7 +35,7 @@ public class PurchaseController {
     }
     @GetMapping("/requests/{id}")
     public String requestDetail(@PathVariable Long id, Model model) {
-        model.addAttribute("item", requestRepository.findById(id).orElseThrow());
+        model.addAttribute("item", requestRepository.findWithLinesById(id).orElseThrow());
         model.addAttribute("suppliers", supplierRepository.findAll());
         return "purchases/request-detail";
     }
@@ -49,5 +49,5 @@ public class PurchaseController {
     @GetMapping("/orders")
     public String orders(Model model) { model.addAttribute("items", orderRepository.findTop30ByOrderByCreatedAtDesc()); return "purchases/orders"; }
     @GetMapping("/orders/{id}")
-    public String orderDetail(@PathVariable Long id, Model model) { model.addAttribute("item", orderRepository.findById(id).orElseThrow()); return "purchases/order-detail"; }
+    public String orderDetail(@PathVariable Long id, Model model) { model.addAttribute("item", orderRepository.findWithLinesById(id).orElseThrow()); return "purchases/order-detail"; }
 }

@@ -41,7 +41,7 @@ public class DestructionController {
         return "redirect:/destructions/" + slip.getId();
     }
     @GetMapping("/{id}")
-    public String detail(@PathVariable Long id, Model model) { model.addAttribute("item", repository.findById(id).orElseThrow()); model.addAttribute("attachments", attachmentService.list(AttachmentReferenceType.DESTRUCTION_SLIP, id)); model.addAttribute("attachmentType", AttachmentReferenceType.DESTRUCTION_SLIP); return "destructions/detail"; }
+    public String detail(@PathVariable Long id, Model model) { model.addAttribute("item", repository.findWithLinesById(id).orElseThrow()); model.addAttribute("attachments", attachmentService.list(AttachmentReferenceType.DESTRUCTION_SLIP, id)); model.addAttribute("attachmentType", AttachmentReferenceType.DESTRUCTION_SLIP); return "destructions/detail"; }
     @PostMapping("/{id}/submit")
     public String submit(@PathVariable Long id, Authentication authentication) { workflowService.submitDestruction(id, authentication.getName()); return "redirect:/destructions/" + id; }
     @PostMapping("/{id}/approve")
