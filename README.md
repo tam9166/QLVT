@@ -15,24 +15,36 @@
 
 ## Yêu cầu môi trường
 
-- JDK 17 trở lên
-- SQL Server đang chạy
-- Database `qlvt`
-- Tài khoản SQL Server có quyền đọc/ghi schema của database
+- JDK 17. Project đặt `<java.version>17</java.version>` trong `pom.xml`.
+- SQL Server đang chạy, bật SQL Server Authentication và TCP/IP.
+- Database `QLVT`.
+- Tài khoản SQL Server `tam` có quyền truy cập database `QLVT`.
 
-Không lưu mật khẩu SQL Server thật trong source. Cấu hình qua biến môi trường hoặc cấu hình local riêng trên máy chạy.
+Nếu VS Code đang chạy bằng JDK/JRE 21, cài JDK 17 và chọn lại Java runtime trong VS Code (`Java: Configure Java Runtime`). Nếu máy chỉ có JDK 21 thì cần cài thêm JDK 17 trước khi trỏ VS Code sang runtime 17.
 
-## Cấu hình SQL Server
+## Cấu hình SQL Server local
 
-Ứng dụng đang cấu hình `spring.jpa.hibernate.ddl-auto=none`, vì vậy database trống phải được tạo schema và seed bằng script SQL trước khi chạy app.
+Ứng dụng dùng profile `dev` mặc định qua `spring.profiles.active=${SPRING_PROFILES_ACTIVE:dev}`. Cấu hình local nằm trong `src/main/resources/application-dev.properties`:
 
-Tạo database nếu chưa có:
-
-```sql
-CREATE DATABASE qlvt;
+```properties
+spring.datasource.url=jdbc:sqlserver://localhost:1433;databaseName=QLVT;encrypt=true;trustServerCertificate=true
+spring.datasource.username=tam
+spring.datasource.password=123456
+spring.datasource.driver-class-name=com.microsoft.sqlserver.jdbc.SQLServerDriver
+spring.jpa.database-platform=org.hibernate.dialect.SQLServerDialect
+spring.jpa.hibernate.ddl-auto=validate
+spring.jpa.show-sql=true
 ```
 
-Sau đó chạy các script theo đúng thứ tự:
+Nếu máy dùng instance khác, đặt `DB_URL`, ví dụ `jdbc:sqlserver://localhost\\SQLEXPRESS;databaseName=QLVT;encrypt=true;trustServerCertificate=true`.
+
+Tạo hoặc sửa login local:
+
+```powershell
+sqlcmd -S localhost -E -i database/fix-login-user.sql
+```
+
+Sau đó chạy các script schema/seed theo đúng thứ tự:
 
 ```text
 database/01_create_schema.sql
@@ -42,7 +54,7 @@ database/03_seed_demo_data.sql
 
 `01_create_schema.sql` có thể chạy lại từ đầu vì script sẽ drop FK/bảng ứng dụng rồi tạo lại schema. `02_seed_master_data.sql` nạp role, người dùng, khoa, kho, vị trí, nhà cung cấp và danh mục vật tư. `03_seed_demo_data.sql` nạp dữ liệu nghiệp vụ demo như lô, tồn kho, yêu cầu cấp phát, nhập/xuất, kiểm kê, chuyển kho, thu hồi, hủy, audit log và thông báo.
 
-Ứng dụng đọc cấu hình từ `src/main/resources/application.properties` và các biến môi trường:
+Ứng dụng đọc cấu hình chung từ `src/main/resources/application.properties`, cấu hình dev từ `src/main/resources/application-dev.properties`, và có thể ghi đè bằng biến môi trường:
 
 - `DB_URL`
 - `DB_USERNAME`
@@ -51,16 +63,33 @@ database/03_seed_demo_data.sql
 Ví dụ cấu hình local trên PowerShell:
 
 ```powershell
-$env:DB_URL="jdbc:sqlserver://localhost:1433;databaseName=qlvt;encrypt=true;trustServerCertificate=true"
+$env:SPRING_PROFILES_ACTIVE="dev"
+$env:DB_URL="jdbc:sqlserver://localhost:1433;databaseName=QLVT;encrypt=true;trustServerCertificate=true"
 $env:DB_USERNAME="tam"
-$env:DB_PASSWORD="<mat-khau-sql-server>"
+$env:DB_PASSWORD="123456"
+```
+
+Checklist trước khi chạy:
+
+- SQL Server service đang chạy.
+- SQL Server Authentication đang bật.
+- TCP/IP đang bật, port `1433` đang listen hoặc `DB_URL` trỏ đúng instance như `localhost\SQLEXPRESS`.
+- `DB_ID('QLVT')` trả về giá trị khác `NULL`.
+- Login `tam` tồn tại, không bị disabled, password đúng.
+- User/login `tam` có quyền `db_owner` hoặc quyền tương đương trên `QLVT`.
+- Active profile là `dev`.
+
+Kiểm tra nhanh bằng `sqlcmd`:
+
+```powershell
+sqlcmd -S localhost -U tam -P 123456 -d QLVT -Q "SELECT DB_NAME(), SUSER_SNAME(), USER_NAME()"
 ```
 
 ## Chạy project
 
 ```powershell
 cd E:\QLVT
-.\mvnw.cmd spring-boot:run
+.\mvnw.cmd clean spring-boot:run
 ```
 
 Hoặc build jar:

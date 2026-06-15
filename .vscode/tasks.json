@@ -4,9 +4,12 @@
     {
       "label": "QLVT: Spring Boot Run",
       "type": "shell",
-      "command": ".\\mvnw.cmd spring-boot:run",
+      "command": ".\\mvnw.cmd clean spring-boot:run",
       "options": {
-        "cwd": "${workspaceFolder}"
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "SPRING_PROFILES_ACTIVE": "dev"
+        }
       },
       "problemMatcher": []
     },

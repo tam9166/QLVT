@@ -1,13 +1,13 @@
-IF DB_ID(N'qlvt') IS NULL
+IF DB_ID(N'QLVT') IS NULL
 BEGIN
-    CREATE DATABASE [qlvt];
+    CREATE DATABASE [QLVT];
 END
 GO
 
-USE [qlvt];
+USE [QLVT];
 GO
 
--- Spring Boot is configured with spring.jpa.hibernate.ddl-auto=none.
+-- Spring Boot dev profile validates this schema with spring.jpa.hibernate.ddl-auto=validate.
 -- Run these scripts in order for a clean database:
 --   database/01_create_schema.sql
 --   database/02_seed_master_data.sql

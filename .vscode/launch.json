@@ -3,18 +3,14 @@
   "configurations": [
     {
       "type": "java",
-      "name": "QlvtApplication",
-      "request": "launch",
-      "mainClass": "com.qlvt.QlvtApplication",
-      "projectName": "medical-inventory-management"
-    },
-    {
-      "type": "java",
       "name": "Run QLVT Spring Boot",
       "request": "launch",
       "mainClass": "com.qlvt.QlvtApplication",
       "projectName": "qlvt",
-      "cwd": "${workspaceFolder}"
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "SPRING_PROFILES_ACTIVE": "dev"
+      }
     }
   ]
 }
