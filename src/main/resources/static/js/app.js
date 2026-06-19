@@ -4,6 +4,25 @@ const chatForm = document.getElementById('chatForm');
 const chatInput = document.getElementById('chatInput');
 const chatMessages = document.getElementById('chatMessages');
 const quickActions = document.querySelectorAll('[data-chat-message]');
+const sidebarNav = document.getElementById('sidebarNav');
+const sidebarBackdrop = document.getElementById('sidebarBackdrop');
+
+if (sidebarNav && sidebarBackdrop) {
+    sidebarNav.addEventListener('shown.bs.collapse', () => sidebarBackdrop.classList.add('show'));
+    sidebarNav.addEventListener('hidden.bs.collapse', () => sidebarBackdrop.classList.remove('show'));
+    sidebarBackdrop.addEventListener('click', () => {
+        const instance = bootstrap.Collapse.getOrCreateInstance(sidebarNav, {toggle: false});
+        instance.hide();
+    });
+
+    document.querySelectorAll('.sidebar-subnav a').forEach(link => {
+        link.addEventListener('click', () => {
+            if (window.innerWidth < 992) {
+                bootstrap.Collapse.getOrCreateInstance(sidebarNav, {toggle: false}).hide();
+            }
+        });
+    });
+}
 
 if (chatToggle && chatPanel) {
     chatToggle.addEventListener('click', async () => {
@@ -24,6 +43,7 @@ if (chatForm) {
 }
 
 async function loadChatHistory() {
+    if (!chatMessages) return;
     try {
         const response = await fetch('/api/chatbot/history');
         const items = await response.json();
@@ -39,7 +59,7 @@ async function loadChatHistory() {
 async function sendChat(message) {
     if (!message || !chatMessages) return;
     appendChat('me', message);
-    chatInput.value = '';
+    if (chatInput) chatInput.value = '';
     const loading = appendChat('bot typing', 'Mình đang kiểm tra dữ liệu...');
     try {
         const response = await fetch('/api/chatbot', {
