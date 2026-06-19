@@ -1,1 +1,59 @@
-<!doctype html><html lang="vi" xmlns:th="http://www.thymeleaf.org"><head th:replace="~{fragments/layout :: head('Chi tiết đề nghị mua')}"></head><body><div th:replace="~{fragments/layout :: navbar}"></div><main class="container-fluid py-4"><div class="d-flex justify-content-between mb-3"><div><h1 class="h3" th:text="${item.requestCode}"></h1><span class="badge text-bg-info" th:text="${item.status}"></span></div><form th:action="@{/purchases/requests/{id}/approve(id=${item.id})}" method="post"><button class="btn btn-success">Duyệt đề nghị</button></form></div><table class="table table-hover"><thead><tr><th>Vật tư</th><th>Đề xuất</th><th>Yêu cầu</th></tr></thead><tbody><tr th:each="l:${item.lines}"><td th:text="${l.material.code + ' - ' + l.material.name}"></td><td th:text="${l.suggestedQuantity}"></td><td th:text="${l.requestedQuantity}"></td></tr></tbody></table><h2 class="h5">Tạo đơn đặt hàng</h2><form th:action="@{/purchases/requests/{id}/order(id=${item.id})}" method="post" class="row g-2"><div class="col-md-5"><select class="form-select" name="supplierId"><option th:each="s:${suppliers}" th:value="${s.id}" th:text="${s.name}"></option></select></div><div class="col-md-4"><input class="form-control" type="date" name="expectedDeliveryDate"></div><div class="col-md-3"><button class="btn btn-primary">Tạo đơn hàng</button></div></form></main></body></html>
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Chi tiết đề nghị mua')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: navbar}"></div>
+<main class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+        <div>
+            <h1 class="h3 mb-1" th:text="${item.requestCode}"></h1>
+            <span class="badge text-bg-info" th:text="${item.status}"></span>
+        </div>
+        <form th:if="${item.status.name() == 'DRAFT' || item.status.name() == 'SUBMITTED'}"
+              th:action="@{/purchases/requests/{id}/approve(id=${item.id})}"
+              method="post">
+            <button class="btn btn-success">Duyệt đề nghị</button>
+        </form>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead>
+            <tr>
+                <th>Vật tư</th>
+                <th class="text-end">Đề xuất</th>
+                <th class="text-end">Yêu cầu</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="l : ${item.lines}">
+                <td th:text="${l.material.code + ' - ' + l.material.name}"></td>
+                <td class="text-end" th:text="${l.suggestedQuantity}"></td>
+                <td class="text-end" th:text="${l.requestedQuantity}"></td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <section th:if="${item.status.name() == 'APPROVED'}" class="mt-4">
+        <h2 class="h5">Tạo đơn đặt hàng</h2>
+        <form th:action="@{/purchases/requests/{id}/order(id=${item.id})}" method="post" class="row g-2">
+            <div class="col-md-5">
+                <select class="form-select" name="supplierId" required>
+                    <option value="">Chọn nhà cung cấp</option>
+                    <option th:each="s : ${suppliers}" th:value="${s.id}" th:text="${s.name}"></option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <input class="form-control" type="date" name="expectedDeliveryDate">
+            </div>
+            <div class="col-md-3">
+                <button class="btn btn-primary">Tạo đơn hàng</button>
+            </div>
+        </form>
+    </section>
+
+    <a class="btn btn-outline-secondary mt-3" th:href="@{/purchases/requests}">Quay lại</a>
+</main>
+</body>
+</html>
