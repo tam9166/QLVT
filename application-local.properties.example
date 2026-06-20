@@ -1,0 +1,5 @@
+# Copy this file to application-local.properties and fill local SQL Server settings.
+# Do not commit application-local.properties with real credentials.
+DB_URL=jdbc:sqlserver://localhost:1433;databaseName=QLVT;encrypt=true;trustServerCertificate=true
+DB_USERNAME=tam
+DB_PASSWORD=
