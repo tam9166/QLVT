@@ -62,14 +62,14 @@ async function sendChat(message) {
     if (chatInput) chatInput.value = '';
     const loading = appendChat('bot typing', 'Mình đang kiểm tra dữ liệu...');
     try {
-        const response = await fetch('/api/chatbot', {
+        const response = await fetch('/api/chatbot/message', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({message})
         });
         const data = await response.json();
         loading.className = 'bot';
-        renderAnswer(loading, data.answer || 'Mình chưa nhận được phản hồi từ dữ liệu. Bạn thử hỏi lại giúp mình nhé.');
+        renderAnswer(loading, data.answer || data.message || 'Mình chưa nhận được phản hồi từ dữ liệu. Bạn thử hỏi lại giúp mình nhé.', data);
     } catch (error) {
         loading.className = 'bot';
         loading.textContent = 'Mình chưa kết nối được chatbot. Bạn thử lại sau một chút nhé.';
@@ -85,7 +85,7 @@ function appendChat(type, text) {
     return item;
 }
 
-function renderAnswer(node, text) {
+function renderAnswer(node, text, data = {}) {
     node.textContent = '';
     text.split('\n').forEach((line, index) => {
         if (index > 0) node.appendChild(document.createElement('br'));
@@ -102,4 +102,70 @@ function renderAnswer(node, text) {
         node.appendChild(link);
         node.appendChild(document.createTextNode(line.slice(linkMatch.index + linkMatch[0].length)));
     });
+    if (Array.isArray(data.items) && data.items.length > 0) {
+        node.appendChild(renderChatItems(data.items));
+    }
+    if (Array.isArray(data.suggestions) && data.suggestions.length > 0) {
+        node.appendChild(renderChatSuggestions(data.suggestions));
+    }
+}
+
+function renderChatItems(items) {
+    const table = document.createElement('div');
+    table.className = 'chat-result-table';
+    const rows = items.slice(0, 6).map(item => `
+        <tr>
+            <td>${escapeHtml(item.materialName || '-')}<small>${escapeHtml(item.materialCode || '')}</small></td>
+            <td>${escapeHtml(formatQuantity(item.availableQuantity, item.unit))}</td>
+            <td>${escapeHtml(item.warehouseName || '-')}<small>${escapeHtml(item.locationName || '-')}</small></td>
+            <td>${escapeHtml(item.batchCode || '-')}<small>HSD ${escapeHtml(item.expiryDate || '-')}</small></td>
+            <td><span class="chat-status ${escapeHtml((item.status || '').toLowerCase())}">${escapeHtml(statusLabel(item.status))}</span></td>
+        </tr>
+    `).join('');
+    table.innerHTML = `
+        <table>
+            <thead><tr><th>Vật tư</th><th>Còn</th><th>Kho/vị trí</th><th>Lô/HSD</th><th>Trạng thái</th></tr></thead>
+            <tbody>${rows}</tbody>
+        </table>
+    `;
+    return table;
+}
+
+function renderChatSuggestions(suggestions) {
+    const wrap = document.createElement('div');
+    wrap.className = 'chat-suggestions';
+    suggestions.slice(0, 4).forEach(text => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.textContent = text;
+        button.addEventListener('click', () => sendChat(text));
+        wrap.appendChild(button);
+    });
+    return wrap;
+}
+
+function formatQuantity(value, unit) {
+    const number = Number.isFinite(Number(value)) ? Number(value).toLocaleString('vi-VN') : '-';
+    return `${number} ${unit || ''}`.trim();
+}
+
+function statusLabel(status) {
+    switch (status) {
+        case 'AVAILABLE': return 'Còn';
+        case 'LOW_STOCK': return 'Tồn thấp';
+        case 'OUT_OF_STOCK': return 'Hết';
+        case 'NEAR_EXPIRY': return 'Sắp HSD';
+        case 'EXPIRED': return 'Hết HSD';
+        default: return status || '-';
+    }
+}
+
+function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+    }[char]));
 }

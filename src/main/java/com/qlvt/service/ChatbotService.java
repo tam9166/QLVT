@@ -1,6 +1,5 @@
 package com.qlvt.service;
 
-import com.qlvt.chatbot.AiProvider;
 import com.qlvt.entity.ChatMessage;
 import com.qlvt.entity.ChatSession;
 import com.qlvt.entity.DepartmentStock;
@@ -9,6 +8,8 @@ import com.qlvt.entity.Material;
 import com.qlvt.entity.MaterialBatch;
 import com.qlvt.entity.MaterialRequest;
 import com.qlvt.entity.StockBalance;
+import com.qlvt.entity.Warehouse;
+import com.qlvt.enums.BatchStatus;
 import com.qlvt.enums.ChatIntent;
 import com.qlvt.enums.IssueStatus;
 import com.qlvt.repository.ChatMessageRepository;
@@ -23,11 +24,15 @@ import com.qlvt.util.VietnameseTextNormalizer;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Matcher;
@@ -35,12 +40,13 @@ import java.util.regex.Pattern;
 
 @Service
 public class ChatbotService {
+    private static final NumberFormat VI_NUMBER = NumberFormat.getIntegerInstance(new Locale("vi", "VN"));
     private static final String MEDICAL_SAFETY_REPLY = """
             Mình hỗ trợ phần quản lý vật tư: tra tồn, vị trí, lô, hạn dùng, phiếu và lịch sử nhận.
             Còn liều dùng, chẩn đoán hay chỉ định điều trị thì bạn cần hỏi bác sĩ hoặc dược sĩ phụ trách nhé.
             """;
 
-    private final AiProvider aiProvider;
+    private final ChatbotNlpService nlpService;
     private final MaterialSearchService materialSearchService;
     private final MaterialRepository materialRepository;
     private final MaterialBatchRepository batchRepository;
@@ -51,7 +57,7 @@ public class ChatbotService {
     private final ChatSessionRepository sessionRepository;
     private final ChatMessageRepository messageRepository;
 
-    public ChatbotService(AiProvider aiProvider,
+    public ChatbotService(ChatbotNlpService nlpService,
                           MaterialSearchService materialSearchService,
                           MaterialRepository materialRepository,
                           MaterialBatchRepository batchRepository,
@@ -61,7 +67,7 @@ public class ChatbotService {
                           DepartmentStockRepository departmentStockRepository,
                           ChatSessionRepository sessionRepository,
                           ChatMessageRepository messageRepository) {
-        this.aiProvider = aiProvider;
+        this.nlpService = nlpService;
         this.materialSearchService = materialSearchService;
         this.materialRepository = materialRepository;
         this.batchRepository = batchRepository;
@@ -75,45 +81,15 @@ public class ChatbotService {
 
     @Transactional
     public ChatResponse answer(String question, String username, String department) {
-        ChatSession session = sessionRepository.findFirstByUserOrderByUpdatedAtDesc(username).orElseGet(() -> {
-            ChatSession created = new ChatSession();
-            created.setUser(username);
-            created.setTitle("Tra cứu QLVT");
-            return sessionRepository.save(created);
-        });
+        ChatSession session = currentSession(username);
+        ChatbotNlpService.ParsedQuestion parsed = nlpService.parse(enrichWithRecentMaterial(question, session));
+        ChatResponse response = route(parsed, username, department, session.getId());
 
-        String socialReply = socialReply(question);
-        ChatIntent intent;
-        String answer;
-        if (socialReply != null) {
-            intent = ChatIntent.HELP;
-            answer = socialReply;
-        } else {
-            String contextualQuestion = enrichWithRecentMaterial(question, session);
-            intent = aiProvider.detectIntent(contextualQuestion);
-            answer = switch (intent) {
-                case HELP -> help();
-                case UNKNOWN -> MEDICAL_SAFETY_REPLY;
-                case CHECK_STOCK -> checkStock(contextualQuestion);
-                case CHECK_LOCATION -> checkLocation(contextualQuestion);
-                case CHECK_EXPIRY, CHECK_BATCH -> checkExpiryOrBatch(contextualQuestion);
-                case CHECK_SUPPLIER -> checkSupplier(contextualQuestion);
-                case SUGGEST_ALTERNATIVE -> suggestAlternative(contextualQuestion);
-                case CHECK_REQUEST_STATUS -> checkRequestStatus(username, department);
-                case CREATE_REQUEST_DRAFT -> createRequestDraft(contextualQuestion);
-                case CHECK_RECEIVED_HISTORY -> receivedHistory(username, department);
-                case CHECK_DEPARTMENT_STOCK -> departmentStock(contextualQuestion, department);
-                case CHECK_DEPARTMENT_EXPIRING_MATERIALS -> expiringMaterials();
-                case HELP_CREATE_REQUEST -> createRequestHelp();
-                default -> searchMaterial(contextualQuestion);
-            };
-        }
-
-        saveMessage(session, "USER", question, intent, answer);
-        saveMessage(session, "BOT", answer, intent, answer);
+        saveMessage(session, "USER", question, parsed.intent(), response.answer());
+        saveMessage(session, "BOT", response.answer(), parsed.intent(), response.answer());
         session.setUpdatedAt(LocalDateTime.now());
         sessionRepository.save(session);
-        return new ChatResponse(answer.strip(), intent.name(), session.getId());
+        return response;
     }
 
     public List<Map<String, String>> recentHistory(String username) {
@@ -132,151 +108,238 @@ public class ChatbotService {
         });
     }
 
-    private String socialReply(String question) {
-        String text = VietnameseTextNormalizer.normalizeSearchText(question);
-        if (text.isBlank()) {
-            return """
-                    Mình đây. Bạn cứ hỏi như đang trao đổi với nhân viên kho.
-                    Ví dụ: "găng tay size M còn bao nhiêu", "VT001 để ở kho nào", "lô nào gần hết date", hoặc "phiếu của tôi đã duyệt chưa".
-                    """;
-        }
-        if (text.equals("xin chao") || text.equals("chao") || text.equals("hello") || text.equals("hi")
-                || text.equals("alo") || text.equals("chao ban") || text.equals("em oi")) {
-            return """
-                    Chào bạn, mình đang sẵn sàng tra dữ liệu QLVT.
-                    Bạn có thể hỏi tự nhiên như: "VT001 còn cấp được bao nhiêu?", "vật tư này ở kho nào?", hoặc "phiếu của em kho duyệt chưa?".
-                    """;
-        }
-        if (VietnameseTextNormalizer.containsAnyKeyword(text, "cam on", "thanks", "thank you", "ok roi", "duoc roi", "ro roi")) {
-            return "Không có gì. Khi cần tra tồn kho, vị trí, lô/HSD hoặc trạng thái phiếu, bạn cứ nhắn theo cách tự nhiên nhé.";
-        }
-        return null;
-    }
-
-    private String enrichWithRecentMaterial(String question, ChatSession session) {
-        String normalized = VietnameseTextNormalizer.normalizeSearchText(question);
-        if (!VietnameseTextNormalizer.containsAnyKeyword(normalized, "vat tu nay", "lo nay", "hang nay", "cai nay")) {
-            return question;
-        }
-        String recentText = messageRepository.findTop30BySession_IdOrderByCreatedAtAsc(session.getId()).stream()
-                .sorted(Comparator.comparing(ChatMessage::getCreatedAt).reversed())
-                .map(message -> message.getMessage() + "\n" + nullSafe(message.getResponse()))
-                .limit(10)
-                .reduce("", (left, right) -> left + "\n" + right);
-        return materialRepository.findByDeletedFalseOrderByCodeAsc().stream()
-                .filter(material -> recentText.contains(material.getCode()))
-                .findFirst()
-                .map(material -> question + " " + material.getCode())
-                .orElse(question);
-    }
-
-    private String searchMaterial(String question) {
-        List<Material> matches = materialSearchService.search(question, 5);
-        if (matches.isEmpty()) {
-            return """
-                    Mình chưa tìm thấy vật tư khớp với câu hỏi này, nên mình không tự đoán.
-                    Bạn thử gửi mã vật tư, tên đầy đủ hơn, hoặc một cụm dễ nhận diện hơn nhé. Ví dụ: "găng tay size M", "khẩu trang y tế", hoặc "VT002".
-                    """;
-        }
-        if (matches.size() > 1) {
-            return "Mình thấy vài vật tư khá giống nhau. Bạn muốn xem loại nào?\n"
-                    + numberedMaterials(matches)
-                    + "\nBạn nhắn lại bằng mã vật tư để mình tra chính xác hơn, ví dụ: VT002.";
-        }
-        return "Mình tìm thấy vật tư này:\n" + materialSummary(matches.get(0))
-                + "\n\nBạn có thể hỏi tiếp: \"" + matches.get(0).getCode() + " còn bao nhiêu?\" hoặc \""
-                + matches.get(0).getCode() + " nằm ở đâu?\"";
-    }
-
-    private String checkStock(String question) {
-        Material material = singleMaterial(question);
-        if (material == null) {
-            return "Mình chưa xác định được vật tư cần kiểm tra tồn. Bạn gửi giúp mình mã hoặc tên rõ hơn, ví dụ: \"VT001 còn cấp được bao nhiêu?\".";
+    private ChatResponse route(ChatbotNlpService.ParsedQuestion parsed, String username, String userDepartment, Long sessionId) {
+        if (parsed.ambiguousMaterial() && requiresSpecificMaterial(parsed.intent())) {
+            return ambiguousMaterial(parsed, sessionId);
         }
 
-        List<StockBalance> balances = balanceRepository.findByMaterial_IdOrderByWarehouse_CodeAscLocation_CodeAsc(material.getId());
-        int totalAvailable = balances.isEmpty()
-                ? material.getAvailableQuantity()
-                : balances.stream().mapToInt(balance -> Math.max(0, balance.getAvailableQuantity())).sum();
-        StringBuilder builder = new StringBuilder("Mình kiểm tra tồn kho cho bạn:\n")
-                .append(materialLine(material))
-                .append("\n- Tổng còn có thể cấp: ").append(totalAvailable).append(" ").append(nullSafe(material.getUnit()));
-
-        if (balances.isEmpty()) {
-            return builder.append("\n\nHiện chưa có số dư theo kho/vị trí cho vật tư này.").toString();
-        }
-
-        builder.append("\n\nTheo từng kho/vị trí:");
-        balances.forEach(balance -> builder.append("\n- ")
-                .append(warehouseLabel(balance)).append(" / ")
-                .append(locationLabel(balance)).append(" / lô ")
-                .append(batchLabel(balance))
-                .append(": còn ").append(balance.getAvailableQuantity()).append(" ")
-                .append(nullSafe(material.getUnit()))
-                .append(" (thực tế ").append(balance.getActualQuantity())
-                .append(", đang giữ ").append(balance.getReservedQuantity()).append(")"));
-        return builder.toString();
-    }
-
-    private String checkLocation(String question) {
-        Material material = singleMaterial(question);
-        if (material == null) {
-            return "Mình chưa biết bạn muốn tìm vị trí của vật tư nào. Bạn gửi mã hoặc tên vật tư giúp mình nhé, ví dụ: \"VT001 để ở đâu?\".";
-        }
-        List<StockBalance> balances = balanceRepository.findByMaterial_IdOrderByWarehouse_CodeAscLocation_CodeAsc(material.getId());
-        if (balances.isEmpty()) {
-            return "Mình chưa thấy vị trí tồn nào cho " + materialLine(material) + " trong dữ liệu hiện tại.";
-        }
-        StringBuilder builder = new StringBuilder("Mình thấy ")
-                .append(materialLine(material))
-                .append(" đang nằm ở:");
-        balances.forEach(balance -> builder.append("\n- ")
-                .append(warehouseLabel(balance))
-                .append(", vị trí ").append(locationLabel(balance))
-                .append(", lô ").append(batchLabel(balance))
-                .append(", còn ").append(balance.getAvailableQuantity()).append(" ")
-                .append(nullSafe(material.getUnit())));
-        return builder.toString();
-    }
-
-    private String checkExpiryOrBatch(String question) {
-        String text = VietnameseTextNormalizer.normalizeSearchText(question);
-        Optional<MaterialBatch> batchByNumber = batchRepository.findAll().stream()
-                .filter(batch -> text.contains(VietnameseTextNormalizer.normalizeSearchText(batch.getBatchNumber())))
-                .findFirst();
-        MaterialBatch batch = batchByNumber.orElseGet(() -> {
-            Material material = singleMaterial(question);
-            return material == null ? null : batchRepository.findIssuableBatchesFefo(material.getId(), LocalDate.now()).stream().findFirst().orElse(null);
-        });
-        if (batch == null) {
-            return "Mình chưa tìm thấy lô phù hợp. Bạn gửi thêm số lô, mã vật tư hoặc tên vật tư để mình kiểm tra chính xác hơn nhé.";
-        }
-
-        String warning = "";
-        if (batch.getExpiryDate() != null) {
-            if (batch.getExpiryDate().isBefore(LocalDate.now())) {
-                warning = "\nLưu ý: lô này đã quá hạn, không nên cấp phát.";
-            } else if (batch.getExpiryDate().isBefore(LocalDate.now().plusDays(90))) {
-                warning = "\nLưu ý: lô này sắp hết hạn, nên ưu tiên kiểm tra trước khi cấp.";
+        return switch (parsed.intent()) {
+            case GENERAL_HELP, HELP -> simple(parsed.intent(), help(), helpSuggestions(), sessionId);
+            case UNKNOWN -> simple(ChatIntent.UNKNOWN, MEDICAL_SAFETY_REPLY, List.of("Tra tồn kho", "Xem lô sắp hết hạn"), sessionId);
+            case ASK_LOW_STOCK -> lowStockReport(parsed, sessionId);
+            case ASK_EXPIRED_OR_NEAR_EXPIRED, CHECK_DEPARTMENT_EXPIRING_MATERIALS -> expiringReport(parsed, sessionId);
+            case ASK_RECOMMEND_ISSUE -> recommendIssue(parsed, sessionId);
+            case ASK_LOCATION, CHECK_LOCATION -> materialInventory(parsed, "LOCATION", sessionId);
+            case ASK_EXPIRY, ASK_IMPORT_DATE, ASK_BATCH, CHECK_EXPIRY, CHECK_BATCH -> materialInventory(parsed, "BATCH", sessionId);
+            case ASK_STOCK, CHECK_STOCK -> {
+                if (parsed.department() != null || containsDepartmentScope(parsed.normalizedMessage())) {
+                    yield departmentStock(parsed, firstNonBlank(parsed.department(), userDepartment), sessionId);
+                }
+                yield materialInventory(parsed, "STOCK", sessionId);
             }
-        }
-
-        return "Mình tìm được thông tin lô này:\n"
-                + "- Lô: " + batch.getBatchNumber()
-                + "\n- Vật tư: " + materialLine(batch.getMaterial())
-                + "\n- Ngày nhập: " + format(batch.getReceiptDate())
-                + "\n- Ngày sản xuất: " + format(batch.getManufactureDate())
-                + "\n- Hạn dùng: " + format(batch.getExpiryDate())
-                + "\n- Số lượng còn: " + batch.getQuantity() + " " + nullSafe(batch.getMaterial().getUnit())
-                + "\n- Trạng thái: " + batch.getStatus()
-                + warning;
+            case CHECK_DEPARTMENT_STOCK -> departmentStock(parsed, firstNonBlank(parsed.department(), userDepartment), sessionId);
+            case CHECK_SUPPLIER -> checkSupplier(parsed, sessionId);
+            case SUGGEST_ALTERNATIVE -> suggestAlternative(parsed, sessionId);
+            case CHECK_REQUEST_STATUS -> simple(parsed.intent(), checkRequestStatus(username, userDepartment), List.of("Tạo yêu cầu cấp phát", "Xem thông báo"), sessionId);
+            case CREATE_REQUEST_DRAFT -> simple(parsed.intent(), createRequestDraft(parsed), List.of("Mở /requests/new", "Kiểm tra tồn trước khi xin"), sessionId);
+            case CHECK_RECEIVED_HISTORY -> simple(parsed.intent(), receivedHistory(username, userDepartment), List.of("Xem tồn tại khoa", "Xem phiếu của tôi"), sessionId);
+            default -> searchMaterial(parsed, sessionId);
+        };
     }
 
-    private String checkSupplier(String question) {
-        Material material = singleMaterial(question);
-        if (material == null) {
-            return "Mình chưa xác định được vật tư hoặc lô cần kiểm tra nhà cung cấp. Bạn gửi mã vật tư, tên vật tư hoặc số lô giúp mình nhé.";
+    private ChatResponse materialInventory(ChatbotNlpService.ParsedQuestion parsed, String mode, Long sessionId) {
+        if (!parsed.hasMaterial()) {
+            return missingMaterial(parsed.intent(), sessionId);
         }
+
+        List<ChatItem> items = new ArrayList<>();
+        StringBuilder answer = new StringBuilder();
+        for (Material material : parsed.targetMaterials()) {
+            List<StockBalance> balances = balancesFor(material, parsed.warehouse());
+            long totalAvailable = balances.stream().mapToLong(this::available).sum();
+            long totalActual = balances.stream().mapToLong(balance -> Math.max(0, balance.getActualQuantity())).sum();
+            String status = stockStatus(material, totalAvailable);
+
+            if (!answer.isEmpty()) {
+                answer.append("\n\n");
+            }
+            answer.append(stockOpening(material, totalAvailable, status));
+            if (balances.isEmpty()) {
+                answer.append("\n\nMình chưa thấy tồn theo kho/kệ/lô cho vật tư này trong dữ liệu hiện tại.");
+                items.add(materialOnlyItem(material, totalAvailable, status));
+                continue;
+            }
+
+            answer.append("\n\nChi tiết:");
+            for (StockBalance balance : balances.stream().limit(8).toList()) {
+                ChatItem item = itemFromBalance(balance, totalAvailable);
+                items.add(item);
+                answer.append("\n* ")
+                        .append(item.warehouseName()).append(": ")
+                        .append(formatNumber(available(balance))).append(" ").append(item.unit())
+                        .append(", ").append(item.locationName())
+                        .append(", lô ").append(item.batchCode())
+                        .append(", nhập ").append(nullSafe(item.importDate()))
+                        .append(", HSD ").append(nullSafe(item.expiryDate()))
+                        .append(statusSuffix(item.status()));
+            }
+
+            appendModeSpecificHint(answer, mode, balances, material, totalActual);
+        }
+        return new ChatResponse(true, parsed.intent().name(), answer.toString(), answer.toString(), items, inventorySuggestions(parsed), sessionId);
+    }
+
+    private boolean requiresSpecificMaterial(ChatIntent intent) {
+        return switch (intent) {
+            case ASK_STOCK, ASK_LOCATION, ASK_EXPIRY, ASK_IMPORT_DATE, ASK_BATCH, ASK_RECOMMEND_ISSUE,
+                 CHECK_STOCK, CHECK_LOCATION, CHECK_EXPIRY, CHECK_BATCH, CHECK_SUPPLIER,
+                 SUGGEST_ALTERNATIVE, CREATE_REQUEST_DRAFT, CHECK_DEPARTMENT_STOCK -> true;
+            default -> false;
+        };
+    }
+
+    private void appendModeSpecificHint(StringBuilder answer, String mode, List<StockBalance> balances, Material material, long totalActual) {
+        Optional<StockBalance> fefo = balances.stream().filter(balance -> available(balance) > 0 && isIssuable(balance)).findFirst();
+        if ("LOCATION".equals(mode)) {
+            answer.append("\n\nMình đã liệt kê kho, kệ/vị trí và lô để bạn dễ tìm khi đi lấy hàng.");
+        } else if ("BATCH".equals(mode)) {
+            answer.append("\n\nCác dòng trên có ngày nhập và hạn dùng để bạn kiểm tra lô trước khi cấp phát.");
+        }
+        fefo.ifPresent(balance -> answer.append("\nGợi ý FEFO: nên ưu tiên lô ")
+                .append(batchLabel(balance))
+                .append(" tại ").append(warehouseLabel(balance)).append(" / ").append(locationLabel(balance))
+                .append(" vì ")
+                .append(balance.getBatch().getExpiryDate() == null
+                        ? "lô này có ngày nhập sớm hơn trong các lô còn khả dụng."
+                        : "hạn dùng gần nhất là " + format(balance.getBatch().getExpiryDate()) + "."));
+
+        long expiredCount = balances.stream().filter(this::isExpired).count();
+        if (expiredCount > 0) {
+            answer.append("\nLưu ý: có ").append(expiredCount)
+                    .append(" dòng tồn đã hết hạn hoặc không nên cấp phát. Vui lòng kiểm tra module Thu hồi/Hủy vật tư.");
+        }
+        if (totalActual == 0 && material.getAvailableQuantity() == 0) {
+            answer.append("\nHiện vật tư này đang hết hàng trong hệ thống.");
+        }
+    }
+
+    private ChatResponse recommendIssue(ChatbotNlpService.ParsedQuestion parsed, Long sessionId) {
+        if (!parsed.hasMaterial()) {
+            return missingMaterial(ChatIntent.ASK_RECOMMEND_ISSUE, sessionId);
+        }
+        Material material = parsed.firstMaterial().orElseThrow();
+        List<StockBalance> fefoBalances = parsed.warehouse() == null
+                ? balanceRepository.findAvailableFefo(material.getId(), LocalDate.now())
+                : balanceRepository.findAvailableFefoInWarehouse(material.getId(), parsed.warehouse().getId(), LocalDate.now());
+        if (fefoBalances.isEmpty()) {
+            String answer = "Mình chưa thấy lô còn khả dụng để cấp phát cho " + materialLine(material)
+                    + ". Nếu cần gấp, bạn nên kiểm tra tồn thực tế hoặc tạo đề nghị mua/bổ sung.";
+            return simple(ChatIntent.ASK_RECOMMEND_ISSUE, answer, List.of("Xem tồn thấp", "Tạo đề nghị mua"), sessionId);
+        }
+
+        StockBalance first = fefoBalances.get(0);
+        ChatItem item = itemFromBalance(first, fefoBalances.stream().mapToLong(this::available).sum());
+        String reason = first.getBatch().getExpiryDate() == null
+                ? "lô này được nhập sớm nhất trong các lô không có hạn dùng rõ ràng, phù hợp nguyên tắc FIFO."
+                : "lô này có hạn dùng gần nhất là " + format(first.getBatch().getExpiryDate()) + ", phù hợp nguyên tắc FEFO.";
+        String answer = "Bạn nên lấy " + material.getName() + " từ "
+                + item.warehouseName() + ", " + item.locationName() + ", lô " + item.batchCode()
+                + " trước. Hiện lô này còn " + formatNumber(item.availableQuantity()) + " " + item.unit()
+                + ".\n\nLý do: " + reason;
+        return new ChatResponse(true, ChatIntent.ASK_RECOMMEND_ISSUE.name(), answer, answer, List.of(item), List.of("Xem vị trí trong kho", "Tạo yêu cầu cấp phát"), sessionId);
+    }
+
+    private ChatResponse expiringReport(ChatbotNlpService.ParsedQuestion parsed, Long sessionId) {
+        int days = parsed.expiryWindowDays();
+        LocalDate today = LocalDate.now();
+        LocalDate until = today.plusDays(days);
+        List<StockBalance> balances = balanceRepository.findAll().stream()
+                .filter(balance -> balance.getBatch() != null && balance.getBatch().getExpiryDate() != null)
+                .filter(balance -> parsed.warehouse() == null || balance.getWarehouse().getId().equals(parsed.warehouse().getId()))
+                .filter(balance -> !parsed.hasMaterial() || parsed.materials().stream().anyMatch(material -> material.getId().equals(balance.getMaterial().getId())))
+                .filter(balance -> balance.getBatch().getExpiryDate().isBefore(today) || !balance.getBatch().getExpiryDate().isAfter(until))
+                .filter(balance -> balance.getActualQuantity() > 0)
+                .sorted(Comparator.comparing(balance -> balance.getBatch().getExpiryDate()))
+                .limit(20)
+                .toList();
+
+        if (balances.isEmpty()) {
+            String target = parsed.hasMaterial() ? " cho " + materialLine(parsed.firstMaterial().orElseThrow()) : "";
+            String answer = "Mình kiểm tra rồi, hiện chưa thấy lô sắp hết hạn trong " + days + " ngày tới" + target + ".";
+            return simple(ChatIntent.ASK_EXPIRED_OR_NEAR_EXPIRED, answer, List.of("Xem tồn thấp", "Kiểm tra vật tư khác"), sessionId);
+        }
+
+        List<ChatItem> items = balances.stream().map(balance -> itemFromBalance(balance, available(balance))).toList();
+        StringBuilder answer = new StringBuilder("Mình thấy ")
+                .append(items.size()).append(" lô cần chú ý trong ").append(days).append(" ngày tới:");
+        for (ChatItem item : items) {
+            answer.append("\n* ")
+                    .append(item.materialName()).append(" | lô ").append(item.batchCode())
+                    .append(" | còn ").append(formatNumber(item.availableQuantity())).append(" ").append(item.unit())
+                    .append(" | ").append(item.warehouseName()).append(" / ").append(item.locationName())
+                    .append(" | HSD ").append(item.expiryDate())
+                    .append(statusSuffix(item.status()));
+        }
+        answer.append("\n\nBạn nên ưu tiên rà soát FEFO, khóa cấp phát lô hết hạn và chuyển sang Thu hồi/Hủy nếu cần.");
+        return new ChatResponse(true, ChatIntent.ASK_EXPIRED_OR_NEAR_EXPIRED.name(), answer.toString(), answer.toString(), items, List.of("Xem module Lô/HSD", "Tạo cảnh báo hôm nay"), sessionId);
+    }
+
+    private ChatResponse lowStockReport(ChatbotNlpService.ParsedQuestion parsed, Long sessionId) {
+        boolean outOfStockOnly = VietnameseTextNormalizer.containsAnyKeyword(parsed.normalizedMessage(), "het hang", "het kho");
+        List<Material> materials = materialRepository.findByDeletedFalseOrderByCodeAsc().stream()
+                .filter(material -> outOfStockOnly ? material.getAvailableQuantity() <= 0 : material.getAvailableQuantity() <= Math.max(1, material.getMinStock()))
+                .limit(15)
+                .toList();
+        if (materials.isEmpty()) {
+            String answer = outOfStockOnly
+                    ? "Mình chưa thấy vật tư nào hết hàng theo số liệu hiện tại."
+                    : "Mình chưa thấy vật tư nào dưới ngưỡng tồn tối thiểu theo số liệu hiện tại.";
+            return simple(ChatIntent.ASK_LOW_STOCK, answer, List.of("Xem lô sắp hết hạn", "Tra một vật tư cụ thể"), sessionId);
+        }
+
+        List<ChatItem> items = materials.stream()
+                .map(material -> materialOnlyItem(material, material.getAvailableQuantity(), stockStatus(material, material.getAvailableQuantity())))
+                .toList();
+        StringBuilder answer = new StringBuilder(outOfStockOnly
+                ? "Hiện có các vật tư đang hết hàng hoặc không còn khả dụng:"
+                : "Hiện có các vật tư đang tồn thấp:");
+        int index = 1;
+        for (Material material : materials) {
+            answer.append("\n").append(index++).append(". ")
+                    .append(material.getName())
+                    .append(": còn ").append(formatNumber(material.getAvailableQuantity())).append(" ").append(nullSafe(material.getUnit()))
+                    .append(", mức tối thiểu ").append(formatNumber(material.getMinStock())).append(" ").append(nullSafe(material.getUnit()));
+        }
+        answer.append("\n\nBạn nên kiểm tra tồn thực tế và tạo đề nghị mua/bổ sung cho các vật tư này.");
+        return new ChatResponse(true, ChatIntent.ASK_LOW_STOCK.name(), answer.toString(), answer.toString(), items, List.of("Mở /purchases/requests", "Xem báo cáo tồn kho"), sessionId);
+    }
+
+    private ChatResponse departmentStock(ChatbotNlpService.ParsedQuestion parsed, String department, Long sessionId) {
+        if (department == null || department.isBlank()) {
+            String answer = "Mình chưa xác định được khoa/phòng cần tra. Bạn có thể hỏi rõ hơn, ví dụ: \"khoa cấp cứu còn bộ dịch truyền không?\".";
+            return simple(ChatIntent.CHECK_DEPARTMENT_STOCK, answer, List.of("Tra tồn kho tổng", "Tạo yêu cầu cấp phát"), sessionId);
+        }
+        List<DepartmentStock> stocks = departmentStockRepository.findByDepartmentAndQuantityOnHandGreaterThanOrderByMaterial_CodeAscBatch_ExpiryDateAsc(department, 0);
+        if (parsed.hasMaterial()) {
+            stocks = stocks.stream()
+                    .filter(stock -> parsed.materials().stream().anyMatch(material -> material.getId().equals(stock.getMaterial().getId())))
+                    .toList();
+        } else {
+            stocks = stocks.stream().limit(10).toList();
+        }
+        if (stocks.isEmpty()) {
+            String target = parsed.hasMaterial() ? " cho " + materialLine(parsed.firstMaterial().orElseThrow()) : "";
+            String answer = department + " hiện chưa còn tồn" + target + " trong dữ liệu khoa/phòng.";
+            return simple(ChatIntent.CHECK_DEPARTMENT_STOCK, answer, List.of("Tạo yêu cầu cấp phát", "Tra tồn kho tổng"), sessionId);
+        }
+
+        List<ChatItem> items = stocks.stream().map(this::itemFromDepartmentStock).toList();
+        StringBuilder answer = new StringBuilder("Tồn tại ").append(department).append(":");
+        for (ChatItem item : items) {
+            answer.append("\n* ")
+                    .append(item.materialName()).append(": còn ").append(formatNumber(item.availableQuantity())).append(" ").append(item.unit())
+                    .append(", lô ").append(item.batchCode())
+                    .append(", HSD ").append(nullSafe(item.expiryDate()))
+                    .append(statusSuffix(item.status()));
+        }
+        return new ChatResponse(true, ChatIntent.CHECK_DEPARTMENT_STOCK.name(), answer.toString(), answer.toString(), items, List.of("Tạo yêu cầu cấp phát", "Báo vật tư hỏng/mất"), sessionId);
+    }
+
+    private ChatResponse checkSupplier(ChatbotNlpService.ParsedQuestion parsed, Long sessionId) {
+        if (!parsed.hasMaterial()) {
+            return missingMaterial(ChatIntent.CHECK_SUPPLIER, sessionId);
+        }
+        Material material = parsed.firstMaterial().orElseThrow();
         List<MaterialBatch> batches = batchRepository.findAll().stream()
                 .filter(batch -> batch.getMaterial().getId().equals(material.getId()))
                 .filter(batch -> batch.getSupplier() != null)
@@ -284,28 +347,168 @@ public class ChatbotService {
                 .limit(5)
                 .toList();
         if (batches.isEmpty()) {
-            return "Mình chưa thấy nhà cung cấp nào được ghi nhận cho " + materialLine(material) + ".";
+            return simple(ChatIntent.CHECK_SUPPLIER, "Mình chưa thấy nhà cung cấp nào được ghi nhận cho " + materialLine(material) + ".", List.of("Xem lịch sử giá nhập"), sessionId);
         }
-        StringBuilder builder = new StringBuilder("Các nhà cung cấp gần đây của ")
-                .append(materialLine(material)).append(":");
-        batches.forEach(batch -> builder.append("\n- ")
+        StringBuilder answer = new StringBuilder("Các nhà cung cấp gần đây của ").append(materialLine(material)).append(":");
+        batches.forEach(batch -> answer.append("\n* ")
                 .append(batch.getSupplier().getName())
                 .append(", lô ").append(batch.getBatchNumber())
                 .append(", nhập ngày ").append(format(batch.getReceiptDate())));
-        return builder.toString();
+        return simple(ChatIntent.CHECK_SUPPLIER, answer.toString(), List.of("Xem lịch sử giá nhập", "Xem đơn mua"), sessionId);
     }
 
-    private String suggestAlternative(String question) {
-        Material material = singleMaterial(question);
-        if (material == null) {
-            return "Mình chưa biết bạn muốn tìm vật tư thay thế cho món nào. Bạn gửi mã hoặc tên vật tư giúp mình nhé, ví dụ: \"hết VT001 thì dùng loại nào?\".";
+    private ChatResponse suggestAlternative(ChatbotNlpService.ParsedQuestion parsed, Long sessionId) {
+        if (!parsed.hasMaterial()) {
+            return missingMaterial(ChatIntent.SUGGEST_ALTERNATIVE, sessionId);
         }
+        Material material = parsed.firstMaterial().orElseThrow();
         List<Material> alternatives = materialSearchService.alternatives(material, 5);
         if (alternatives.isEmpty()) {
-            return "Mình chưa thấy vật tư thay thế phù hợp cho " + materialLine(material) + " trong dữ liệu hiện tại.";
+            return simple(ChatIntent.SUGGEST_ALTERNATIVE, "Mình chưa thấy vật tư thay thế phù hợp cho " + materialLine(material) + " trong dữ liệu hiện tại.", List.of("Tra tồn kho vật tư khác"), sessionId);
         }
-        return "Có vài vật tư gần nhóm với " + materialLine(material) + ". Bạn vẫn nên kiểm tra lại trước khi dùng:\n"
+        String answer = "Có vài vật tư gần nhóm với " + materialLine(material) + ". Bạn vẫn nên kiểm tra lại trước khi dùng:\n"
                 + listMaterials(alternatives);
+        return simple(ChatIntent.SUGGEST_ALTERNATIVE, answer, List.of("Tra tồn từng vật tư", "Tạo yêu cầu cấp phát"), sessionId);
+    }
+
+    private ChatResponse searchMaterial(ChatbotNlpService.ParsedQuestion parsed, Long sessionId) {
+        if (parsed.hasMaterial()) {
+            Material material = parsed.firstMaterial().orElseThrow();
+            String answer = "Mình tìm thấy vật tư này:\n" + materialSummary(material)
+                    + "\n\nBạn có thể hỏi tiếp: \"" + material.getName() + " còn bao nhiêu?\" hoặc \""
+                    + material.getName() + " nằm ở đâu?\"";
+            return simple(ChatIntent.SEARCH_MATERIAL, answer, inventorySuggestions(parsed), sessionId);
+        }
+        if (!parsed.candidates().isEmpty()) {
+            return ambiguousMaterial(parsed, sessionId);
+        }
+        String answer = """
+                Mình chưa tìm thấy vật tư khớp với câu hỏi này, nên mình không tự đoán.
+                Bạn thử gửi mã vật tư, tên đầy đủ hơn, hoặc một cụm dễ nhận diện hơn nhé. Ví dụ: "găng tay size M", "khẩu trang y tế", hoặc "VT002".
+                """;
+        return simple(ChatIntent.SEARCH_MATERIAL, answer, List.of("Còn bao nhiêu khẩu trang?", "Vật tư nào tồn thấp?"), sessionId);
+    }
+
+    private ChatResponse ambiguousMaterial(ChatbotNlpService.ParsedQuestion parsed, Long sessionId) {
+        StringBuilder answer = new StringBuilder("Mình tìm thấy vài vật tư khá giống nhau, nên chưa chọn thay bạn để tránh sai dữ liệu:\n");
+        int index = 1;
+        for (Material material : parsed.candidates()) {
+            answer.append(index++).append(". ").append(materialLine(material))
+                    .append(" | còn có thể cấp ").append(formatNumber(material.getAvailableQuantity())).append(" ")
+                    .append(nullSafe(material.getUnit())).append("\n");
+        }
+        answer.append("\nBạn nhắn lại bằng mã hoặc tên đầy đủ hơn, ví dụ: \"")
+                .append(parsed.candidates().isEmpty() ? "VT002" : parsed.candidates().get(0).getCode())
+                .append(" còn bao nhiêu?\".");
+        List<ChatItem> items = parsed.candidates().stream()
+                .map(material -> materialOnlyItem(material, material.getAvailableQuantity(), stockStatus(material, material.getAvailableQuantity())))
+                .toList();
+        return new ChatResponse(false, parsed.intent().name(), answer.toString().strip(), answer.toString().strip(), items, List.of("Nhập mã vật tư", "Nhập thêm size/quy cách"), sessionId);
+    }
+
+    private ChatResponse missingMaterial(ChatIntent intent, Long sessionId) {
+        String answer = "Bạn muốn kiểm tra vật tư nào? Bạn có thể nhập như: \"còn bao nhiêu khẩu trang\", \"bộ dịch truyền ở kho nào\" hoặc \"bơm tiêm 5ml còn bao nhiêu\".";
+        return simple(intent, answer, List.of("Còn bao nhiêu khẩu trang?", "Bộ dịch truyền nằm ở đâu?"), sessionId);
+    }
+
+    private List<StockBalance> balancesFor(Material material, Warehouse warehouse) {
+        List<StockBalance> balances = balanceRepository.findByMaterial_IdOrderByWarehouse_CodeAscLocation_CodeAsc(material.getId()).stream()
+                .filter(balance -> warehouse == null || balance.getWarehouse().getId().equals(warehouse.getId()))
+                .filter(balance -> balance.getActualQuantity() > 0 || balance.getReservedQuantity() > 0 || balance.getPendingIssueQuantity() > 0)
+                .sorted(Comparator.comparing((StockBalance balance) -> balance.getBatch().getExpiryDate(), Comparator.nullsLast(Comparator.naturalOrder()))
+                        .thenComparing(balance -> balance.getBatch().getReceiptDate(), Comparator.nullsLast(Comparator.naturalOrder()))
+                        .thenComparing(balance -> balance.getWarehouse().getCode())
+                        .thenComparing(balance -> balance.getLocation().getCode()))
+                .toList();
+        if (!balances.isEmpty()) {
+            return balances;
+        }
+        return warehouse == null
+                ? balanceRepository.findAvailableFefo(material.getId(), LocalDate.now())
+                : balanceRepository.findAvailableFefoInWarehouse(material.getId(), warehouse.getId(), LocalDate.now());
+    }
+
+    private ChatItem itemFromBalance(StockBalance balance, long totalAvailable) {
+        Material material = balance.getMaterial();
+        MaterialBatch batch = balance.getBatch();
+        return new ChatItem(
+                material.getId(),
+                material.getCode(),
+                material.getName(),
+                (int) totalAvailable,
+                nullSafe(material.getUnit()),
+                warehouseLabel(balance),
+                locationLabel(balance),
+                batchLabel(balance),
+                format(batch.getReceiptDate()),
+                format(batch.getExpiryDate()),
+                rowStatus(balance),
+                available(balance),
+                Math.max(0, balance.getActualQuantity()),
+                Math.max(0, balance.getReservedQuantity()),
+                daysToExpiry(batch.getExpiryDate()),
+                statusNote(balance)
+        );
+    }
+
+    private ChatItem itemFromDepartmentStock(DepartmentStock stock) {
+        Material material = stock.getMaterial();
+        MaterialBatch batch = stock.getBatch();
+        return new ChatItem(
+                material.getId(),
+                material.getCode(),
+                material.getName(),
+                stock.getQuantityOnHand(),
+                nullSafe(material.getUnit()),
+                stock.getDepartment(),
+                "Tồn tại khoa",
+                batch == null ? "-" : nullSafe(batch.getBatchNumber()),
+                stock.getLastReceivedAt() == null ? "-" : format(stock.getLastReceivedAt().toLocalDate()),
+                batch == null ? "-" : format(batch.getExpiryDate()),
+                batch != null && batch.getExpiryDate() != null && batch.getExpiryDate().isBefore(LocalDate.now()) ? "EXPIRED" : "AVAILABLE",
+                stock.getQuantityOnHand(),
+                stock.getQuantityOnHand(),
+                0,
+                batch == null ? null : daysToExpiry(batch.getExpiryDate()),
+                "Tồn khoa/phòng"
+        );
+    }
+
+    private ChatItem materialOnlyItem(Material material, long totalAvailable, String status) {
+        return new ChatItem(
+                material.getId(), material.getCode(), material.getName(), (int) totalAvailable, nullSafe(material.getUnit()),
+                "-", "-", "-", "-", "-", status, (int) totalAvailable, material.getActualQuantity(), material.getReservedQuantity(), null, ""
+        );
+    }
+
+    private ChatResponse simple(ChatIntent intent, String answer, List<String> suggestions, Long sessionId) {
+        return new ChatResponse(true, intent.name(), answer.strip(), answer.strip(), List.of(), suggestions, sessionId);
+    }
+
+    private ChatSession currentSession(String username) {
+        return sessionRepository.findFirstByUserOrderByUpdatedAtDesc(username).orElseGet(() -> {
+            ChatSession created = new ChatSession();
+            created.setUser(username);
+            created.setTitle("Tra cứu QLVT");
+            return sessionRepository.save(created);
+        });
+    }
+
+    private String enrichWithRecentMaterial(String question, ChatSession session) {
+        String normalized = VietnameseTextNormalizer.normalizeSearchText(question);
+        if (!VietnameseTextNormalizer.containsAnyKeyword(normalized, "vat tu nay", "lo nay", "hang nay", "cai nay")) {
+            return question == null ? "" : question;
+        }
+        String recentText = messageRepository.findTop30BySession_IdOrderByCreatedAtAsc(session.getId()).stream()
+                .sorted(Comparator.comparing(ChatMessage::getCreatedAt).reversed())
+                .map(message -> nullSafe(message.getMessage()) + "\n" + nullSafe(message.getResponse()))
+                .limit(10)
+                .reduce("", (left, right) -> left + "\n" + right);
+        return materialRepository.findByDeletedFalseOrderByCodeAsc().stream()
+                .filter(material -> recentText.contains(material.getCode()))
+                .findFirst()
+                .map(material -> question + " " + material.getCode())
+                .orElse(question == null ? "" : question);
     }
 
     private String checkRequestStatus(String username, String department) {
@@ -317,7 +520,7 @@ public class ChatbotService {
             return "Mình chưa thấy phiếu yêu cầu nào trong phạm vi bạn được phép xem. Nếu vừa cần xin vật tư, bạn có thể tạo yêu cầu tại /requests/new.";
         }
         StringBuilder builder = new StringBuilder("Mình thấy các phiếu gần đây như sau:");
-        requests.forEach(request -> builder.append("\n- ")
+        requests.forEach(request -> builder.append("\n* ")
                 .append(request.getCode())
                 .append(" | ").append(format(request.getCreatedAt()))
                 .append(" | ").append(request.getStatus())
@@ -326,9 +529,9 @@ public class ChatbotService {
         return builder.append("\nBạn bấm vào đường dẫn phiếu để xem chi tiết từng dòng vật tư.").toString();
     }
 
-    private String createRequestDraft(String question) {
-        Material material = singleMaterial(question);
-        Integer quantity = extractFirstNumber(question);
+    private String createRequestDraft(ChatbotNlpService.ParsedQuestion parsed) {
+        Material material = parsed.firstMaterial().orElse(null);
+        Integer quantity = extractFirstNumber(parsed.rawMessage());
         if (material == null || quantity == null) {
             return """
                     Mình cần thêm một chút thông tin để lập đúng yêu cầu: vật tư nào và số lượng bao nhiêu.
@@ -336,20 +539,9 @@ public class ChatbotService {
                     """;
         }
         return "Mình hiểu là bạn muốn lấy "
-                + quantity + " " + nullSafe(material.getUnit())
+                + formatNumber(quantity) + " " + nullSafe(material.getUnit())
                 + " của " + materialLine(material)
                 + ".\nBạn mở trang tạo yêu cầu tại /requests/new để kiểm tra khoa/phòng, ghi lý do và gửi duyệt.";
-    }
-
-    private String createRequestHelp() {
-        return """
-                Bạn có thể nói tự nhiên kiểu:
-                - "mình cần xin 20 hộp găng tay size M"
-                - "tạo yêu cầu 10 VT001"
-                - "VT001 còn cấp được bao nhiêu?"
-                - "lô nào gần hết date?"
-                Mình sẽ tra dữ liệu và dẫn bạn tới đúng trang tạo yêu cầu hoặc trang xử lý.
-                """;
     }
 
     private String receivedHistory(String username, String department) {
@@ -361,107 +553,142 @@ public class ChatbotService {
             return "Mình chưa thấy lịch sử nhận vật tư nào trong phạm vi bạn được phép xem.";
         }
         StringBuilder builder = new StringBuilder("Các lần nhận vật tư gần đây:");
-        slips.forEach(slip -> slip.getLines().forEach(line -> builder.append("\n- ")
+        slips.forEach(slip -> slip.getLines().forEach(line -> builder.append("\n* ")
                 .append(format(slip.getReceivedAt()))
                 .append(" | ").append(materialLine(line.getMaterial()))
-                .append(" | SL ").append(line.getIssuedQuantity())
+                .append(" | SL ").append(formatNumber(line.getIssuedQuantity()))
                 .append(" | phiếu ").append(slip.getIssueCode())));
-        return builder.toString();
-    }
-
-    private String expiringMaterials() {
-        List<StockBalance> balances = balanceRepository.findTop20ByBatch_ExpiryDateBetweenOrderByBatch_ExpiryDateAsc(LocalDate.now(), LocalDate.now().plusDays(90));
-        if (balances.isEmpty()) {
-            return "Mình kiểm tra rồi, hiện chưa có lô nào sắp hết hạn trong 90 ngày tới.";
-        }
-        StringBuilder builder = new StringBuilder("Các lô cần chú ý trong 90 ngày tới:");
-        balances.forEach(balance -> builder.append("\n- ")
-                .append(materialLine(balance.getMaterial()))
-                .append(" | lô ").append(balance.getBatch().getBatchNumber())
-                .append(" | HSD ").append(format(balance.getBatch().getExpiryDate()))
-                .append(" | còn ").append(balance.getAvailableQuantity()).append(" ").append(nullSafe(balance.getMaterial().getUnit()))
-                .append(" | ").append(balance.getWarehouse().getName()).append(" / ").append(balance.getLocation().getName()));
         return builder.toString();
     }
 
     private String help() {
         return """
-                Mình có thể hỗ trợ bạn tra dữ liệu QLVT bằng câu hỏi tự nhiên, không cần nhớ đúng mẫu câu.
-                Bạn có thể hỏi như sau:
-                - "VT001 còn cấp được bao nhiêu?"
-                - "găng tay size M đang nằm ở kho nào?"
-                - "lô LO-001 hạn dùng khi nào?"
-                - "phiếu của em kho duyệt chưa?"
-                - "khoa tôi đang giữ những vật tư gì?"
-                - "mình cần xin 20 hộp khẩu trang"
-                Mình chỉ dùng dữ liệu trong hệ thống, nên nếu không đủ thông tin mình sẽ hỏi lại thay vì tự đoán.
+                Mình có thể hỗ trợ bạn tra dữ liệu QLVT bằng câu hỏi tự nhiên.
+                Bạn có thể hỏi như:
+                * "còn bao nhiêu khẩu trang?"
+                * "bộ dịch truyền nằm ở đâu?"
+                * "vật tư nào sắp hết?"
+                * "có lô nào hết hạn trong 30 ngày tới không?"
+                * "tôi cần lấy khẩu trang thì lấy lô nào trước?"
+                * "khoa cấp cứu còn bộ dịch truyền không?"
+
+                Mình chỉ dùng dữ liệu trong hệ thống. Nếu tên vật tư mơ hồ, mình sẽ hỏi lại thay vì tự đoán.
                 """;
-    }
-
-    private String departmentStock(String question, String department) {
-        if (department == null || department.isBlank()) {
-            return "Tài khoản của bạn chưa được gán khoa/phòng, nên mình chưa tra được tồn tại khoa.";
-        }
-        List<DepartmentStock> stocks = departmentStockRepository.findByDepartmentAndQuantityOnHandGreaterThanOrderByMaterial_CodeAscBatch_ExpiryDateAsc(department, 0);
-        if (stocks.isEmpty()) {
-            return "Mình chưa thấy tồn vật tư đang giữ tại " + department + ".";
-        }
-        Material material = singleMaterial(question);
-        if (material != null) {
-            stocks = stocks.stream().filter(stock -> stock.getMaterial().getId().equals(material.getId())).toList();
-            if (stocks.isEmpty()) {
-                return department + " hiện chưa còn tồn cho " + materialLine(material) + ".";
-            }
-        } else {
-            stocks = stocks.stream().limit(10).toList();
-        }
-        StringBuilder builder = new StringBuilder("Tồn tại ").append(department).append(":");
-        stocks.forEach(stock -> builder.append("\n- ")
-                .append(materialLine(stock.getMaterial()))
-                .append(" | lô ").append(stock.getBatch().getBatchNumber())
-                .append(" | còn ").append(stock.getQuantityOnHand()).append(" ").append(nullSafe(stock.getMaterial().getUnit()))
-                .append(" | HSD ").append(format(stock.getBatch().getExpiryDate())));
-        return builder.toString();
-    }
-
-    private Material singleMaterial(String question) {
-        List<Material> matches = materialSearchService.search(question, 3);
-        return matches.size() == 1 ? matches.get(0) : matches.stream().findFirst().orElse(null);
     }
 
     private String materialSummary(Material material) {
         return materialLine(material)
-                + "\n- Loại: " + nullSafe(material.getCategory())
-                + "\n- ĐVT: " + nullSafe(material.getUnit())
-                + "\n- Tồn thực tế: " + material.getActualQuantity()
-                + "\n- Đang giữ: " + material.getReservedQuantity()
-                + "\n- Chờ xuất: " + material.getPendingIssueQuantity()
-                + "\n- Có thể cấp: " + material.getAvailableQuantity()
-                + "\n- Trạng thái: " + nullSafe(material.getStatus())
-                + "\n- Trang vật tư: /materials";
+                + "\n* Loại: " + nullSafe(material.getCategory())
+                + "\n* ĐVT: " + nullSafe(material.getUnit())
+                + "\n* Tồn thực tế: " + formatNumber(material.getActualQuantity())
+                + "\n* Đang giữ: " + formatNumber(material.getReservedQuantity())
+                + "\n* Chờ xuất: " + formatNumber(material.getPendingIssueQuantity())
+                + "\n* Có thể cấp: " + formatNumber(material.getAvailableQuantity())
+                + "\n* Trạng thái: " + nullSafe(material.getStatus())
+                + "\n* Trang vật tư: /materials";
     }
 
     private String listMaterials(List<Material> materials) {
         StringBuilder builder = new StringBuilder();
-        materials.forEach(material -> builder.append("- ")
+        materials.forEach(material -> builder.append("* ")
                 .append(materialLine(material))
-                .append(" | còn có thể cấp ").append(material.getAvailableQuantity()).append(" ")
+                .append(" | còn có thể cấp ").append(formatNumber(material.getAvailableQuantity())).append(" ")
                 .append(nullSafe(material.getUnit()))
                 .append("\n"));
         return builder.toString().trim();
     }
 
-    private String numberedMaterials(List<Material> materials) {
-        StringBuilder builder = new StringBuilder();
-        for (int i = 0; i < materials.size(); i++) {
-            Material material = materials.get(i);
-            builder.append(i + 1).append(". ")
-                    .append(materialLine(material))
-                    .append(" | còn có thể cấp ").append(material.getAvailableQuantity()).append(" ")
-                    .append(nullSafe(material.getUnit()))
-                    .append("\n");
+    private List<String> inventorySuggestions(ChatbotNlpService.ParsedQuestion parsed) {
+        String materialName = parsed.firstMaterial().map(Material::getName).orElse("vật tư này");
+        return List.of(
+                materialName + " nằm ở đâu?",
+                "Nên xuất lô nào trước?",
+                "Có lô nào sắp hết hạn không?"
+        );
+    }
+
+    private List<String> helpSuggestions() {
+        return List.of("Còn bao nhiêu khẩu trang?", "Vật tư nào sắp hết?", "Có lô nào hết hạn trong 30 ngày tới không?");
+    }
+
+    private int available(StockBalance balance) {
+        return Math.max(0, balance.getAvailableQuantity());
+    }
+
+    private boolean isIssuable(StockBalance balance) {
+        MaterialBatch batch = balance.getBatch();
+        return batch != null
+                && batch.getStatus() == BatchStatus.AVAILABLE
+                && (batch.getExpiryDate() == null || batch.getExpiryDate().isAfter(LocalDate.now()));
+    }
+
+    private boolean isExpired(StockBalance balance) {
+        MaterialBatch batch = balance.getBatch();
+        return batch != null && batch.getExpiryDate() != null && batch.getExpiryDate().isBefore(LocalDate.now());
+    }
+
+    private String stockOpening(Material material, long totalAvailable, String status) {
+        if (totalAvailable > 0) {
+            return "Có nhé. " + material.getName() + " hiện còn tổng cộng "
+                    + formatNumber(totalAvailable) + " " + nullSafe(material.getUnit())
+                    + " có thể cấp trong hệ thống.";
         }
-        return builder.toString().trim();
+        if ("LOW_STOCK".equals(status)) {
+            return material.getName() + " đang dưới ngưỡng tồn tối thiểu. Hiện còn "
+                    + formatNumber(totalAvailable) + " " + nullSafe(material.getUnit()) + " có thể cấp.";
+        }
+        return material.getName() + " hiện chưa còn số lượng khả dụng để cấp phát.";
+    }
+
+    private String stockStatus(Material material, long totalAvailable) {
+        if (totalAvailable <= 0) {
+            return "OUT_OF_STOCK";
+        }
+        if (material.getMinStock() > 0 && totalAvailable <= material.getMinStock()) {
+            return "LOW_STOCK";
+        }
+        return "AVAILABLE";
+    }
+
+    private String rowStatus(StockBalance balance) {
+        if (isExpired(balance)) {
+            return "EXPIRED";
+        }
+        MaterialBatch batch = balance.getBatch();
+        if (batch != null && batch.getExpiryDate() != null && !batch.getExpiryDate().isAfter(LocalDate.now().plusDays(30))) {
+            return "NEAR_EXPIRY";
+        }
+        if (available(balance) <= 0) {
+            return "OUT_OF_STOCK";
+        }
+        return "AVAILABLE";
+    }
+
+    private String statusSuffix(String status) {
+        return switch (status) {
+            case "EXPIRED" -> " (đã hết hạn, không nên cấp phát)";
+            case "NEAR_EXPIRY" -> " (sắp hết hạn)";
+            case "LOW_STOCK" -> " (tồn thấp)";
+            case "OUT_OF_STOCK" -> " (hết khả dụng)";
+            default -> "";
+        };
+    }
+
+    private String statusNote(StockBalance balance) {
+        return switch (rowStatus(balance)) {
+            case "EXPIRED" -> "Đã hết hạn";
+            case "NEAR_EXPIRY" -> "Sắp hết hạn";
+            case "OUT_OF_STOCK" -> "Không còn khả dụng";
+            default -> isIssuable(balance) ? "Có thể cấp phát" : "Cần kiểm tra trạng thái lô";
+        };
+    }
+
+    private Long daysToExpiry(LocalDate expiryDate) {
+        return expiryDate == null ? null : ChronoUnit.DAYS.between(LocalDate.now(), expiryDate);
+    }
+
+    private boolean containsDepartmentScope(String text) {
+        return VietnameseTextNormalizer.containsAnyKeyword(text, "khoa", "phong", "tai khoa", "khoa cap cuu", "khoa toi");
     }
 
     private String materialLine(Material material) {
@@ -498,14 +725,30 @@ public class ChatbotService {
         chatMessage.setSession(session);
         chatMessage.setSenderType(sender);
         chatMessage.setMessage(message);
-        chatMessage.setIntent(intent);
+        chatMessage.setIntent(persistedIntent(intent));
         chatMessage.setResponse(response);
         messageRepository.save(chatMessage);
     }
 
+    private ChatIntent persistedIntent(ChatIntent intent) {
+        return switch (intent) {
+            case ASK_STOCK -> ChatIntent.CHECK_STOCK;
+            case ASK_LOCATION -> ChatIntent.CHECK_LOCATION;
+            case ASK_EXPIRY, ASK_IMPORT_DATE, ASK_EXPIRED_OR_NEAR_EXPIRED -> ChatIntent.CHECK_EXPIRY;
+            case ASK_BATCH, ASK_RECOMMEND_ISSUE -> ChatIntent.CHECK_BATCH;
+            case ASK_LOW_STOCK -> ChatIntent.CHECK_DEPARTMENT_EXPIRING_MATERIALS;
+            case GENERAL_HELP -> ChatIntent.HELP;
+            default -> intent;
+        };
+    }
+
     private Integer extractFirstNumber(String question) {
-        Matcher matcher = Pattern.compile("\\d+").matcher(question);
+        Matcher matcher = Pattern.compile("\\d+").matcher(question == null ? "" : question);
         return matcher.find() ? Integer.parseInt(matcher.group()) : null;
+    }
+
+    private String firstNonBlank(String left, String right) {
+        return left != null && !left.isBlank() ? left : right;
     }
 
     private String format(LocalDate value) {
@@ -516,10 +759,38 @@ public class ChatbotService {
         return value == null ? "-" : value.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
     }
 
+    private String formatNumber(long value) {
+        return VI_NUMBER.format(value);
+    }
+
     private String nullSafe(String value) {
         return value == null || value.isBlank() ? "-" : value;
     }
 
-    public record ChatResponse(String answer, String intent, Long sessionId) {
+    public record ChatResponse(boolean success,
+                               String intent,
+                               String answer,
+                               String message,
+                               List<ChatItem> items,
+                               List<String> suggestions,
+                               Long sessionId) {
+    }
+
+    public record ChatItem(Long materialId,
+                           String materialCode,
+                           String materialName,
+                           Integer totalQuantity,
+                           String unit,
+                           String warehouseName,
+                           String locationName,
+                           String batchCode,
+                           String importDate,
+                           String expiryDate,
+                           String status,
+                           Integer availableQuantity,
+                           Integer actualQuantity,
+                           Integer reservedQuantity,
+                           Long daysToExpiry,
+                           String note) {
     }
 }

@@ -2,7 +2,9 @@ package com.qlvt.util;
 
 import java.text.Normalizer;
 import java.util.Arrays;
+import java.util.LinkedHashSet;
 import java.util.Locale;
+import java.util.Set;
 
 public final class VietnameseTextNormalizer {
     private VietnameseTextNormalizer() {
@@ -38,7 +40,37 @@ public final class VietnameseTextNormalizer {
         if (left.isBlank() || right.isBlank()) {
             return false;
         }
-        return left.contains(right) || right.contains(left) || levenshtein(left, right) <= Math.max(2, Math.min(left.length(), right.length()) / 5);
+        return left.contains(right)
+                || right.contains(left)
+                || tokenFuzzyMatch(left, right)
+                || levenshtein(left, right) <= Math.max(2, Math.min(left.length(), right.length()) / 5);
+    }
+
+    private static boolean tokenFuzzyMatch(String left, String right) {
+        Set<String> leftTokens = tokens(left);
+        Set<String> rightTokens = tokens(right);
+        if (leftTokens.isEmpty() || rightTokens.isEmpty()) {
+            return false;
+        }
+        Set<String> smaller = leftTokens.size() <= rightTokens.size() ? leftTokens : rightTokens;
+        Set<String> larger = leftTokens.size() <= rightTokens.size() ? rightTokens : leftTokens;
+        int matched = 0;
+        for (String token : smaller) {
+            if (larger.contains(token) || larger.stream().anyMatch(candidate -> levenshtein(token, candidate) <= Math.max(1, token.length() / 4))) {
+                matched++;
+            }
+        }
+        return matched >= Math.max(1, smaller.size() - 1);
+    }
+
+    private static Set<String> tokens(String text) {
+        Set<String> tokens = new LinkedHashSet<>();
+        for (String token : text.split(" ")) {
+            if (token.length() >= 2) {
+                tokens.add(token);
+            }
+        }
+        return tokens;
     }
 
     private static int levenshtein(String a, String b) {

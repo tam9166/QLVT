@@ -19,10 +19,19 @@ public class ChatbotController {
     }
 
     @PostMapping
-    public ChatbotService.ChatResponse ask(@RequestBody Map<String, String> payload, Authentication authentication) {
+    public ChatbotService.ChatResponse ask(@RequestBody ChatbotRequest payload, Authentication authentication) {
+        return answer(payload, authentication);
+    }
+
+    @PostMapping("/message")
+    public ChatbotService.ChatResponse message(@RequestBody ChatbotRequest payload, Authentication authentication) {
+        return answer(payload, authentication);
+    }
+
+    private ChatbotService.ChatResponse answer(ChatbotRequest payload, Authentication authentication) {
         String username = authentication == null ? "anonymous" : authentication.getName();
         String department = userRepository.findByUsername(username).map(user -> user.getDepartment()).orElse(null);
-        return chatbotService.answer(payload.getOrDefault("message", ""), username, department);
+        return chatbotService.answer(payload == null ? "" : payload.message(), username, department);
     }
 
     @GetMapping("/history")
@@ -35,5 +44,8 @@ public class ChatbotController {
     public void clear(Authentication authentication) {
         String username = authentication == null ? "anonymous" : authentication.getName();
         chatbotService.clearHistory(username);
+    }
+
+    public record ChatbotRequest(String message, Map<String, Object> context) {
     }
 }

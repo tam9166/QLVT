@@ -1217,6 +1217,101 @@ main > form:not(.topbar-search):not(.chat-form):not(.m-0) {
     font-weight: 800;
 }
 
+.chat-result-table {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    margin-top: 10px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface);
+}
+
+.chat-result-table table {
+    width: 100%;
+    min-width: 520px;
+    margin: 0;
+    border-collapse: collapse;
+    font-size: .76rem;
+}
+
+.chat-result-table th,
+.chat-result-table td {
+    padding: 8px;
+    border-bottom: 1px solid #e8eef8;
+    text-align: left;
+    vertical-align: top;
+}
+
+.chat-result-table th {
+    color: var(--muted-soft);
+    background: #f6faff;
+    font-size: .68rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.chat-result-table tr:last-child td {
+    border-bottom: 0;
+}
+
+.chat-result-table small {
+    display: block;
+    margin-top: 2px;
+    color: var(--muted-soft);
+}
+
+.chat-status {
+    display: inline-flex;
+    align-items: center;
+    min-height: 22px;
+    padding: 3px 8px;
+    border-radius: 999px;
+    color: var(--primary);
+    background: var(--primary-soft);
+    border: 1px solid #bad8ff;
+    font-size: .68rem;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.chat-status.low_stock,
+.chat-status.near_expiry {
+    color: var(--warning);
+    background: var(--warning-soft);
+    border-color: #ffd890;
+}
+
+.chat-status.out_of_stock,
+.chat-status.expired {
+    color: var(--danger);
+    background: var(--danger-soft);
+    border-color: #ffc8c8;
+}
+
+.chat-suggestions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 10px;
+}
+
+.chat-suggestions button {
+    min-height: 28px;
+    padding: 5px 9px;
+    color: var(--primary);
+    background: var(--surface);
+    border: 1px solid #bad8ff;
+    border-radius: 999px;
+    font-size: .72rem;
+    font-weight: 800;
+}
+
+.chat-suggestions button:hover {
+    background: var(--primary-soft);
+}
+
 .chat-form {
     display: flex;
     gap: 8px;

@@ -1,6 +1,15 @@
 package com.qlvt.enums;
 
 public enum ChatIntent {
+    ASK_STOCK,
+    ASK_LOCATION,
+    ASK_EXPIRY,
+    ASK_IMPORT_DATE,
+    ASK_BATCH,
+    ASK_LOW_STOCK,
+    ASK_EXPIRED_OR_NEAR_EXPIRED,
+    ASK_RECOMMEND_ISSUE,
+    GENERAL_HELP,
     SEARCH_MATERIAL,
     CHECK_STOCK,
     CHECK_LOCATION,

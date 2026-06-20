@@ -43,7 +43,7 @@ public class RuleBasedAiProvider implements AiProvider {
         }
         if (has(text,
                 "ton tai khoa", "ton o khoa", "ton khoa", "khoa con bao nhieu", "vat tu tai khoa",
-                "vat tu khoa toi", "trong khoa con gi", "khoa con gi", "khoa dang giu")) {
+                "vat tu khoa toi", "trong khoa con gi", "khoa con gi", "khoa toi con gi", "khoa dang giu")) {
             return ChatIntent.CHECK_DEPARTMENT_STOCK;
         }
         if (has(text,
