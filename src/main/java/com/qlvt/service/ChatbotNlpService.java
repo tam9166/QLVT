@@ -9,6 +9,7 @@ import com.qlvt.repository.WarehouseRepository;
 import com.qlvt.util.VietnameseTextNormalizer;
 import org.springframework.stereotype.Service;
 
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
@@ -20,6 +21,7 @@ import java.util.regex.Pattern;
 @Service
 public class ChatbotNlpService {
     private static final Pattern DAYS_PATTERN = Pattern.compile("(?:trong|toi|den)\\s+(\\d{1,3})\\s+ngay");
+    private static final Pattern NUMBER_PATTERN = Pattern.compile("\\b(\\d{1,6})\\b");
 
     private final MaterialSearchService materialSearchService;
     private final WarehouseRepository warehouseRepository;
@@ -41,6 +43,7 @@ public class ChatbotNlpService {
         Optional<Warehouse> warehouse = resolveWarehouse(normalized);
         Optional<Department> department = resolveDepartment(normalized);
         int expiryWindowDays = expiryWindowDays(normalized);
+        Integer requestedQuantity = requestedQuantity(normalized);
 
         return new ParsedQuestion(
                 message == null ? "" : message,
@@ -51,7 +54,8 @@ public class ChatbotNlpService {
                 materialResolution.ambiguous(),
                 warehouse.orElse(null),
                 department.map(Department::getName).orElse(null),
-                expiryWindowDays
+                expiryWindowDays,
+                requestedQuantity
         );
     }
 
@@ -118,7 +122,8 @@ public class ChatbotNlpService {
         }
         if (has(text, "con khong", "con bao nhieu", "con nhieu khong", "con may", "con nhieu",
                 "con cap duoc", "cap duoc bao nhieu", "con hang khong", "con du khong",
-                "co san khong", "cap duoc khong", "ton kho", "ton", "kha dung", "stock", "so luong con")) {
+                "co du khong", "du khong", "co san khong", "cap duoc khong",
+                "ton kho", "ton", "kha dung", "stock", "so luong con")) {
             return ChatIntent.ASK_STOCK;
         }
         if (has(text, "thay the", "tuong duong", "doi sang", "loai khac", "het thi dung gi", "vat tu tuong tu")) {
@@ -197,7 +202,35 @@ public class ChatbotNlpService {
         if (has(text, "trong thang nay", "thang nay")) {
             return Math.max(1, (int) (LocalDate.now().datesUntil(LocalDate.now().with(TemporalAdjusters.lastDayOfMonth()).plusDays(1)).count()));
         }
+        if (has(text, "hom nay", "ngay hom nay", "trong ngay")) {
+            return 1;
+        }
+        if (has(text, "ngay mai", "mai")) {
+            return 2;
+        }
+        if (has(text, "tuan nay", "trong tuan")) {
+            LocalDate endOfWeek = LocalDate.now().with(TemporalAdjusters.nextOrSame(DayOfWeek.SUNDAY));
+            return Math.max(1, (int) LocalDate.now().datesUntil(endOfWeek.plusDays(1)).count());
+        }
+        if (has(text, "tuan toi", "tuan sau")) {
+            return 14;
+        }
+        if (has(text, "thang toi", "thang sau")) {
+            return 60;
+        }
         return 30;
+    }
+
+    private Integer requestedQuantity(String text) {
+        if (!has(text, "can", "lay", "xin", "cap", "xuat", "du khong", "co du", "muon",
+                "tao", "lap", "yeu cau", "de nghi")) {
+            return null;
+        }
+        String withoutSpecs = text
+                .replaceAll("\\b\\d+\\s*(ml|mm|cm|g|mg|kg|l)\\b", " ")
+                .replaceAll("\\b(size|co)\\s*\\d+\\b", " ");
+        Matcher matcher = NUMBER_PATTERN.matcher(withoutSpecs);
+        return matcher.find() ? Integer.parseInt(matcher.group(1)) : null;
     }
 
     private boolean has(String text, String... keywords) {
@@ -215,7 +248,8 @@ public class ChatbotNlpService {
                                  boolean ambiguousMaterial,
                                  Warehouse warehouse,
                                  String department,
-                                 int expiryWindowDays) {
+                                 int expiryWindowDays,
+                                 Integer requestedQuantity) {
         public boolean hasMaterial() {
             return !materials.isEmpty();
         }

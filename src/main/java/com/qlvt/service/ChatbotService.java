@@ -120,7 +120,13 @@ public class ChatbotService {
             case ASK_EXPIRED_OR_NEAR_EXPIRED, CHECK_DEPARTMENT_EXPIRING_MATERIALS -> expiringReport(parsed, sessionId);
             case ASK_RECOMMEND_ISSUE -> recommendIssue(parsed, sessionId);
             case ASK_LOCATION, CHECK_LOCATION -> materialInventory(parsed, "LOCATION", sessionId);
-            case ASK_EXPIRY, ASK_IMPORT_DATE, ASK_BATCH, CHECK_EXPIRY, CHECK_BATCH -> materialInventory(parsed, "BATCH", sessionId);
+            case ASK_EXPIRY, ASK_IMPORT_DATE, ASK_BATCH, CHECK_EXPIRY, CHECK_BATCH -> {
+                ChatResponse batchResponse = batchLookup(parsed, sessionId);
+                if (batchResponse != null) {
+                    yield batchResponse;
+                }
+                yield materialInventory(parsed, "BATCH", sessionId);
+            }
             case ASK_STOCK, CHECK_STOCK -> {
                 if (parsed.department() != null || containsDepartmentScope(parsed.normalizedMessage())) {
                     yield departmentStock(parsed, firstNonBlank(parsed.department(), userDepartment), sessionId);
@@ -159,6 +165,7 @@ public class ChatbotService {
                 answer.append("\n\n");
             }
             answer.append(stockOpening(material, totalAvailable, status));
+            appendQuantityCheck(answer, parsed, material, totalAvailable);
             if (balances.isEmpty()) {
                 answer.append("\n\nMình chưa thấy tồn theo kho/kệ/lô cho vật tư này trong dữ liệu hiện tại.");
                 items.add(materialOnlyItem(material, totalAvailable, status));
@@ -182,6 +189,25 @@ public class ChatbotService {
             appendModeSpecificHint(answer, mode, balances, material, totalActual);
         }
         return new ChatResponse(true, parsed.intent().name(), answer.toString(), answer.toString(), items, inventorySuggestions(parsed), sessionId);
+    }
+
+    private void appendQuantityCheck(StringBuilder answer, ChatbotNlpService.ParsedQuestion parsed, Material material, long totalAvailable) {
+        Integer requestedQuantity = parsed.requestedQuantity();
+        if (requestedQuantity == null || requestedQuantity <= 0) {
+            return;
+        }
+        String scope = parsed.warehouse() == null ? "trong hệ thống" : "tại " + parsed.warehouse().getName();
+        if (totalAvailable >= requestedQuantity) {
+            answer.append("\nMình kiểm tra nhanh: đủ để cấp ")
+                    .append(formatNumber(requestedQuantity)).append(" ").append(nullSafe(material.getUnit()))
+                    .append(" ").append(scope).append(".");
+        } else {
+            answer.append("\nMình kiểm tra nhanh: chưa đủ ")
+                    .append(formatNumber(requestedQuantity)).append(" ").append(nullSafe(material.getUnit()))
+                    .append(" ").append(scope).append("; còn thiếu khoảng ")
+                    .append(formatNumber(requestedQuantity - totalAvailable)).append(" ").append(nullSafe(material.getUnit()))
+                    .append(".");
+        }
     }
 
     private boolean requiresSpecificMaterial(ChatIntent intent) {
@@ -255,6 +281,49 @@ public class ChatbotService {
                 + " trước. Hiện lô này còn " + formatNumber(item.availableQuantity()) + " " + item.unit()
                 + ".\n\nLý do: " + reason;
         return new ChatResponse(true, ChatIntent.ASK_RECOMMEND_ISSUE.name(), answer, answer, List.of(item), List.of("Xem vị trí trong kho", "Tạo yêu cầu cấp phát"), sessionId);
+    }
+
+    private ChatResponse batchLookup(ChatbotNlpService.ParsedQuestion parsed, Long sessionId) {
+        List<MaterialBatch> batches = batchRepository.findAll().stream()
+                .filter(batch -> batch.getBatchNumber() != null)
+                .filter(batch -> parsed.normalizedMessage().contains(VietnameseTextNormalizer.normalizeSearchText(batch.getBatchNumber())))
+                .limit(5)
+                .toList();
+        if (batches.isEmpty()) {
+            return null;
+        }
+
+        List<ChatItem> items = new ArrayList<>();
+        StringBuilder answer = new StringBuilder("Mình tìm thấy thông tin lô bạn hỏi:");
+        for (MaterialBatch batch : batches) {
+            List<StockBalance> balances = balanceRepository.findAll().stream()
+                    .filter(balance -> balance.getBatch() != null && balance.getBatch().getId().equals(batch.getId()))
+                    .filter(balance -> balance.getActualQuantity() > 0 || balance.getReservedQuantity() > 0 || balance.getPendingIssueQuantity() > 0)
+                    .toList();
+            if (balances.isEmpty()) {
+                ChatItem item = itemFromBatch(batch);
+                items.add(item);
+                answer.append(batchLine(item));
+                continue;
+            }
+            for (StockBalance balance : balances) {
+                ChatItem item = itemFromBalance(balance, available(balance));
+                items.add(item);
+                answer.append(batchLine(item));
+            }
+        }
+        answer.append("\n\nNếu cần cấp phát, hãy ưu tiên lô còn hạn và trạng thái AVAILABLE; lô hết hạn/khóa nên xử lý ở Thu hồi/Hủy.");
+        return new ChatResponse(true, parsed.intent().name(), answer.toString(), answer.toString(), items, List.of("Nên xuất lô nào trước?", "Xem lô sắp hết hạn"), sessionId);
+    }
+
+    private String batchLine(ChatItem item) {
+        return "\n* " + item.materialName()
+                + " | lô " + item.batchCode()
+                + " | còn khả dụng " + formatNumber(item.availableQuantity()) + " " + item.unit()
+                + " | " + item.warehouseName() + " / " + item.locationName()
+                + " | nhập " + item.importDate()
+                + " | HSD " + item.expiryDate()
+                + statusSuffix(item.status());
     }
 
     private ChatResponse expiringReport(ChatbotNlpService.ParsedQuestion parsed, Long sessionId) {
@@ -492,6 +561,32 @@ public class ChatbotService {
         );
     }
 
+    private ChatItem itemFromBatch(MaterialBatch batch) {
+        Material material = batch.getMaterial();
+        boolean issuable = batch.canIssue(LocalDate.now());
+        String status = batch.getExpiryDate() != null && batch.getExpiryDate().isBefore(LocalDate.now())
+                ? "EXPIRED"
+                : issuable ? "AVAILABLE" : batch.getStatus().name();
+        return new ChatItem(
+                material.getId(),
+                material.getCode(),
+                material.getName(),
+                batch.getQuantity(),
+                nullSafe(material.getUnit()),
+                batch.getWarehouse() == null ? "Kho chưa rõ" : batch.getWarehouse().getName(),
+                batch.getLocation() == null ? "vị trí chưa rõ" : nullSafe(batch.getLocation().getName()),
+                nullSafe(batch.getBatchNumber()),
+                format(batch.getReceiptDate()),
+                format(batch.getExpiryDate()),
+                status,
+                issuable ? batch.getQuantity() : 0,
+                batch.getQuantity(),
+                0,
+                daysToExpiry(batch.getExpiryDate()),
+                issuable ? "Có thể cấp phát" : "Cần kiểm tra trạng thái lô"
+        );
+    }
+
     private ChatItem materialOnlyItem(Material material, long totalAvailable, String status) {
         return new ChatItem(
                 material.getId(), material.getCode(), material.getName(), (int) totalAvailable, nullSafe(material.getUnit()),
@@ -549,7 +644,7 @@ public class ChatbotService {
 
     private String createRequestDraft(ChatbotNlpService.ParsedQuestion parsed) {
         Material material = parsed.firstMaterial().orElse(null);
-        Integer quantity = extractFirstNumber(parsed.rawMessage());
+        Integer quantity = parsed.requestedQuantity() == null ? extractFirstNumber(parsed.rawMessage()) : parsed.requestedQuantity();
         if (material == null || quantity == null) {
             return """
                     Mình cần thêm một chút thông tin để lập đúng yêu cầu: vật tư nào và số lượng bao nhiêu.

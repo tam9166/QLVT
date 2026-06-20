@@ -1,6 +1,7 @@
 package com.qlvt;
 
 import com.qlvt.chatbot.RuleBasedAiProvider;
+import com.qlvt.entity.Department;
 import com.qlvt.entity.Material;
 import com.qlvt.enums.ChatIntent;
 import com.qlvt.repository.DepartmentRepository;
@@ -85,6 +86,31 @@ class ChatbotRuleTest {
         assertEquals(ChatIntent.GENERAL_HELP, nlp.parse("chatbot có thể làm gì").intent());
     }
 
+    @Test
+    void nlpUnderstandsQuantityDepartmentAndNaturalTimeWindows() {
+        MaterialSearchService searchService = new MaterialSearchService(materialRepository(
+                material(1L, "VT001", "Khẩu trang y tế", "mask", "hộp"),
+                material(2L, "VT003", "Bơm tiêm 5ml", "syringe", "cái")
+        ));
+        ChatbotNlpService nlp = new ChatbotNlpService(searchService, emptyWarehouses(), departments(department("KCC", "Khoa Cấp cứu")));
+
+        ChatbotNlpService.ParsedQuestion enough = nlp.parse("cần 20 hộp khẩu trang có đủ không");
+        assertEquals(ChatIntent.ASK_STOCK, enough.intent());
+        assertEquals(20, enough.requestedQuantity());
+
+        ChatbotNlpService.ParsedQuestion syringe = nlp.parse("tạo yêu cầu 30 bơm tiêm 5ml");
+        assertEquals(ChatIntent.CREATE_REQUEST_DRAFT, syringe.intent());
+        assertEquals(30, syringe.requestedQuantity());
+
+        ChatbotNlpService.ParsedQuestion departmentStock = nlp.parse("khoa cấp cứu còn vật tư gì");
+        assertEquals(ChatIntent.CHECK_DEPARTMENT_STOCK, departmentStock.intent());
+        assertEquals("Khoa Cấp cứu", departmentStock.department());
+
+        ChatbotNlpService.ParsedQuestion thisWeek = nlp.parse("lô nào sắp hết hạn tuần này");
+        assertEquals(ChatIntent.ASK_EXPIRED_OR_NEAR_EXPIRED, thisWeek.intent());
+        assertTrue(thisWeek.expiryWindowDays() >= 1 && thisWeek.expiryWindowDays() <= 7);
+    }
+
     private MaterialRepository materialRepository(Material... materials) {
         MaterialRepository repository = mock(MaterialRepository.class);
         when(repository.findByDeletedFalseOrderByCodeAsc()).thenReturn(List.of(materials));
@@ -103,6 +129,12 @@ class ChatbotRuleTest {
         return repository;
     }
 
+    private DepartmentRepository departments(Department... departments) {
+        DepartmentRepository repository = mock(DepartmentRepository.class);
+        when(repository.findByDeletedFalseOrderByCodeAsc()).thenReturn(List.of(departments));
+        return repository;
+    }
+
     private Material material(Long id, String code, String name, String alias, String unit) {
         Material material = new Material();
         material.setId(id);
@@ -114,5 +146,12 @@ class ChatbotRuleTest {
         material.setActualQuantity(100);
         material.setMinStock(20);
         return material;
+    }
+
+    private Department department(String code, String name) {
+        Department department = new Department();
+        department.setCode(code);
+        department.setName(name);
+        return department;
     }
 }
