@@ -27,6 +27,10 @@ public class DataPermissionService {
         return hasAny(user, UserRole.ADMIN, UserRole.MANAGER, UserRole.ACCOUNTANT, UserRole.WAREHOUSE_STAFF);
     }
 
+    public boolean canProcessWarehouseStock(AppUser user) {
+        return hasAny(user, UserRole.ADMIN, UserRole.MANAGER, UserRole.WAREHOUSE_STAFF);
+    }
+
     public boolean canViewDepartmentName(AppUser user, String department) {
         if (canViewAllRequests(user)) {
             return true;
@@ -55,6 +59,12 @@ public class DataPermissionService {
         AppUser user = currentUser();
         if (!hasAny(user, UserRole.ADMIN, UserRole.MANAGER, UserRole.WAREHOUSE_STAFF)) {
             throw new AccessDeniedException("Bạn không có quyền xử lý xuất kho cho phiếu này");
+        }
+    }
+
+    public void checkCanProcessWarehouseStock() {
+        if (!canProcessWarehouseStock(currentUser())) {
+            throw new AccessDeniedException("Bạn không có quyền xử lý tồn kho");
         }
     }
 

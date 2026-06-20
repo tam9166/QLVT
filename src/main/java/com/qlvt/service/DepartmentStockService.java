@@ -138,7 +138,12 @@ public class DepartmentStockService {
         DepartmentReturn departmentReturn = new DepartmentReturn();
         departmentReturn.setReturnCode(nextReturnCode());
         departmentReturn.setDepartment(stock.getDepartment());
-        departmentReturn.setWarehouse(warehouseRepository.findById(warehouseId).orElseThrow());
+        Warehouse warehouse = warehouseRepository.findById(warehouseId).orElseThrow();
+        StorageLocation location = locationRepository.findById(locationId).orElseThrow();
+        if (location.getWarehouse() == null || !location.getWarehouse().getId().equals(warehouse.getId())) {
+            throw new IllegalArgumentException("Vị trí nhận lại phải thuộc kho đã chọn");
+        }
+        departmentReturn.setWarehouse(warehouse);
         departmentReturn.setReason(reason);
         departmentReturn.setCreatedBy(username);
         departmentReturn.setStatus(DepartmentReturnStatus.SUBMITTED);
@@ -148,7 +153,7 @@ public class DepartmentStockService {
         line.setDepartmentStock(stock);
         line.setMaterial(stock.getMaterial());
         line.setBatch(stock.getBatch());
-        line.setLocation(locationRepository.findById(locationId).orElseThrow());
+        line.setLocation(location);
         line.setQuantity(quantity);
         line.setNote(reason);
         departmentReturn.getLines().add(line);

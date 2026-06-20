@@ -109,7 +109,7 @@ public class ChatbotService {
     }
 
     private ChatResponse route(ChatbotNlpService.ParsedQuestion parsed, String username, String userDepartment, Long sessionId) {
-        if (parsed.ambiguousMaterial() && requiresSpecificMaterial(parsed.intent())) {
+        if (parsed.ambiguousMaterial() && requiresSpecificMaterial(parsed.intent()) && !canAnswerWithoutMaterial(parsed)) {
             return ambiguousMaterial(parsed, sessionId);
         }
 
@@ -127,7 +127,12 @@ public class ChatbotService {
                 }
                 yield materialInventory(parsed, "STOCK", sessionId);
             }
-            case CHECK_DEPARTMENT_STOCK -> departmentStock(parsed, firstNonBlank(parsed.department(), userDepartment), sessionId);
+            case CHECK_DEPARTMENT_STOCK -> {
+                if (parsed.ambiguousMaterial() && !isGenericDepartmentStockQuestion(parsed.normalizedMessage())) {
+                    yield ambiguousMaterial(parsed, sessionId);
+                }
+                yield departmentStock(parsed, firstNonBlank(parsed.department(), userDepartment), sessionId);
+            }
             case CHECK_SUPPLIER -> checkSupplier(parsed, sessionId);
             case SUGGEST_ALTERNATIVE -> suggestAlternative(parsed, sessionId);
             case CHECK_REQUEST_STATUS -> simple(parsed.intent(), checkRequestStatus(username, userDepartment), List.of("Tạo yêu cầu cấp phát", "Xem thông báo"), sessionId);
@@ -183,9 +188,22 @@ public class ChatbotService {
         return switch (intent) {
             case ASK_STOCK, ASK_LOCATION, ASK_EXPIRY, ASK_IMPORT_DATE, ASK_BATCH, ASK_RECOMMEND_ISSUE,
                  CHECK_STOCK, CHECK_LOCATION, CHECK_EXPIRY, CHECK_BATCH, CHECK_SUPPLIER,
-                 SUGGEST_ALTERNATIVE, CREATE_REQUEST_DRAFT, CHECK_DEPARTMENT_STOCK -> true;
+                 SUGGEST_ALTERNATIVE, CREATE_REQUEST_DRAFT -> true;
             default -> false;
         };
+    }
+
+    private boolean canAnswerWithoutMaterial(ChatbotNlpService.ParsedQuestion parsed) {
+        return switch (parsed.intent()) {
+            case ASK_STOCK, CHECK_STOCK, CHECK_DEPARTMENT_STOCK -> isGenericDepartmentStockQuestion(parsed.normalizedMessage());
+            default -> false;
+        };
+    }
+
+    private boolean isGenericDepartmentStockQuestion(String normalizedMessage) {
+        return containsDepartmentScope(normalizedMessage)
+                && VietnameseTextNormalizer.containsAnyKeyword(normalizedMessage,
+                "vat tu gi", "con gi", "dang giu gi", "co gi", "co nhung gi", "danh sach", "tat ca", "nhung vat tu");
     }
 
     private void appendModeSpecificHint(StringBuilder answer, String mode, List<StockBalance> balances, Material material, long totalActual) {
@@ -732,7 +750,7 @@ public class ChatbotService {
 
     private ChatIntent persistedIntent(ChatIntent intent) {
         return switch (intent) {
-            case ASK_STOCK -> ChatIntent.CHECK_STOCK;
+            case ASK_STOCK, CHECK_DEPARTMENT_STOCK -> ChatIntent.CHECK_STOCK;
             case ASK_LOCATION -> ChatIntent.CHECK_LOCATION;
             case ASK_EXPIRY, ASK_IMPORT_DATE, ASK_EXPIRED_OR_NEAR_EXPIRED -> ChatIntent.CHECK_EXPIRY;
             case ASK_BATCH, ASK_RECOMMEND_ISSUE -> ChatIntent.CHECK_BATCH;

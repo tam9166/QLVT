@@ -6,6 +6,7 @@ import com.qlvt.service.AttachmentService;
 import com.qlvt.service.CurrentUserService;
 import com.qlvt.service.DataPermissionService;
 import com.qlvt.service.DepartmentStockService;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -60,13 +61,21 @@ public class DepartmentReturnController {
     @PostMapping
     public String create(@RequestParam Long stockId, @RequestParam Long warehouseId, @RequestParam Long locationId,
                          @RequestParam int quantity, @RequestParam(required = false) String reason, Authentication authentication) {
+        var stock = stockRepository.findById(stockId).orElseThrow();
+        if (!dataPermissionService.canViewDepartmentName(currentUserService.currentUser(), stock.getDepartment())) {
+            throw new AccessDeniedException("Bạn không có quyền tạo phiếu trả cho khoa/phòng khác");
+        }
         var item = stockService.createReturn(stockId, warehouseId, locationId, quantity, reason, authentication.getName());
         return "redirect:/department-returns/" + item.getId();
     }
 
     @GetMapping("/{id}")
     public String detail(@PathVariable Long id, Model model) {
-        model.addAttribute("item", returnRepository.findWithLinesById(id).orElseThrow());
+        var item = returnRepository.findWithLinesById(id).orElseThrow();
+        if (!dataPermissionService.canViewDepartmentName(currentUserService.currentUser(), item.getDepartment())) {
+            throw new AccessDeniedException("Bạn không có quyền xem phiếu trả của khoa/phòng khác");
+        }
+        model.addAttribute("item", item);
         model.addAttribute("attachments", attachmentService.list(AttachmentReferenceType.DEPARTMENT_RETURN, id));
         model.addAttribute("attachmentType", AttachmentReferenceType.DEPARTMENT_RETURN);
         return "department-returns/detail";
@@ -74,6 +83,7 @@ public class DepartmentReturnController {
 
     @PostMapping("/{id}/receive")
     public String receive(@PathVariable Long id, Authentication authentication) {
+        dataPermissionService.checkCanProcessWarehouseStock();
         stockService.receiveReturn(id, authentication.getName());
         return "redirect:/department-returns/" + id;
     }

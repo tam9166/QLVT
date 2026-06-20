@@ -39,6 +39,8 @@ public class SecurityConfig {
                         .requestMatchers("/purchases/**").hasAnyRole("ADMIN", "WAREHOUSE_STAFF", "MANAGER", "PROCUREMENT", "ACCOUNTANT")
                         .requestMatchers("/department-stocks/my-department", "/department-stocks/use", "/department-stocks/report-issue")
                                 .hasAnyRole("ADMIN", "DEPARTMENT_STAFF", "DEPARTMENT_HEAD", "WAREHOUSE_STAFF", "MANAGER")
+                        .requestMatchers(HttpMethod.POST, "/department-returns/*/receive")
+                                .hasAnyRole("ADMIN", "WAREHOUSE_STAFF", "MANAGER")
                         .requestMatchers("/department-stocks/**", "/department-returns/**")
                                 .hasAnyRole("ADMIN", "DEPARTMENT_STAFF", "DEPARTMENT_HEAD", "WAREHOUSE_STAFF", "MANAGER")
                         .requestMatchers("/price-histories/**", "/price-alerts/**")

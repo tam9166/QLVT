@@ -95,7 +95,8 @@ public class ChatbotNlpService {
                 "lay vat tu", "lay thuoc", "linh thuoc", "xuat kho cho khoa")) {
             return ChatIntent.CREATE_REQUEST_DRAFT;
         }
-        if (has(text, "ton tai khoa", "ton o khoa", "ton khoa", "khoa con bao nhieu", "vat tu tai khoa",
+        if ((text.contains("khoa") && has(text, "vat tu gi", "con gi", "co gi", "co nhung gi", "dang giu gi"))
+                || has(text, "ton tai khoa", "ton o khoa", "ton khoa", "khoa con bao nhieu", "vat tu tai khoa",
                 "vat tu khoa toi", "trong khoa con gi", "khoa con gi", "khoa dang giu")) {
             return ChatIntent.CHECK_DEPARTMENT_STOCK;
         }
