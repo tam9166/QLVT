@@ -81,8 +81,13 @@ public class ChatbotService {
 
     @Transactional
     public ChatResponse answer(String question, String username, String department) {
+        return answer(question, username, department, Map.of());
+    }
+
+    @Transactional
+    public ChatResponse answer(String question, String username, String department, Map<String, Object> context) {
         ChatSession session = currentSession(username);
-        ChatbotNlpService.ParsedQuestion parsed = parseWithConversationContext(question, session);
+        ChatbotNlpService.ParsedQuestion parsed = parseWithConversationContext(question, session, context);
         ChatResponse response = route(parsed, username, department, session.getId());
 
         saveMessage(session, "USER", question, parsed.intent(), response.answer());
@@ -92,8 +97,12 @@ public class ChatbotService {
         return response;
     }
 
-    private ChatbotNlpService.ParsedQuestion parseWithConversationContext(String question, ChatSession session) {
+    private ChatbotNlpService.ParsedQuestion parseWithConversationContext(String question, ChatSession session, Map<String, Object> context) {
         ChatbotNlpService.ParsedQuestion parsed = nlpService.parse(question);
+        String contextualQuestion = enrichWithRequestContext(question, parsed, context);
+        if (!contextualQuestion.equals(question == null ? "" : question)) {
+            parsed = nlpService.parse(contextualQuestion);
+        }
         if (!shouldUseRecentMaterialContext(question, parsed)) {
             return parsed;
         }
@@ -704,6 +713,73 @@ public class ChatbotService {
             created.setTitle("Tra cứu QLVT");
             return sessionRepository.save(created);
         });
+    }
+
+    private String enrichWithRequestContext(String question, ChatbotNlpService.ParsedQuestion parsed, Map<String, Object> context) {
+        String baseQuestion = question == null ? "" : question;
+        if (context == null || context.isEmpty() || !shouldUseRequestContext(baseQuestion, parsed)) {
+            return baseQuestion;
+        }
+
+        StringBuilder enriched = new StringBuilder(baseQuestion);
+        materialFromContext(context)
+                .map(Material::getCode)
+                .filter(code -> !code.isBlank())
+                .ifPresent(code -> enriched.append(' ').append(code));
+        contextValue(context, "batchCode", "batchNumber", "lotCode", "lotNumber")
+                .filter(value -> !value.isBlank())
+                .ifPresent(value -> enriched.append(' ').append(value));
+        return enriched.toString();
+    }
+
+    private boolean shouldUseRequestContext(String question, ChatbotNlpService.ParsedQuestion parsed) {
+        if (!requiresSpecificMaterial(parsed.intent())) {
+            return false;
+        }
+        String normalized = VietnameseTextNormalizer.normalizeSearchText(question);
+        if (parsed.hasMaterial() && directlyMentionsResolvedMaterial(normalized, parsed)) {
+            return false;
+        }
+        return normalized.length() <= 80 || VietnameseTextNormalizer.containsAnyKeyword(normalized,
+                "vat tu nay", "vat tu do", "lo nay", "lo do", "hang nay", "hang do",
+                "cai nay", "cai do", "no", "muc nay", "dong nay", "trang nay",
+                "o dau", "han dung", "hsd", "lay lo nao", "xuat lo nao",
+                "nha cung cap", "xin them", "cap them", "lay them");
+    }
+
+    private Optional<Material> materialFromContext(Map<String, Object> context) {
+        Optional<Long> materialId = contextLong(context, "materialId", "material_id");
+        if (materialId.isPresent()) {
+            Optional<Material> material = materialRepository.findById(materialId.get());
+            if (material.isPresent()) {
+                return material;
+            }
+        }
+        return contextValue(context, "materialCode", "material_code", "code")
+                .flatMap(materialRepository::findByCode);
+    }
+
+    private Optional<Long> contextLong(Map<String, Object> context, String... keys) {
+        return contextValue(context, keys).flatMap(value -> {
+            try {
+                return Optional.of(Long.parseLong(value));
+            } catch (NumberFormatException ignored) {
+                return Optional.empty();
+            }
+        });
+    }
+
+    private Optional<String> contextValue(Map<String, Object> context, String... keys) {
+        if (context == null) {
+            return Optional.empty();
+        }
+        for (String key : keys) {
+            Object value = context.get(key);
+            if (value != null && !value.toString().isBlank()) {
+                return Optional.of(value.toString().trim());
+            }
+        }
+        return Optional.empty();
     }
 
     private boolean shouldUseRecentMaterialContext(String question, ChatbotNlpService.ParsedQuestion parsed) {
