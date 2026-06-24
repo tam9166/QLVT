@@ -544,6 +544,56 @@ public class Prompt3WorkflowService {
         return order;
     }
 
+    @Transactional
+    public void sendPurchaseOrder(Long id, String username) {
+        PurchaseOrder order = purchaseOrderRepository.findWithLinesById(id).orElseThrow();
+        ensure(order.getStatus() == PurchaseOrderStatus.DRAFT, "Chi gui duoc don dang nhap");
+        ensure(!order.getLines().isEmpty(), "Don dat hang phai co it nhat mot dong");
+        order.setStatus(PurchaseOrderStatus.SENT);
+        purchaseOrderRepository.save(order);
+        auditService.log(username, "SEND_PURCHASE_ORDER", "PURCHASE_ORDER", order.getOrderCode(), "Gui don dat hang cho nha cung cap");
+    }
+
+    @Transactional
+    public void recordPurchaseOrderReceipt(Long id, Map<String, String> parameters, String username) {
+        PurchaseOrder order = purchaseOrderRepository.findWithLinesById(id).orElseThrow();
+        ensure(order.getStatus() == PurchaseOrderStatus.SENT || order.getStatus() == PurchaseOrderStatus.PARTIALLY_RECEIVED,
+                "Chi ghi nhan nhan hang cho don da gui hoac da nhan mot phan");
+        boolean changed = false;
+        for (PurchaseOrderLine line : order.getLines()) {
+            String value = parameters.get("received_" + line.getId());
+            if (value == null || value.isBlank()) {
+                continue;
+            }
+            int receivedNow = parseReceivedQuantity(value);
+            ensure(receivedNow >= 0, "So luong nhan khong duoc am");
+            if (receivedNow == 0) {
+                continue;
+            }
+            int remaining = line.getOrderedQuantity() - line.getReceivedQuantity();
+            ensure(receivedNow <= remaining, "So luong nhan khong duoc vuot so con lai cua don");
+            line.setReceivedQuantity(line.getReceivedQuantity() + receivedNow);
+            changed = true;
+        }
+        ensure(changed, "Phai nhap so luong nhan lon hon 0");
+        int orderedTotal = order.getLines().stream().mapToInt(PurchaseOrderLine::getOrderedQuantity).sum();
+        int receivedTotal = order.getLines().stream().mapToInt(PurchaseOrderLine::getReceivedQuantity).sum();
+        order.setStatus(receivedTotal >= orderedTotal ? PurchaseOrderStatus.RECEIVED : PurchaseOrderStatus.PARTIALLY_RECEIVED);
+        if (order.getStatus() == PurchaseOrderStatus.RECEIVED) {
+            order.setReceivedAt(LocalDateTime.now());
+        }
+        purchaseOrderRepository.save(order);
+        auditService.log(username, "RECEIVE_PURCHASE_ORDER", "PURCHASE_ORDER", order.getOrderCode(), "Ghi nhan nha cung cap giao hang");
+    }
+
+    private int parseReceivedQuantity(String value) {
+        try {
+            return Integer.parseInt(value);
+        } catch (NumberFormatException ex) {
+            throw new IllegalStateException("So luong nhan phai la so nguyen hop le");
+        }
+    }
+
     private void moveBetweenBalances(Material material, MaterialBatch batch, Warehouse fromWarehouse, Warehouse toWarehouse,
                                      StorageLocation fromLocation, StorageLocation toLocation, int quantity, String username, String code) {
         applyBalanceOnly(material, batch, fromWarehouse, fromLocation, -quantity);

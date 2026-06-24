@@ -1,4 +1,4 @@
 @echo off
-cd /d E:\QLVT
+cd /d "%~dp0"
 call .\mvnw.cmd spring-boot:run
 pause
