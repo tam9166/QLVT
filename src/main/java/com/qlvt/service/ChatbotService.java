@@ -321,7 +321,7 @@ public class ChatbotService {
 
     private ChatResponse recommendIssue(ChatbotNlpService.ParsedQuestion parsed, Long sessionId) {
         if (!parsed.hasMaterial()) {
-            return missingMaterial(ChatIntent.ASK_RECOMMEND_ISSUE, sessionId);
+            return globalFefoRecommendation(parsed, sessionId);
         }
         Material material = parsed.firstMaterial().orElseThrow();
         List<StockBalance> fefoBalances = parsed.warehouse() == null
@@ -343,6 +343,43 @@ public class ChatbotService {
                 + " trước. Hiện lô này còn " + formatNumber(item.availableQuantity()) + " " + item.unit()
                 + ".\n\nLý do: " + reason;
         return new ChatResponse(true, ChatIntent.ASK_RECOMMEND_ISSUE.name(), answer, answer, List.of(item), List.of("Xem vị trí trong kho", "Tạo yêu cầu cấp phát"), sessionId);
+    }
+
+    private ChatResponse globalFefoRecommendation(ChatbotNlpService.ParsedQuestion parsed, Long sessionId) {
+        List<StockBalance> balances = balanceRepository.findAll().stream()
+                .filter(balance -> parsed.warehouse() == null || balance.getWarehouse().getId().equals(parsed.warehouse().getId()))
+                .filter(balance -> available(balance) > 0 && isIssuable(balance))
+                .sorted(Comparator.comparing((StockBalance balance) -> balance.getBatch().getExpiryDate(), Comparator.nullsLast(Comparator.naturalOrder()))
+                        .thenComparing(balance -> balance.getBatch().getReceiptDate(), Comparator.nullsLast(Comparator.naturalOrder()))
+                        .thenComparing(balance -> balance.getMaterial().getCode())
+                        .thenComparing(balance -> balance.getWarehouse().getCode())
+                        .thenComparing(balance -> balance.getLocation().getCode()))
+                .limit(8)
+                .toList();
+        if (balances.isEmpty()) {
+            String scope = parsed.warehouse() == null ? "" : " táº¡i " + parsed.warehouse().getName();
+            String answer = "MÃ¬nh chÆ°a tháº¥y lÃ´ cÃ²n kháº£ dá»¥ng Ä‘á»ƒ gá»£i Ã½ FEFO" + scope
+                    + ". Báº¡n nÃªn kiá»ƒm tra tá»“n thá»±c táº¿, lÃ´ háº¿t háº¡n vÃ  cÃ¡c phiáº¿u Ä‘ang giá»¯ hÃ ng.";
+            return simple(ChatIntent.ASK_RECOMMEND_ISSUE, answer, List.of("Xem lÃ´ sáº¯p háº¿t háº¡n", "Tra má»™t váº­t tÆ° cá»¥ thá»ƒ"), sessionId);
+        }
+
+        List<ChatItem> items = balances.stream()
+                .map(balance -> itemFromBalance(balance, available(balance)))
+                .toList();
+        String scope = parsed.warehouse() == null ? "toÃ n há»‡ thá»‘ng" : parsed.warehouse().getName();
+        StringBuilder answer = new StringBuilder("CÃ¡c lÃ´ nÃªn Æ°u tiÃªn xuáº¥t trÆ°á»›c theo FEFO trong ")
+                .append(scope).append(":");
+        for (ChatItem item : items) {
+            answer.append("\n* ")
+                    .append(item.materialCode()).append(" - ").append(item.materialName())
+                    .append(" | lÃ´ ").append(item.batchCode())
+                    .append(" | cÃ²n ").append(formatNumber(item.availableQuantity())).append(" ").append(item.unit())
+                    .append(" | ").append(item.warehouseName()).append(" / ").append(item.locationName())
+                    .append(" | HSD ").append(item.expiryDate());
+        }
+        answer.append("\n\nKhi cáº¥p phÃ¡t cho má»™t váº­t tÆ° cá»¥ thá»ƒ, báº¡n cÃ³ thá»ƒ há»i \"cáº§n 20 kháº©u trang thÃ¬ láº¥y lÃ´ nÃ o trÆ°á»›c\" Ä‘á»ƒ mÃ¬nh láº­p káº¿ hoáº¡ch sá»‘ lÆ°á»£ng theo tá»«ng lÃ´.");
+        return new ChatResponse(true, ChatIntent.ASK_RECOMMEND_ISSUE.name(), answer.toString(), answer.toString(), items,
+                List.of("Cáº§n 20 kháº©u trang láº¥y lÃ´ nÃ o?", "Xem lÃ´ sáº¯p háº¿t háº¡n"), sessionId);
     }
 
     private ChatResponse batchLookup(ChatbotNlpService.ParsedQuestion parsed, Long sessionId) {

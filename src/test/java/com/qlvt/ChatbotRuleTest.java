@@ -132,6 +132,17 @@ class ChatbotRuleTest {
         assertTrue(thisWeek.expiryWindowDays() >= 1 && thisWeek.expiryWindowDays() <= 7);
     }
 
+    @Test
+    void nlpDetectsGenericFefoRecommendationQuestion() {
+        MaterialSearchService searchService = new MaterialSearchService(materialRepository());
+        ChatbotNlpService nlp = new ChatbotNlpService(searchService, emptyWarehouses(), emptyDepartments());
+
+        ChatbotNlpService.ParsedQuestion parsed = nlp.parse("Nen xuat lo nao truoc?");
+
+        assertEquals(ChatIntent.ASK_RECOMMEND_ISSUE, parsed.intent());
+        assertTrue(parsed.materials().isEmpty());
+    }
+
     private MaterialRepository materialRepository(Material... materials) {
         MaterialRepository repository = mock(MaterialRepository.class);
         when(repository.findByDeletedFalseOrderByCodeAsc()).thenReturn(List.of(materials));
