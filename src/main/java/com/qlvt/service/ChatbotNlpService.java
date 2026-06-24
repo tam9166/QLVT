@@ -14,7 +14,9 @@ import java.time.LocalDate;
 import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -22,6 +24,24 @@ import java.util.regex.Pattern;
 public class ChatbotNlpService {
     private static final Pattern DAYS_PATTERN = Pattern.compile("(?:trong|toi|den)\\s+(\\d{1,3})\\s+ngay");
     private static final Pattern NUMBER_PATTERN = Pattern.compile("\\b(\\d{1,6})\\b");
+    private static final Set<String> REQUEST_QUANTITY_TRIGGERS = Set.of(
+            "can", "lay", "xin", "cap", "xuat", "muon", "tao", "lap", "du", "thieu"
+    );
+    private static final Map<String, Integer> VIETNAMESE_NUMBER_WORDS = Map.ofEntries(
+            Map.entry("mot", 1),
+            Map.entry("moi", 1),
+            Map.entry("hai", 2),
+            Map.entry("ba", 3),
+            Map.entry("bon", 4),
+            Map.entry("tu", 4),
+            Map.entry("nam", 5),
+            Map.entry("lam", 5),
+            Map.entry("sau", 6),
+            Map.entry("bay", 7),
+            Map.entry("tam", 8),
+            Map.entry("chin", 9)
+    );
+    private static final Set<String> NUMBER_CONNECTORS = Set.of("le", "linh");
 
     private final MaterialSearchService materialSearchService;
     private final WarehouseRepository warehouseRepository;
@@ -231,7 +251,85 @@ public class ChatbotNlpService {
                 .replaceAll("\\b\\d+\\s*(ml|mm|cm|g|mg|kg|l)\\b", " ")
                 .replaceAll("\\b(size|co)\\s*\\d+\\b", " ");
         Matcher matcher = NUMBER_PATTERN.matcher(withoutSpecs);
-        return matcher.find() ? Integer.parseInt(matcher.group(1)) : null;
+        if (matcher.find()) {
+            return Integer.parseInt(matcher.group(1));
+        }
+        return requestedQuantityFromWords(withoutSpecs);
+    }
+
+    private Integer requestedQuantityFromWords(String text) {
+        if (text == null || text.isBlank()) {
+            return null;
+        }
+        List<String> tokens = List.of(text.trim().split("\\s+"));
+        for (int i = 0; i < tokens.size(); i++) {
+            if (!REQUEST_QUANTITY_TRIGGERS.contains(tokens.get(i))) {
+                continue;
+            }
+            int end = Math.min(tokens.size(), i + 8);
+            for (int start = i + 1; start < end; start++) {
+                NumberParse parsed = parseNumberAt(tokens, start);
+                if (parsed.value() != null && parsed.value() > 0) {
+                    return parsed.value();
+                }
+            }
+        }
+        return null;
+    }
+
+    private NumberParse parseNumberAt(List<String> tokens, int start) {
+        int value = 0;
+        int current = 0;
+        int index = start;
+        boolean seen = false;
+
+        while (index < tokens.size()) {
+            String token = tokens.get(index);
+            if (NUMBER_CONNECTORS.contains(token) && seen) {
+                index++;
+                continue;
+            }
+            Integer digit = VIETNAMESE_NUMBER_WORDS.get(token);
+            if (digit != null) {
+                current += digit;
+                seen = true;
+                index++;
+                continue;
+            }
+            if ("muoi".equals(token) || "chuc".equals(token)) {
+                current = current == 0 ? 10 : current * 10;
+                seen = true;
+                index++;
+                continue;
+            }
+            if ("tram".equals(token)) {
+                if (!seen) {
+                    break;
+                }
+                current = current == 0 ? 100 : current * 100;
+                value += current;
+                current = 0;
+                index++;
+                continue;
+            }
+            if ("nghin".equals(token) || "ngan".equals(token)) {
+                if (!seen && current == 0) {
+                    break;
+                }
+                current = current == 0 ? 1 : current;
+                value += current * 1000;
+                current = 0;
+                seen = true;
+                index++;
+                continue;
+            }
+            break;
+        }
+
+        if (!seen) {
+            return new NumberParse(null, start);
+        }
+        return new NumberParse(value + current, index);
     }
 
     private boolean has(String text, String... keywords) {
@@ -239,6 +337,9 @@ public class ChatbotNlpService {
     }
 
     private record MaterialResolution(List<Material> materials, List<Material> candidates, boolean ambiguous) {
+    }
+
+    private record NumberParse(Integer value, int nextIndex) {
     }
 
     public record ParsedQuestion(String rawMessage,

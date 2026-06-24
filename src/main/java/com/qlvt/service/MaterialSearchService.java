@@ -32,7 +32,9 @@ public class MaterialSearchService {
             "con", "bao", "nhieu", "may", "cai", "bo", "hop", "goi", "o", "dau", "nam", "ke",
             "kho", "nao", "cho", "toi", "minh", "em", "anh", "chi", "vat", "tu", "hang",
             "khong", "co", "can", "lay", "xem", "ngay", "nhap", "han", "dung", "hsd",
-            "sap", "het", "trong", "gan", "nhat", "la", "lo", "ma", "so", "va"
+            "sap", "het", "trong", "gan", "nhat", "la", "lo", "ma", "so", "va",
+            "nha", "cung", "cap", "phat", "supplier", "cong", "ty", "ai", "mua", "thau",
+            "don", "vi", "de", "nghi", "tao", "lap", "xin", "muon", "them", "du"
     );
 
     private final MaterialRepository materialRepository;
@@ -114,7 +116,7 @@ public class MaterialSearchService {
             score += (int) Math.round(60.0 * overlap / Math.max(1, Math.min(queryTokens.size(), materialTokens.size())));
         }
 
-        if (VietnameseTextNormalizer.fuzzyMatch(normalizedQuery, name)) {
+        if (!queryTokens.isEmpty() && VietnameseTextNormalizer.fuzzyMatch(normalizedQuery, name)) {
             score += 35;
         }
         return score;

@@ -54,10 +54,13 @@ class ChatbotRuleTest {
 
     @Test
     void materialSearchUnderstandsAliasesAndLightTypos() {
+        Material supplierNoise = material(4L, "VT028", "Mặt nạ khí dung người lớn", "", "cái");
+        supplierNoise.setCategory("Cấp cứu");
         MaterialSearchService service = new MaterialSearchService(materialRepository(
                 material(1L, "VT001", "Khẩu trang y tế", "mask; kt y tế", "cái"),
                 material(2L, "VT002", "Bộ dịch truyền", "dây truyền dịch; bộ dây truyền", "bộ"),
-                material(3L, "VT003", "Bơm tiêm 5ml", "syringe", "cái")
+                material(3L, "VT003", "Bơm tiêm 5ml", "syringe", "cái"),
+                supplierNoise
         ));
 
         assertEquals("VT001", service.search("khau trangg con bao nhieu", 3).get(0).getCode(),
@@ -66,6 +69,7 @@ class ChatbotRuleTest {
                         .collect(Collectors.joining(", ")));
         assertEquals("VT002", service.search("day truyen dich nam o ke nao", 3).get(0).getCode());
         assertEquals("VT003", service.search("syringe 5ml còn không", 3).get(0).getCode());
+        assertTrue(service.search("nhà cung cấp?", 3).isEmpty());
     }
 
     @Test
@@ -100,9 +104,20 @@ class ChatbotRuleTest {
         assertEquals(ChatIntent.ASK_STOCK, enough.intent());
         assertEquals(20, enough.requestedQuantity());
 
+        ChatbotNlpService.ParsedQuestion enoughByWords = nlp.parse("cần hai mươi hộp khẩu trang có đủ không");
+        assertEquals(ChatIntent.ASK_STOCK, enoughByWords.intent());
+        assertEquals(20, enoughByWords.requestedQuantity());
+
         ChatbotNlpService.ParsedQuestion syringe = nlp.parse("tạo yêu cầu 30 bơm tiêm 5ml");
         assertEquals(ChatIntent.CREATE_REQUEST_DRAFT, syringe.intent());
         assertEquals(30, syringe.requestedQuantity());
+
+        ChatbotNlpService.ParsedQuestion syringeByWords = nlp.parse("tạo yêu cầu một trăm bơm tiêm 5ml");
+        assertEquals(ChatIntent.CREATE_REQUEST_DRAFT, syringeByWords.intent());
+        assertEquals(100, syringeByWords.requestedQuantity());
+
+        ChatbotNlpService.ParsedQuestion nextWeek = nlp.parse("tuần sau cần khẩu trang");
+        assertNull(nextWeek.requestedQuantity());
 
         ChatbotNlpService.ParsedQuestion departmentStock = nlp.parse("khoa cấp cứu còn vật tư gì");
         assertEquals(ChatIntent.CHECK_DEPARTMENT_STOCK, departmentStock.intent());

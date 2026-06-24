@@ -82,7 +82,7 @@ public class ChatbotService {
     @Transactional
     public ChatResponse answer(String question, String username, String department) {
         ChatSession session = currentSession(username);
-        ChatbotNlpService.ParsedQuestion parsed = nlpService.parse(enrichWithRecentMaterial(question, session));
+        ChatbotNlpService.ParsedQuestion parsed = parseWithConversationContext(question, session);
         ChatResponse response = route(parsed, username, department, session.getId());
 
         saveMessage(session, "USER", question, parsed.intent(), response.answer());
@@ -90,6 +90,21 @@ public class ChatbotService {
         session.setUpdatedAt(LocalDateTime.now());
         sessionRepository.save(session);
         return response;
+    }
+
+    private ChatbotNlpService.ParsedQuestion parseWithConversationContext(String question, ChatSession session) {
+        ChatbotNlpService.ParsedQuestion parsed = nlpService.parse(question);
+        if (!shouldUseRecentMaterialContext(question, parsed)) {
+            return parsed;
+        }
+
+        String enrichedQuestion = enrichWithRecentMaterial(question, session, true);
+        if (enrichedQuestion.equals(question == null ? "" : question)) {
+            return parsed;
+        }
+
+        ChatbotNlpService.ParsedQuestion enrichedParsed = nlpService.parse(enrichedQuestion);
+        return enrichedParsed;
     }
 
     public List<Map<String, String>> recentHistory(String username) {
@@ -607,12 +622,47 @@ public class ChatbotService {
         });
     }
 
-    private String enrichWithRecentMaterial(String question, ChatSession session) {
+    private boolean shouldUseRecentMaterialContext(String question, ChatbotNlpService.ParsedQuestion parsed) {
+        if (!requiresSpecificMaterial(parsed.intent())) {
+            return false;
+        }
+        String normalized = VietnameseTextNormalizer.normalizeSearchText(question);
+        if (parsed.hasMaterial() && directlyMentionsResolvedMaterial(normalized, parsed)) {
+            return false;
+        }
+        return normalized.length() <= 80 || VietnameseTextNormalizer.containsAnyKeyword(normalized,
+                "vat tu nay", "vat tu do", "lo nay", "lo do", "hang nay", "hang do",
+                "cai nay", "cai do", "no", "muc nay", "dong nay", "vua hoi", "vua noi",
+                "vay", "the", "tiep", "lay lo nao", "xuat lo nao", "o dau", "han dung",
+                "hsd", "nha cung cap", "xin them", "cap them", "lay them");
+    }
+
+    private boolean directlyMentionsResolvedMaterial(String normalizedQuestion, ChatbotNlpService.ParsedQuestion parsed) {
+        return parsed.materials().stream().anyMatch(material -> {
+            String code = VietnameseTextNormalizer.normalizeSearchText(material.getCode());
+            String name = VietnameseTextNormalizer.normalizeSearchText(material.getName());
+            if ((!code.isBlank() && normalizedQuestion.contains(code))
+                    || (!name.isBlank() && normalizedQuestion.contains(name))) {
+                return true;
+            }
+            String aliases = nullSafe(material.getAliasText());
+            for (String alias : aliases.split("\\s*,\\s*|\\s*;\\s*")) {
+                String normalizedAlias = VietnameseTextNormalizer.normalizeSearchText(alias);
+                if (!normalizedAlias.isBlank() && normalizedQuestion.contains(normalizedAlias)) {
+                    return true;
+                }
+            }
+            return false;
+        });
+    }
+
+    private String enrichWithRecentMaterial(String question, ChatSession session, boolean allowImplicitFollowUp) {
         String baseQuestion = question == null ? "" : question;
         String normalized = VietnameseTextNormalizer.normalizeSearchText(question);
-        if (!VietnameseTextNormalizer.containsAnyKeyword(normalized,
+        boolean explicitReference = VietnameseTextNormalizer.containsAnyKeyword(normalized,
                 "vat tu nay", "vat tu do", "lo nay", "lo do", "hang nay", "hang do",
-                "cai nay", "cai do", "no", "muc nay", "dong nay", "vua hoi", "vua noi")) {
+                "cai nay", "cai do", "no", "muc nay", "dong nay", "vua hoi", "vua noi");
+        if (!explicitReference && !allowImplicitFollowUp) {
             return baseQuestion;
         }
         List<String> recentTexts = messageRepository.findTop30BySession_IdOrderByCreatedAtAsc(session.getId()).stream()
@@ -620,10 +670,12 @@ public class ChatbotService {
                 .map(message -> nullSafe(message.getMessage()) + "\n" + nullSafe(message.getResponse()))
                 .limit(10)
                 .toList();
+        List<MaterialBatch> batches = batchRepository.findAll();
+        List<Material> materials = materialRepository.findByDeletedFalseOrderByCodeAsc();
         if (VietnameseTextNormalizer.containsAnyKeyword(normalized, "lo nay", "lo do", "batch nay", "batch do")) {
             Optional<MaterialBatch> recentBatch = recentTexts.stream()
                     .map(VietnameseTextNormalizer::normalizeSearchText)
-                    .flatMap(text -> batchRepository.findAll().stream()
+                    .flatMap(text -> batches.stream()
                             .filter(batch -> batch.getBatchNumber() != null)
                             .filter(batch -> text.contains(VietnameseTextNormalizer.normalizeSearchText(batch.getBatchNumber()))))
                     .findFirst();
@@ -633,7 +685,7 @@ public class ChatbotService {
         }
         return recentTexts.stream()
                 .map(VietnameseTextNormalizer::normalizeSearchText)
-                .flatMap(text -> materialRepository.findByDeletedFalseOrderByCodeAsc().stream()
+                .flatMap(text -> materials.stream()
                         .filter(material -> text.contains(VietnameseTextNormalizer.normalizeSearchText(material.getCode()))
                                 || text.contains(VietnameseTextNormalizer.normalizeSearchText(material.getName()))))
                 .findFirst()
