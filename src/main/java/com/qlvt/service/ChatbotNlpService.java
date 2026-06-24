@@ -144,6 +144,8 @@ public class ChatbotNlpService {
         if (has(text, "con khong", "con bao nhieu", "con nhieu khong", "con may", "con nhieu",
                 "con cap duoc", "cap duoc bao nhieu", "con hang khong", "con du khong",
                 "co du khong", "du khong", "co san khong", "cap duoc khong",
+                "thieu bao nhieu", "con thieu bao nhieu", "can bo sung bao nhieu",
+                "phai bo sung", "phai dat mua", "can dat mua", "dat mua them",
                 "ton kho", "ton", "kha dung", "stock", "so luong con")) {
             return ChatIntent.ASK_STOCK;
         }
@@ -244,7 +246,7 @@ public class ChatbotNlpService {
 
     private Integer requestedQuantity(String text) {
         if (!has(text, "can", "lay", "xin", "cap", "xuat", "du khong", "co du", "muon",
-                "tao", "lap", "yeu cau", "de nghi")) {
+                "tao", "lap", "yeu cau", "de nghi", "thieu", "bo sung", "dat mua")) {
             return null;
         }
         String withoutSpecs = text

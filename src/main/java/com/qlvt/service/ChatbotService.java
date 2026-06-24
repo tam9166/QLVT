@@ -201,6 +201,7 @@ public class ChatbotService {
                         .append(statusSuffix(item.status()));
             }
 
+            appendFefoFulfillmentPlan(answer, parsed, material, balances);
             appendModeSpecificHint(answer, mode, balances, material, totalActual);
         }
         return new ChatResponse(true, parsed.intent().name(), answer.toString(), answer.toString(), items, inventorySuggestions(parsed), sessionId);
@@ -222,6 +223,52 @@ public class ChatbotService {
                     .append(" ").append(scope).append("; còn thiếu khoảng ")
                     .append(formatNumber(requestedQuantity - totalAvailable)).append(" ").append(nullSafe(material.getUnit()))
                     .append(".");
+        }
+    }
+
+    private void appendFefoFulfillmentPlan(StringBuilder answer,
+                                           ChatbotNlpService.ParsedQuestion parsed,
+                                           Material material,
+                                           List<StockBalance> balances) {
+        Integer requestedQuantity = parsed.requestedQuantity();
+        if (requestedQuantity == null || requestedQuantity <= 0) {
+            return;
+        }
+
+        List<StockBalance> issuableBalances = balances.stream()
+                .filter(balance -> available(balance) > 0 && isIssuable(balance))
+                .toList();
+        if (issuableBalances.isEmpty()) {
+            answer.append("\n\nChưa có lô còn hạn/trạng thái AVAILABLE để lập kế hoạch cấp phát FEFO cho yêu cầu ")
+                    .append(formatNumber(requestedQuantity)).append(" ").append(nullSafe(material.getUnit())).append(".");
+            return;
+        }
+
+        long remaining = requestedQuantity;
+        answer.append("\n\nKế hoạch cấp phát FEFO đề xuất:");
+        for (StockBalance balance : issuableBalances) {
+            if (remaining <= 0) {
+                break;
+            }
+            long take = Math.min(remaining, available(balance));
+            answer.append("\n* Lấy ").append(formatNumber(take)).append(" ").append(nullSafe(material.getUnit()))
+                    .append(" từ ").append(warehouseLabel(balance)).append(" / ").append(locationLabel(balance))
+                    .append(", lô ").append(batchLabel(balance))
+                    .append(", HSD ").append(format(balance.getBatch().getExpiryDate()));
+            remaining -= take;
+        }
+
+        long plannedQuantity = requestedQuantity - remaining;
+        if (plannedQuantity >= requestedQuantity) {
+            answer.append("\nTổng kế hoạch trên đủ ")
+                    .append(formatNumber(requestedQuantity)).append(" ").append(nullSafe(material.getUnit()))
+                    .append("; nên xuất theo đúng thứ tự FEFO để giảm rủi ro hết hạn.");
+        } else {
+            answer.append("\nKế hoạch hiện chỉ gom được ")
+                    .append(formatNumber(plannedQuantity)).append(" ").append(nullSafe(material.getUnit()))
+                    .append(", còn thiếu khoảng ")
+                    .append(formatNumber(requestedQuantity - plannedQuantity)).append(" ").append(nullSafe(material.getUnit()))
+                    .append(". Nên tạo đề nghị mua/bổ sung hoặc kiểm tra tồn thực tế trước khi xác nhận cấp phát.");
         }
     }
 

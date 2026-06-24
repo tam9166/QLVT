@@ -108,6 +108,10 @@ class ChatbotRuleTest {
         assertEquals(ChatIntent.ASK_STOCK, enoughByWords.intent());
         assertEquals(20, enoughByWords.requestedQuantity());
 
+        ChatbotNlpService.ParsedQuestion shortage = nlp.parse("thiếu bao nhiêu nếu cần 500 hộp khẩu trang");
+        assertEquals(ChatIntent.ASK_STOCK, shortage.intent());
+        assertEquals(500, shortage.requestedQuantity());
+
         ChatbotNlpService.ParsedQuestion syringe = nlp.parse("tạo yêu cầu 30 bơm tiêm 5ml");
         assertEquals(ChatIntent.CREATE_REQUEST_DRAFT, syringe.intent());
         assertEquals(30, syringe.requestedQuantity());
