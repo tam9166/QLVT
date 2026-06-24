@@ -66,7 +66,7 @@ public class ChatbotNlpService {
         }
         if (has(text, "lieu dung", "cach dung thuoc", "dieu tri", "uong bao nhieu", "uong the nao",
                 "uong thuoc", "thuoc nay", "tiem bao nhieu", "tiem thuoc", "bao nhieu lan",
-                "tac dung phu", "chi dinh", "chan doan", "thuoc gi", "dung cho benh")) {
+                "tac dung phu", "chi dinh", "chan doan", "dung cho benh")) {
             return ChatIntent.UNKNOWN;
         }
         if (has(text, "phieu cua toi", "phieu cua em", "don cua toi", "yeu cau cua toi", "yeu cau toi dau",
@@ -85,7 +85,8 @@ public class ChatbotNlpService {
         if (has(text, "vat tu nao het hang", "mon nao het hang", "het hang", "het kho")) {
             return ChatIntent.ASK_LOW_STOCK;
         }
-        if (has(text, "vat tu nao sap het", "mon nao sap het", "ton thap", "gan het", "can nhap them",
+        if (has(text, "vat tu nao sap het", "mon nao sap het", "thuoc nao sap het", "thuoc gi sap het",
+                "hang nao gan het", "ton thap", "gan het", "can nhap them",
                 "sap het hang", "duoi nguong", "duoi ton toi thieu")) {
             return ChatIntent.ASK_LOW_STOCK;
         }

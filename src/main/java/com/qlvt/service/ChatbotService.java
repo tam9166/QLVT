@@ -608,20 +608,37 @@ public class ChatbotService {
     }
 
     private String enrichWithRecentMaterial(String question, ChatSession session) {
+        String baseQuestion = question == null ? "" : question;
         String normalized = VietnameseTextNormalizer.normalizeSearchText(question);
-        if (!VietnameseTextNormalizer.containsAnyKeyword(normalized, "vat tu nay", "lo nay", "hang nay", "cai nay")) {
-            return question == null ? "" : question;
+        if (!VietnameseTextNormalizer.containsAnyKeyword(normalized,
+                "vat tu nay", "vat tu do", "lo nay", "lo do", "hang nay", "hang do",
+                "cai nay", "cai do", "no", "muc nay", "dong nay", "vua hoi", "vua noi")) {
+            return baseQuestion;
         }
-        String recentText = messageRepository.findTop30BySession_IdOrderByCreatedAtAsc(session.getId()).stream()
+        List<String> recentTexts = messageRepository.findTop30BySession_IdOrderByCreatedAtAsc(session.getId()).stream()
                 .sorted(Comparator.comparing(ChatMessage::getCreatedAt).reversed())
                 .map(message -> nullSafe(message.getMessage()) + "\n" + nullSafe(message.getResponse()))
                 .limit(10)
-                .reduce("", (left, right) -> left + "\n" + right);
-        return materialRepository.findByDeletedFalseOrderByCodeAsc().stream()
-                .filter(material -> recentText.contains(material.getCode()))
+                .toList();
+        if (VietnameseTextNormalizer.containsAnyKeyword(normalized, "lo nay", "lo do", "batch nay", "batch do")) {
+            Optional<MaterialBatch> recentBatch = recentTexts.stream()
+                    .map(VietnameseTextNormalizer::normalizeSearchText)
+                    .flatMap(text -> batchRepository.findAll().stream()
+                            .filter(batch -> batch.getBatchNumber() != null)
+                            .filter(batch -> text.contains(VietnameseTextNormalizer.normalizeSearchText(batch.getBatchNumber()))))
+                    .findFirst();
+            if (recentBatch.isPresent()) {
+                return baseQuestion + " " + recentBatch.get().getBatchNumber();
+            }
+        }
+        return recentTexts.stream()
+                .map(VietnameseTextNormalizer::normalizeSearchText)
+                .flatMap(text -> materialRepository.findByDeletedFalseOrderByCodeAsc().stream()
+                        .filter(material -> text.contains(VietnameseTextNormalizer.normalizeSearchText(material.getCode()))
+                                || text.contains(VietnameseTextNormalizer.normalizeSearchText(material.getName()))))
                 .findFirst()
-                .map(material -> question + " " + material.getCode())
-                .orElse(question == null ? "" : question);
+                .map(material -> baseQuestion + " " + material.getCode())
+                .orElse(baseQuestion);
     }
 
     private String checkRequestStatus(String username, String department) {

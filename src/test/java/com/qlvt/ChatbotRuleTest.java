@@ -84,6 +84,8 @@ class ChatbotRuleTest {
         assertEquals(ChatIntent.ASK_RECOMMEND_ISSUE, nlp.parse("tôi cần lấy khẩu trang thì lấy lô nào trước").intent());
         assertEquals(ChatIntent.ASK_EXPIRED_OR_NEAR_EXPIRED, nlp.parse("có lô nào hết hạn trong 30 ngày tới không").intent());
         assertEquals(ChatIntent.GENERAL_HELP, nlp.parse("chatbot có thể làm gì").intent());
+        assertEquals(ChatIntent.ASK_LOW_STOCK, nlp.parse("thuốc gì sắp hết trong kho").intent());
+        assertEquals(ChatIntent.UNKNOWN, nlp.parse("thuốc này liều dùng bao nhiêu").intent());
     }
 
     @Test
