@@ -22,10 +22,8 @@ public class SchemaMigration implements CommandLineRunner {
         addDateTime("users", "updated_at");
         ensureNvarchar("users", "full_name", 150);
         ensureNvarchar("users", "department", 120);
-        addNvarchar("users", "visible_password", 120);
-        if (columnExists("users", "visible_password")) {
-            jdbcTemplate.execute("UPDATE users SET visible_password = '123456' WHERE visible_password IS NULL OR visible_password = ''");
-        }
+        dropColumnIfExists("users", "visible_password");
+        addBit("users", "must_change_password", "0");
         addNvarchar("users", "email", 160);
         addVarchar("users", "phone", 30);
 
@@ -92,6 +90,12 @@ public class SchemaMigration implements CommandLineRunner {
 
     private void addVarchar(String table, String column, int length) {
         executeIfMissing(table, column, "ALTER TABLE " + table + " ADD " + column + " varchar(" + length + ") NULL");
+    }
+
+    private void dropColumnIfExists(String table, String column) {
+        if (columnExists(table, column)) {
+            jdbcTemplate.execute("ALTER TABLE " + table + " DROP COLUMN " + column);
+        }
     }
 
     private void ensureNvarchar(String table, String column, int length) {

@@ -5,6 +5,7 @@ import com.qlvt.enums.*;
 import com.qlvt.repository.*;
 import com.qlvt.service.WarehouseWorkflowService;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.annotation.Profile;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,6 +16,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Component
+@Profile("!prod")
 @Order(2)
 public class DemoPageDataSeeder implements CommandLineRunner {
     private final MaterialRepository materialRepository;

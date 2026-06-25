@@ -21,9 +21,6 @@ public class AppUser {
     @Column(nullable = false)
     private String password;
 
-    @Column(columnDefinition = "nvarchar(120)")
-    private String visiblePassword;
-
     @NotBlank
     @Column(nullable = false, columnDefinition = "nvarchar(150)")
     private String fullName;
@@ -45,6 +42,7 @@ public class AppUser {
     private boolean enabled = true;
     private Boolean locked = false;
     private Boolean deleted = false;
+    private Boolean mustChangePassword = false;
     private LocalDateTime createdAt = LocalDateTime.now();
     private LocalDateTime updatedAt = LocalDateTime.now();
 
@@ -54,8 +52,6 @@ public class AppUser {
     public void setUsername(String username) { this.username = username; }
     public String getPassword() { return password; }
     public void setPassword(String password) { this.password = password; }
-    public String getVisiblePassword() { return visiblePassword; }
-    public void setVisiblePassword(String visiblePassword) { this.visiblePassword = visiblePassword; }
     public String getFullName() { return fullName; }
     public void setFullName(String fullName) { this.fullName = fullName; }
     public String getDepartment() { return department; }
@@ -72,6 +68,8 @@ public class AppUser {
     public void setLocked(boolean locked) { this.locked = locked; }
     public boolean isDeleted() { return Boolean.TRUE.equals(deleted); }
     public void setDeleted(boolean deleted) { this.deleted = deleted; }
+    public boolean isMustChangePassword() { return Boolean.TRUE.equals(mustChangePassword); }
+    public void setMustChangePassword(boolean mustChangePassword) { this.mustChangePassword = mustChangePassword; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }

@@ -1,10 +1,15 @@
 package com.qlvt;
 
+import com.qlvt.entity.AppUser;
 import com.qlvt.enums.UserRole;
+import com.qlvt.service.UserAdminService;
 import com.qlvt.util.RoleUtils;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
+import java.lang.reflect.Field;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Arrays;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -31,5 +36,27 @@ class SecurityAndSeedRulesTest {
         assertThat(RoleUtils.requiresDepartment(UserRole.DEPARTMENT_STAFF)).isTrue();
         assertThat(RoleUtils.requiresDepartment(UserRole.DEPARTMENT_HEAD)).isTrue();
         assertThat(RoleUtils.requiresDepartment(UserRole.ADMIN)).isFalse();
+    }
+
+    @Test
+    void userEntityDoesNotExposeVisiblePassword() {
+        assertThat(Arrays.stream(AppUser.class.getDeclaredFields()).map(Field::getName))
+                .doesNotContain("visiblePassword");
+    }
+
+    @Test
+    void seedSqlDoesNotStoreVisiblePassword() throws Exception {
+        String schema = Files.readString(Path.of("database/01_create_schema.sql"));
+        String seed = Files.readString(Path.of("database/02_seed_master_data.sql"));
+
+        assertThat(schema).doesNotContain("visible_password");
+        assertThat(seed).doesNotContain("visible_password");
+        assertThat(seed).doesNotContain("N'123456'");
+    }
+
+    @Test
+    void resetPasswordDoesNotExposeDefaultPasswordConstant() {
+        assertThat(Arrays.stream(UserAdminService.class.getDeclaredFields()).map(Field::getName))
+                .doesNotContain("DEFAULT_RESET_PASSWORD");
     }
 }

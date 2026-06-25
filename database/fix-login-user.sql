@@ -1,13 +1,16 @@
+-- Run with sqlcmd variable, for example:
+-- sqlcmd -S localhost -i database/fix-login-user.sql -v QLVT_SQL_PASSWORD="your-strong-password"
+
 USE master;
 GO
 
 IF NOT EXISTS (SELECT * FROM sys.sql_logins WHERE name = 'tam')
 BEGIN
-    CREATE LOGIN tam WITH PASSWORD = '123456';
+    CREATE LOGIN tam WITH PASSWORD = '$(QLVT_SQL_PASSWORD)';
 END
 ELSE
 BEGIN
-    ALTER LOGIN tam WITH PASSWORD = '123456';
+    ALTER LOGIN tam WITH PASSWORD = '$(QLVT_SQL_PASSWORD)';
     ALTER LOGIN tam ENABLE;
 END
 GO
