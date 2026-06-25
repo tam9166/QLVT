@@ -6,7 +6,8 @@ const chatMessages = document.getElementById('chatMessages');
 const quickActions = document.querySelectorAll('[data-chat-message]');
 const sidebarNav = document.getElementById('sidebarNav');
 const sidebarBackdrop = document.getElementById('sidebarBackdrop');
-let chatContext = {};
+const chatContextKey = 'qlvt.chat.context';
+let chatContext = loadChatContext();
 
 if (sidebarNav && sidebarBackdrop) {
     sidebarNav.addEventListener('shown.bs.collapse', () => sidebarBackdrop.classList.add('show'));
@@ -91,6 +92,24 @@ function updateChatContext(data = {}) {
         materialCode: item.materialCode,
         batchCode: item.batchCode && item.batchCode !== '-' ? item.batchCode : undefined
     };
+    saveChatContext(chatContext);
+}
+
+function loadChatContext() {
+    try {
+        const saved = window.sessionStorage?.getItem(chatContextKey);
+        return saved ? JSON.parse(saved) : {};
+    } catch (error) {
+        return {};
+    }
+}
+
+function saveChatContext(context) {
+    try {
+        window.sessionStorage?.setItem(chatContextKey, JSON.stringify(context || {}));
+    } catch (error) {
+        // Ignore storage failures; follow-up context still works for the current page.
+    }
 }
 
 function appendChat(type, text) {
