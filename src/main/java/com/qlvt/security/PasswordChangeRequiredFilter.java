@@ -52,6 +52,7 @@ public class PasswordChangeRequiredFilter extends OncePerRequestFilter {
     private boolean isAllowedPath(HttpServletRequest request) {
         String path = request.getRequestURI().substring(request.getContextPath().length());
         return path.equals("/login")
+                || path.equals("/forgot-password")
                 || path.equals("/logout")
                 || path.equals("/profile")
                 || path.equals("/profile/password")

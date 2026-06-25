@@ -25,7 +25,7 @@ public class SecurityConfig {
                                                    PasswordChangeRequiredFilter passwordChangeRequiredFilter) throws Exception {
         http
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/login", "/css/**", "/js/**").permitAll()
+                        .requestMatchers("/login", "/forgot-password", "/css/**", "/js/**").permitAll()
                         .requestMatchers("/qr/public/material/**").permitAll()
                         .requestMatchers("/qr/internal/material/**").hasAnyRole("ADMIN", "WAREHOUSE_STAFF", "MANAGER")
                         .requestMatchers("/admin/**").hasRole("ADMIN")
