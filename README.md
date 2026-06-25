@@ -29,7 +29,7 @@ Nếu VS Code đang chạy bằng JDK/JRE 21, cài JDK 17 và chọn lại Java 
 ```properties
 spring.datasource.url=jdbc:sqlserver://localhost:1433;databaseName=QLVT;encrypt=true;trustServerCertificate=true
 spring.datasource.username=tam
-spring.datasource.password=123456
+spring.datasource.password=${DB_PASSWORD}
 spring.datasource.driver-class-name=com.microsoft.sqlserver.jdbc.SQLServerDriver
 spring.jpa.database-platform=org.hibernate.dialect.SQLServerDialect
 spring.jpa.hibernate.ddl-auto=validate
@@ -41,7 +41,7 @@ Nếu máy dùng instance khác, đặt `DB_URL`, ví dụ `jdbc:sqlserver://loc
 Tạo hoặc sửa login local:
 
 ```powershell
-sqlcmd -S localhost -E -i database/fix-login-user.sql
+sqlcmd -S localhost -E -i database/fix-login-user.sql -v QLVT_SQL_PASSWORD="your-strong-password"
 ```
 
 Sau đó chạy các script schema/seed theo đúng thứ tự:
@@ -66,7 +66,7 @@ Ví dụ cấu hình local trên PowerShell:
 $env:SPRING_PROFILES_ACTIVE="dev"
 $env:DB_URL="jdbc:sqlserver://localhost:1433;databaseName=QLVT;encrypt=true;trustServerCertificate=true"
 $env:DB_USERNAME="tam"
-$env:DB_PASSWORD="123456"
+$env:DB_PASSWORD="your-strong-password"
 ```
 
 Checklist trước khi chạy:
@@ -82,7 +82,7 @@ Checklist trước khi chạy:
 Kiểm tra nhanh bằng `sqlcmd`:
 
 ```powershell
-sqlcmd -S localhost -U tam -P 123456 -d QLVT -Q "SELECT DB_NAME(), SUSER_SNAME(), USER_NAME()"
+sqlcmd -S localhost -U tam -P $env:DB_PASSWORD -d QLVT -Q "SELECT DB_NAME(), SUSER_SNAME(), USER_NAME()"
 ```
 
 ## Chạy project
@@ -119,7 +119,7 @@ Nếu Maven báo `PKIX path building failed` khi tải Surefire từ Maven Centr
 
 ## Tài khoản mẫu
 
-Các tài khoản demo của ứng dụng dùng mật khẩu `123456`.
+Cac tai khoan demo chi dung cho dev/demo. Dat mat khau demo bang `APP_DEMO_DEFAULT_PASSWORD`; khong commit mat khau that vao source.
 
 - `admin`: quản trị hệ thống
 - `thukho`: thủ kho

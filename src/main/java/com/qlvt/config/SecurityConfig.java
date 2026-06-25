@@ -8,7 +8,9 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
+import com.qlvt.security.PasswordChangeRequiredFilter;
 
 @Configuration
 @EnableMethodSecurity
@@ -19,7 +21,8 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http,
+                                                   PasswordChangeRequiredFilter passwordChangeRequiredFilter) throws Exception {
         http
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/login", "/css/**", "/js/**").permitAll()
@@ -61,6 +64,7 @@ public class SecurityConfig {
                         .permitAll()
                 )
                 .logout(logout -> logout.logoutSuccessUrl("/login?logout").permitAll());
+        http.addFilterAfter(passwordChangeRequiredFilter, UsernamePasswordAuthenticationFilter.class);
         http.csrf(csrf -> csrf.ignoringRequestMatchers(new AntPathRequestMatcher("/api/chatbot/**")));
         http.exceptionHandling(ex -> ex.accessDeniedPage("/access-denied"));
         return http.build();

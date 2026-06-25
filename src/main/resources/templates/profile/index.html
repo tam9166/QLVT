@@ -15,6 +15,9 @@
 
     <div th:if="${success}" class="alert alert-success mt-3" th:text="${success}"></div>
     <div th:if="${error}" class="alert alert-danger mt-3" th:text="${error}"></div>
+    <div th:if="${profile.mustChangePassword}" class="alert alert-warning mt-3">
+        Tài khoản đang dùng mật khẩu tạm. Bạn phải đổi mật khẩu trước khi tiếp tục sử dụng các chức năng khác.
+    </div>
 
     <section class="data-panel mt-3">
         <div class="panel-heading">

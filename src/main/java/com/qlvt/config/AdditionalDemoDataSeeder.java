@@ -44,6 +44,7 @@ import com.qlvt.repository.SupplierRepository;
 import com.qlvt.repository.TemperatureLogRepository;
 import com.qlvt.repository.WarehouseRepository;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.annotation.Profile;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -53,6 +54,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Component
+@Profile("!prod")
 @Order(3)
 public class AdditionalDemoDataSeeder implements CommandLineRunner {
     private final MaterialRepository materialRepository;

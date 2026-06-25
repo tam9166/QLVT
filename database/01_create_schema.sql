@@ -763,7 +763,7 @@ CREATE TABLE [dbo].[users] (
     [updated_at] DATETIME2(6) NULL,
     [locked] BIT NOT NULL CONSTRAINT [DF_users_locked] DEFAULT ((0)),
     [deleted] BIT NOT NULL CONSTRAINT [DF_users_deleted] DEFAULT ((0)),
-    [visible_password] NVARCHAR(120) NULL,
+    [must_change_password] BIT NOT NULL DEFAULT 0,
     CONSTRAINT [PK__users__3213E83F964FE602] PRIMARY KEY ([id]),
     CONSTRAINT [idx_users_username] UNIQUE ([username]),
     CONSTRAINT [CK__users__role__628FA481] CHECK ([role]='MANAGER' OR [role]='ACCOUNTANT' OR [role]='PROCUREMENT' OR [role]='WAREHOUSE_STAFF' OR [role]='DEPARTMENT_HEAD' OR [role]='DEPARTMENT_STAFF' OR [role]='ADMIN')
