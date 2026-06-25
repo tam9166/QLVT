@@ -366,29 +366,29 @@ public class ChatbotService {
                 .limit(8)
                 .toList();
         if (balances.isEmpty()) {
-            String scope = parsed.warehouse() == null ? "" : " táº¡i " + parsed.warehouse().getName();
-            String answer = "MÃ¬nh chÆ°a tháº¥y lÃ´ cÃ²n kháº£ dá»¥ng Ä‘á»ƒ gá»£i Ã½ FEFO" + scope
-                    + ". Báº¡n nÃªn kiá»ƒm tra tá»“n thá»±c táº¿, lÃ´ háº¿t háº¡n vÃ  cÃ¡c phiáº¿u Ä‘ang giá»¯ hÃ ng.";
-            return simple(ChatIntent.ASK_RECOMMEND_ISSUE, answer, List.of("Xem lÃ´ sáº¯p háº¿t háº¡n", "Tra má»™t váº­t tÆ° cá»¥ thá»ƒ"), sessionId);
+            String scope = parsed.warehouse() == null ? "" : " tại " + parsed.warehouse().getName();
+            String answer = "Mình chưa thấy lô còn khả dụng để gợi ý FEFO" + scope
+                    + ". Bạn nên kiểm tra tồn thực tế, lô hết hạn và các phiếu đang giữ hàng.";
+            return simple(ChatIntent.ASK_RECOMMEND_ISSUE, answer, List.of("Xem lô sắp hết hạn", "Tra một vật tư cụ thể"), sessionId);
         }
 
         List<ChatItem> items = balances.stream()
                 .map(balance -> itemFromBalance(balance, available(balance)))
                 .toList();
-        String scope = parsed.warehouse() == null ? "toÃ n há»‡ thá»‘ng" : parsed.warehouse().getName();
-        StringBuilder answer = new StringBuilder("CÃ¡c lÃ´ nÃªn Æ°u tiÃªn xuáº¥t trÆ°á»›c theo FEFO trong ")
+        String scope = parsed.warehouse() == null ? "toàn hệ thống" : parsed.warehouse().getName();
+        StringBuilder answer = new StringBuilder("Các lô nên ưu tiên xuất trước theo FEFO trong ")
                 .append(scope).append(":");
         for (ChatItem item : items) {
             answer.append("\n* ")
                     .append(item.materialCode()).append(" - ").append(item.materialName())
-                    .append(" | lÃ´ ").append(item.batchCode())
-                    .append(" | cÃ²n ").append(formatNumber(item.availableQuantity())).append(" ").append(item.unit())
+                    .append(" | lô ").append(item.batchCode())
+                    .append(" | còn ").append(formatNumber(item.availableQuantity())).append(" ").append(item.unit())
                     .append(" | ").append(item.warehouseName()).append(" / ").append(item.locationName())
                     .append(" | HSD ").append(item.expiryDate());
         }
-        answer.append("\n\nKhi cáº¥p phÃ¡t cho má»™t váº­t tÆ° cá»¥ thá»ƒ, báº¡n cÃ³ thá»ƒ há»i \"cáº§n 20 kháº©u trang thÃ¬ láº¥y lÃ´ nÃ o trÆ°á»›c\" Ä‘á»ƒ mÃ¬nh láº­p káº¿ hoáº¡ch sá»‘ lÆ°á»£ng theo tá»«ng lÃ´.");
+        answer.append("\n\nKhi cấp phát cho một vật tư cụ thể, bạn có thể hỏi \"cần 20 khẩu trang thì lấy lô nào trước\" để mình lập kế hoạch số lượng theo từng lô.");
         return new ChatResponse(true, ChatIntent.ASK_RECOMMEND_ISSUE.name(), answer.toString(), answer.toString(), items,
-                List.of("Cáº§n 20 kháº©u trang láº¥y lÃ´ nÃ o?", "Xem lÃ´ sáº¯p háº¿t háº¡n"), sessionId);
+                List.of("Cần 20 khẩu trang lấy lô nào?", "Xem lô sắp hết hạn"), sessionId);
     }
 
     private ChatResponse batchLookup(ChatbotNlpService.ParsedQuestion parsed, Long sessionId) {
@@ -592,7 +592,7 @@ public class ChatbotService {
                     .append(" | còn có thể cấp ").append(formatNumber(material.getAvailableQuantity())).append(" ")
                     .append(nullSafe(material.getUnit())).append("\n");
         }
-        answer.append("\nBạn nhắn lại bằng mã hoặc tên đầy đủ hơn, ví dụ: \"")
+        answer.append("\nBạn nhập lại bằng mã hoặc tên đầy đủ hơn, ví dụ: \"")
                 .append(parsed.candidates().isEmpty() ? "VT002" : parsed.candidates().get(0).getCode())
                 .append(" còn bao nhiêu?\".");
         List<ChatItem> items = parsed.candidates().stream()
