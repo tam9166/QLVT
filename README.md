@@ -103,6 +103,22 @@ $env:DB_PASSWORD="your-strong-password"
 .\mvnw.cmd clean spring-boot:run
 ```
 
+Hoặc dùng script kiểm tra SQL Server trước khi chạy:
+
+```powershell
+cd E:\QLVT
+$env:DB_PASSWORD="your-strong-password"
+.\scripts\run-dev.ps1
+```
+
+Nếu chỉ muốn kiểm tra cấu hình SQL Server:
+
+```powershell
+cd E:\QLVT
+$env:DB_PASSWORD="your-strong-password"
+.\scripts\verify-sqlserver.ps1
+```
+
 Nếu đã set User Environment bằng `[Environment]::SetEnvironmentVariable(...)`, hãy đóng mở lại VS Code để Java Debugger nhận biến mới. Terminal hoặc VS Code đang mở từ trước có thể vẫn chạy với `DB_PASSWORD` rỗng và gây lỗi `Login failed for user 'tam'`.
 
 Hoặc build jar:
