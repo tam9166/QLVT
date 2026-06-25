@@ -6,6 +6,7 @@ const chatMessages = document.getElementById('chatMessages');
 const quickActions = document.querySelectorAll('[data-chat-message]');
 const sidebarNav = document.getElementById('sidebarNav');
 const sidebarBackdrop = document.getElementById('sidebarBackdrop');
+let chatContext = {};
 
 if (sidebarNav && sidebarBackdrop) {
     sidebarNav.addEventListener('shown.bs.collapse', () => sidebarBackdrop.classList.add('show'));
@@ -65,15 +66,31 @@ async function sendChat(message) {
         const response = await fetch('/api/chatbot/message', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({message})
+            body: JSON.stringify({message, context: chatContext})
         });
         const data = await response.json();
+        updateChatContext(data);
         loading.className = 'bot';
         renderAnswer(loading, data.answer || data.message || 'Mình chưa nhận được phản hồi từ dữ liệu. Bạn thử hỏi lại giúp mình nhé.', data);
     } catch (error) {
         loading.className = 'bot';
         loading.textContent = 'Mình chưa kết nối được chatbot. Bạn thử lại sau một chút nhé.';
     }
+}
+
+function updateChatContext(data = {}) {
+    if (!Array.isArray(data.items) || data.items.length === 0) {
+        return;
+    }
+    const item = data.items.find(candidate => candidate && (candidate.materialId || candidate.materialCode));
+    if (!item) {
+        return;
+    }
+    chatContext = {
+        materialId: item.materialId,
+        materialCode: item.materialCode,
+        batchCode: item.batchCode && item.batchCode !== '-' ? item.batchCode : undefined
+    };
 }
 
 function appendChat(type, text) {
