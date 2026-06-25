@@ -65,7 +65,8 @@ class SecurityAndSeedRulesTest {
         for (String file : new String[] {
                 "src/main/resources/templates/users/list.html",
                 "src/main/java/com/qlvt/service/ChatbotService.java",
-                "database/03_seed_demo_data.sql"
+                "database/03_seed_demo_data.sql",
+                "README.md"
         }) {
             String content = Files.readString(Path.of(file));
             assertThat(content)
