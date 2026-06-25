@@ -55,9 +55,15 @@ public class SchemaMigration implements CommandLineRunner {
         ensureNvarchar("material_requests", "department_approved_by", 120);
         ensureNvarchar("material_requests", "warehouse_approved_by", 120);
         ensureNvarchar("material_requests", "received_by", 120);
+        replaceStatusCheckConstraint("material_requests", "CK_material_requests_status",
+                "DRAFT", "SUBMITTED", "DEPARTMENT_APPROVED", "DEPARTMENT_REJECTED",
+                "WAREHOUSE_APPROVED", "PARTIALLY_APPROVED", "WAREHOUSE_REJECTED",
+                "RESERVED", "PREPARING", "ISSUED", "RECEIVED", "CANCELLED");
 
         ensureNvarchar("issue_slips", "department", 160);
         ensureNvarchar("issue_slips", "received_by", 120);
+        replaceStatusCheckConstraint("issue_slips", "CK_issue_slips_status",
+                "DRAFT", "PREPARING", "ISSUED", "RECEIVED", "CANCELLED");
         ensureNvarchar("department_stocks", "department", 160);
         ensureNvarchar("department_returns", "department", 160);
         ensureNvarchar("recall_order_lines", "department", 160);
@@ -110,6 +116,29 @@ public class SchemaMigration implements CommandLineRunner {
         if (count != null && count > 0) {
             jdbcTemplate.execute("ALTER TABLE " + table + " ALTER COLUMN " + column + " nvarchar(" + length + ") NULL");
         }
+    }
+
+    private void replaceStatusCheckConstraint(String table, String constraintName, String... allowedValues) {
+        if (!tableExists(table) || !columnExists(table, "status")) {
+            return;
+        }
+        jdbcTemplate.queryForList("""
+                SELECT cc.name
+                FROM sys.check_constraints cc
+                WHERE cc.parent_object_id = OBJECT_ID(?)
+                  AND cc.definition LIKE '%[status]%'
+                """, String.class, table).forEach(name ->
+                jdbcTemplate.execute("ALTER TABLE " + table + " DROP CONSTRAINT " + name));
+
+        StringBuilder allowed = new StringBuilder();
+        for (int i = 0; i < allowedValues.length; i++) {
+            if (i > 0) {
+                allowed.append(", ");
+            }
+            allowed.append("'").append(allowedValues[i].replace("'", "''")).append("'");
+        }
+        jdbcTemplate.execute("ALTER TABLE " + table + " ADD CONSTRAINT " + constraintName
+                + " CHECK (status IN (" + allowed + "))");
     }
 
     private void normalizeVietnameseDepartmentNames() {

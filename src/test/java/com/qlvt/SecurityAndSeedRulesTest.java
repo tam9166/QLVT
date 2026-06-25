@@ -55,6 +55,17 @@ class SecurityAndSeedRulesTest {
     }
 
     @Test
+    void materialRequestSchemaAllowsWorkflowStatusesUsedByIssueFlow() throws Exception {
+        String schema = Files.readString(Path.of("database/01_create_schema.sql"));
+
+        assertThat(schema)
+                .contains("CK_material_requests_status")
+                .contains("PARTIALLY_APPROVED")
+                .contains("RESERVED")
+                .contains("PREPARING");
+    }
+
+    @Test
     void resetPasswordDoesNotExposeDefaultPasswordConstant() {
         assertThat(Arrays.stream(UserAdminService.class.getDeclaredFields()).map(Field::getName))
                 .doesNotContain("DEFAULT_RESET_PASSWORD");

@@ -16,6 +16,7 @@ public class InventoryService {
     private final WarehouseRepository warehouseRepository;
     private final StorageLocationRepository locationRepository;
     private final SupplierRepository supplierRepository;
+    private final StockBalanceRepository balanceRepository;
     private final StockMovementRepository movementRepository;
     private final AuditService auditService;
     private final InventorySyncService inventorySyncService;
@@ -25,6 +26,7 @@ public class InventoryService {
                             WarehouseRepository warehouseRepository,
                             StorageLocationRepository locationRepository,
                             SupplierRepository supplierRepository,
+                            StockBalanceRepository balanceRepository,
                             StockMovementRepository movementRepository,
                             AuditService auditService,
                             InventorySyncService inventorySyncService) {
@@ -33,6 +35,7 @@ public class InventoryService {
         this.warehouseRepository = warehouseRepository;
         this.locationRepository = locationRepository;
         this.supplierRepository = supplierRepository;
+        this.balanceRepository = balanceRepository;
         this.movementRepository = movementRepository;
         this.auditService = auditService;
         this.inventorySyncService = inventorySyncService;
@@ -46,7 +49,7 @@ public class InventoryService {
         }
         Material material = materialRepository.findById(materialId).orElseThrow();
         Warehouse warehouse = warehouseRepository.findById(warehouseId).orElseThrow();
-        StorageLocation location = locationId == null ? null : locationRepository.findById(locationId).orElse(null);
+        StorageLocation location = resolveReceiveLocation(warehouseId, locationId);
         Supplier supplier = supplierId == null ? null : supplierRepository.findById(supplierId).orElse(null);
 
         int before = inventorySyncService.syncMaterialActualQuantity(material);
@@ -58,8 +61,18 @@ public class InventoryService {
         batch.setBatchNumber(batchNumber);
         batch.setExpiryDate(expiryDate);
         batch.setReceiptDate(LocalDate.now());
+        if (batch.getInitialQuantity() == 0) {
+            batch.setInitialQuantity(quantity);
+        } else {
+            batch.setInitialQuantity(batch.getInitialQuantity() + quantity);
+        }
         batch.setQuantity(batch.getQuantity() + quantity);
         batchRepository.save(batch);
+
+        StockBalance balance = findOrCreateBalance(material, batch, warehouse, location);
+        balance.setActualQuantity(balance.getActualQuantity() + quantity);
+        balance.validate();
+        balanceRepository.save(balance);
 
         int after = inventorySyncService.syncMaterialActualQuantity(material);
         movementRepository.save(movement(MovementType.IN, material, batch, warehouse, quantity, before, after, "RECEIPT", batchNumber, username));
@@ -76,15 +89,22 @@ public class InventoryService {
         if (material.getAvailableQuantity() < quantity) {
             throw new IllegalStateException("Không đủ tồn khả dụng để xuất kho");
         }
-        List<MaterialBatch> batches = batchRepository.findIssuableBatchesFefo(materialId, LocalDate.now());
         int remaining = quantity;
         List<String> allocations = new ArrayList<>();
 
-        for (MaterialBatch batch : batches) {
+        for (StockBalance balance : balanceRepository.findAvailableFefo(materialId, LocalDate.now())) {
             if (remaining == 0) {
                 break;
             }
-            int take = Math.min(batch.getQuantity(), remaining);
+            int take = Math.min(balance.getAvailableQuantity(), remaining);
+            if (take <= 0) {
+                continue;
+            }
+            MaterialBatch batch = balance.getBatch();
+            balance.setActualQuantity(balance.getActualQuantity() - take);
+            balance.validate();
+            balanceRepository.save(balance);
+
             batch.setQuantity(batch.getQuantity() - take);
             batchRepository.save(batch);
             remaining -= take;
@@ -97,6 +117,27 @@ public class InventoryService {
         movementRepository.save(movement(MovementType.OUT, material, null, null, -quantity, before, after, "ISSUE", department, username));
         auditService.log(username, "ISSUE_STOCK", "MATERIAL", material.getCode(), "Xuất " + quantity + " cho " + department + " theo FEFO: " + allocations);
         return allocations;
+    }
+
+    private StorageLocation resolveReceiveLocation(Long warehouseId, Long locationId) {
+        if (locationId != null) {
+            return locationRepository.findById(locationId).orElseThrow();
+        }
+        return locationRepository.findByWarehouse_IdAndDeletedFalseOrderByCodeAsc(warehouseId).stream()
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("Kho chua co vi tri luu tru. Hay tao/chon vi tri truoc khi nhap kho."));
+    }
+
+    private StockBalance findOrCreateBalance(Material material, MaterialBatch batch, Warehouse warehouse, StorageLocation location) {
+        return balanceRepository.findByMaterial_IdAndBatch_IdAndWarehouse_IdAndLocation_Id(
+                material.getId(), batch.getId(), warehouse.getId(), location.getId()).orElseGet(() -> {
+            StockBalance balance = new StockBalance();
+            balance.setMaterial(material);
+            balance.setBatch(batch);
+            balance.setWarehouse(warehouse);
+            balance.setLocation(location);
+            return balance;
+        });
     }
 
     private StockMovement movement(MovementType type, Material material, MaterialBatch batch, Warehouse warehouse,
