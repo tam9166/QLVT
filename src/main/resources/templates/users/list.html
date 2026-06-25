@@ -1,17 +1,17 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
-<head th:replace="~{fragments/layout :: head('Quáº£n lÃ½ ngÆ°á»i dÃ¹ng')}"></head>
+<head th:replace="~{fragments/layout :: head('Quản lý người dùng')}"></head>
 <body>
 <div th:replace="~{fragments/layout :: navbar}"></div>
 <main class="container-fluid app-shell">
     <section class="data-panel">
         <div class="panel-heading">
-            <div><span class="eyebrow">Quáº£n trá»‹</span><h1 class="h3">Quáº£n lÃ½ ngÆ°á»i dÃ¹ng</h1></div>
-            <a class="btn btn-primary" th:href="@{/users/new}"><i class="bi bi-person-plus"></i> ThÃªm ngÆ°á»i dÃ¹ng</a>
+            <div><span class="eyebrow">Quản trị</span><h1 class="h3">Quản lý người dùng</h1></div>
+            <a class="btn btn-primary" th:href="@{/users/new}"><i class="bi bi-person-plus"></i> Thêm người dùng</a>
         </div>
         <form class="row g-2 mb-3">
-            <div class="col-md-5"><input class="form-control" name="q" th:value="${q}" placeholder="TÃ¬m tÃªn Ä‘Äƒng nháº­p, há» tÃªn, email"></div>
-            <div class="col-auto"><button class="btn btn-outline-light">TÃ¬m</button></div>
+            <div class="col-md-5"><input class="form-control" name="q" th:value="${q}" placeholder="Tìm tên đăng nhập, họ tên, email"></div>
+            <div class="col-auto"><button class="btn btn-outline-light">Tìm</button></div>
         </form>
         <div class="alert alert-warning" th:if="${temporaryPassword}">
             <div th:text="${securityNotice}"></div>
@@ -21,13 +21,13 @@
             <table class="table table-modern align-middle">
                 <thead>
                 <tr>
-                    <th>TÃªn Ä‘Äƒng nháº­p</th>
-                    <th>Há» tÃªn</th>
+                    <th>Tên đăng nhập</th>
+                    <th>Họ tên</th>
                     <th>Email</th>
-                    <th>Vai trÃ²</th>
+                    <th>Vai trò</th>
                     <th>Khoa</th>
                     <th>Đổi mật khẩu</th>
-                    <th>Tráº¡ng thÃ¡i</th>
+                    <th>Trạng thái</th>
                     <th></th>
                 </tr>
                 </thead>
@@ -39,13 +39,13 @@
                     <td th:text="${u.role}"></td>
                     <td th:text="${u.department}"></td>
                     <td th:text="${u.mustChangePassword ? 'Bắt buộc' : 'Không'}"></td>
-                    <td th:text="${u.locked ? 'ÄÃ£ khÃ³a' : (u.enabled ? 'Hoáº¡t Ä‘á»™ng' : 'Táº¯t')}"></td>
+                    <td th:text="${u.locked ? 'Đã khóa' : (u.enabled ? 'Hoạt động' : 'Tắt')}"></td>
                     <td class="text-end">
-                        <a class="btn btn-sm btn-outline-light" th:href="@{/users/{id}/edit(id=${u.id})}">Sá»­a</a>
-                        <form class="d-inline" method="post" th:action="@{/users/{id}/lock(id=${u.id})}" th:if="${!u.locked}"><button class="btn btn-sm btn-outline-light">KhÃ³a</button></form>
-                        <form class="d-inline" method="post" th:action="@{/users/{id}/unlock(id=${u.id})}" th:if="${u.locked}"><button class="btn btn-sm btn-outline-light">Má»Ÿ</button></form>
+                        <a class="btn btn-sm btn-outline-light" th:href="@{/users/{id}/edit(id=${u.id})}">Sửa</a>
+                        <form class="d-inline" method="post" th:action="@{/users/{id}/lock(id=${u.id})}" th:if="${!u.locked}"><button class="btn btn-sm btn-outline-light">Khóa</button></form>
+                        <form class="d-inline" method="post" th:action="@{/users/{id}/unlock(id=${u.id})}" th:if="${u.locked}"><button class="btn btn-sm btn-outline-light">Mở</button></form>
                         <form class="d-inline" method="post" th:action="@{/users/{id}/reset-password(id=${u.id})}" onsubmit="return confirm('Tạo mật khẩu tạm mới cho tài khoản này?')"><button class="btn btn-sm btn-outline-light">Reset</button></form>
-                        <form class="d-inline" method="post" th:action="@{/users/{id}/delete(id=${u.id})}" onsubmit="return confirm('XÃ³a má»m ngÆ°á»i dÃ¹ng nÃ y?')"><button class="btn btn-sm btn-outline-light">XÃ³a</button></form>
+                        <form class="d-inline" method="post" th:action="@{/users/{id}/delete(id=${u.id})}" onsubmit="return confirm('Xóa mềm người dùng này?')"><button class="btn btn-sm btn-outline-light">Xóa</button></form>
                     </td>
                 </tr>
                 </tbody>

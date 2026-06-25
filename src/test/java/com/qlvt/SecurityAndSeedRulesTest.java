@@ -59,4 +59,18 @@ class SecurityAndSeedRulesTest {
         assertThat(Arrays.stream(UserAdminService.class.getDeclaredFields()).map(Field::getName))
                 .doesNotContain("DEFAULT_RESET_PASSWORD");
     }
+
+    @Test
+    void userFacingVietnameseFilesDoNotContainMojibake() throws Exception {
+        for (String file : new String[] {
+                "src/main/resources/templates/users/list.html",
+                "src/main/java/com/qlvt/service/ChatbotService.java",
+                "database/03_seed_demo_data.sql"
+        }) {
+            String content = Files.readString(Path.of(file));
+            assertThat(content)
+                    .as(file)
+                    .doesNotContain("Ã", "Â", "Ä", "Å", "Æ", "Ð", "áº", "á»", "ï¿½", "\uFFFD");
+        }
+    }
 }

@@ -150,9 +150,9 @@ GO
 PRINT N'Seeding material_request_lines';
 SET IDENTITY_INSERT [dbo].[material_request_lines] ON;
 INSERT INTO [dbo].[material_request_lines] ([id], [approved_quantity], [reason], [requested_quantity], [material_id], [request_id], [issued_quantity], [note], [status]) VALUES (1, 0, N'', 10, 8, 1, 0, NULL, NULL);
-INSERT INTO [dbo].[material_request_lines] ([id], [approved_quantity], [reason], [requested_quantity], [material_id], [request_id], [issued_quantity], [note], [status]) VALUES (2, 0, N'B? sung t? tr?c c?p c?u', 12, 2, 2, 0, N'Dữ liệu mẫu', N'PENDING');
-INSERT INTO [dbo].[material_request_lines] ([id], [approved_quantity], [reason], [requested_quantity], [material_id], [request_id], [issued_quantity], [note], [status]) VALUES (3, 0, N'Phát cho khu ti?p nh?n', 8, 1, 2, 0, N'Dữ liệu mẫu', N'PENDING');
-INSERT INTO [dbo].[material_request_lines] ([id], [approved_quantity], [reason], [requested_quantity], [material_id], [request_id], [issued_quantity], [note], [status]) VALUES (4, 20, N'B? sung xe tiêm truy?n', 20, 6, 3, 0, N'Dữ liệu mẫu', N'APPROVED');
+INSERT INTO [dbo].[material_request_lines] ([id], [approved_quantity], [reason], [requested_quantity], [material_id], [request_id], [issued_quantity], [note], [status]) VALUES (2, 0, N'Bổ sung từ trực cấp cứu', 12, 2, 2, 0, N'Dữ liệu mẫu', N'PENDING');
+INSERT INTO [dbo].[material_request_lines] ([id], [approved_quantity], [reason], [requested_quantity], [material_id], [request_id], [issued_quantity], [note], [status]) VALUES (3, 0, N'Phát cho khu tiếp nhận', 8, 1, 2, 0, N'Dữ liệu mẫu', N'PENDING');
+INSERT INTO [dbo].[material_request_lines] ([id], [approved_quantity], [reason], [requested_quantity], [material_id], [request_id], [issued_quantity], [note], [status]) VALUES (4, 20, N'Bổ sung xe tiêm truyền', 20, 6, 3, 0, N'Dữ liệu mẫu', N'APPROVED');
 INSERT INTO [dbo].[material_request_lines] ([id], [approved_quantity], [reason], [requested_quantity], [material_id], [request_id], [issued_quantity], [note], [status]) VALUES (5, 0, N'', 10, 51, 4, 0, NULL, NULL);
 INSERT INTO [dbo].[material_request_lines] ([id], [approved_quantity], [reason], [requested_quantity], [material_id], [request_id], [issued_quantity], [note], [status]) VALUES (6, 0, N'', 5, 2, 5, 0, NULL, NULL);
 SET IDENTITY_INSERT [dbo].[material_request_lines] OFF;
@@ -398,7 +398,7 @@ SET IDENTITY_INSERT [dbo].[department_return_lines] OFF;
 GO
 PRINT N'Seeding recall_order_lines';
 SET IDENTITY_INSERT [dbo].[recall_order_lines] ON;
-INSERT INTO [dbo].[recall_order_lines] ([id], [department], [issued_quantity], [note], [remaining_quantity], [returned_quantity], [status], [recall_order_id]) VALUES (1, N'Khoa Nội tổng hợp', 20, N'Dữ liệu mẫu thu hồi theo lô', 12, 3, N'Ðang thu h?i', 1);
+INSERT INTO [dbo].[recall_order_lines] ([id], [department], [issued_quantity], [note], [remaining_quantity], [returned_quantity], [status], [recall_order_id]) VALUES (1, N'Khoa Nội tổng hợp', 20, N'Dữ liệu mẫu thu hồi theo lô', 12, 3, N'Đang thu hồi', 1);
 SET IDENTITY_INSERT [dbo].[recall_order_lines] OFF;
 GO
 -- Supplemental demo coverage to keep an empty rebuild useful for acceptance testing.
