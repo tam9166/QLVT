@@ -370,7 +370,7 @@ CREATE TABLE [dbo].[material_requests] (
     [warehouse_approved_by] NVARCHAR(120) NULL,
     CONSTRAINT [PK__material__3213E83FB57D1982] PRIMARY KEY ([id]),
     CONSTRAINT [UKcofg5ceptl5b11mkr2petj2mt] UNIQUE ([code]),
-    CONSTRAINT [CK__material___statu__5070F446] CHECK ([status]='CANCELLED' OR [status]='RECEIVED' OR [status]='ISSUED' OR [status]='WAREHOUSE_REJECTED' OR [status]='WAREHOUSE_APPROVED' OR [status]='DEPARTMENT_REJECTED' OR [status]='DEPARTMENT_APPROVED' OR [status]='SUBMITTED' OR [status]='DRAFT')
+    CONSTRAINT [CK_material_requests_status] CHECK ([status] IN ('DRAFT','SUBMITTED','DEPARTMENT_APPROVED','DEPARTMENT_REJECTED','WAREHOUSE_APPROVED','PARTIALLY_APPROVED','WAREHOUSE_REJECTED','RESERVED','PREPARING','ISSUED','RECEIVED','CANCELLED'))
 );
 GO
 CREATE TABLE [dbo].[materials] (
