@@ -62,7 +62,7 @@ public class InventoryService {
         batchRepository.save(batch);
 
         int after = inventorySyncService.syncMaterialActualQuantity(material);
-        movementRepository.save(movement(MovementType.IN, material, batch, warehouse, quantity, before, after, "RECEIPT", batchNumber, username));
+        movementRepository.save(movement(MovementType.IN, material, batch, warehouse, location, quantity, before, after, "RECEIPT", batchNumber, username));
         auditService.log(username, "RECEIVE_STOCK", "MATERIAL", material.getCode(), "Nhập " + quantity + " " + material.getUnit());
     }
 
@@ -78,6 +78,7 @@ public class InventoryService {
         }
         List<MaterialBatch> batches = batchRepository.findIssuableBatchesFefo(materialId, LocalDate.now());
         int remaining = quantity;
+        int runningQuantity = before;
         List<String> allocations = new ArrayList<>();
 
         for (MaterialBatch batch : batches) {
@@ -87,25 +88,46 @@ public class InventoryService {
             int take = Math.min(batch.getQuantity(), remaining);
             batch.setQuantity(batch.getQuantity() - take);
             batchRepository.save(batch);
+            int afterTake = runningQuantity - take;
+            movementRepository.save(movement(
+                    MovementType.OUT,
+                    material,
+                    batch,
+                    batch.getWarehouse(),
+                    batch.getLocation(),
+                    -take,
+                    runningQuantity,
+                    afterTake,
+                    "ISSUE",
+                    department,
+                    username
+            ));
+            runningQuantity = afterTake;
             remaining -= take;
-            allocations.add(batch.getBatchNumber() + ": " + take);
+            allocations.add(locationLabel(batch) + " / lô " + batch.getBatchNumber() + ": " + take);
         }
         if (remaining > 0) {
             throw new IllegalStateException("Không có lô hợp lệ để xuất theo FEFO");
         }
-        int after = inventorySyncService.syncMaterialActualQuantity(material);
-        movementRepository.save(movement(MovementType.OUT, material, null, null, -quantity, before, after, "ISSUE", department, username));
+        inventorySyncService.syncMaterialActualQuantity(material);
         auditService.log(username, "ISSUE_STOCK", "MATERIAL", material.getCode(), "Xuất " + quantity + " cho " + department + " theo FEFO: " + allocations);
         return allocations;
     }
 
-    private StockMovement movement(MovementType type, Material material, MaterialBatch batch, Warehouse warehouse,
+    private String locationLabel(MaterialBatch batch) {
+        String warehouseName = batch.getWarehouse() == null ? "Không rõ kho" : batch.getWarehouse().getName();
+        String locationName = batch.getLocation() == null ? "Không rõ vị trí" : batch.getLocation().getName();
+        return warehouseName + " / " + locationName;
+    }
+
+    private StockMovement movement(MovementType type, Material material, MaterialBatch batch, Warehouse warehouse, StorageLocation location,
                                    int quantity, int before, int after, String refType, String refCode, String username) {
         StockMovement movement = new StockMovement();
         movement.setMovementType(type);
         movement.setMaterial(material);
         movement.setBatch(batch);
         movement.setWarehouse(warehouse);
+        movement.setLocation(location);
         movement.setQuantity(quantity);
         movement.setBeforeQuantity(before);
         movement.setAfterQuantity(after);
