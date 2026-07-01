@@ -1,21 +1,55 @@
 package com.qlvt.config;
 
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.beans.factory.InitializingBean;
+import org.springframework.beans.factory.config.BeanFactoryPostProcessor;
+import org.springframework.context.annotation.Bean;
 import org.springframework.core.annotation.Order;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
+import java.util.LinkedHashSet;
 
 @Component
 @Order(0)
-public class SchemaMigration implements CommandLineRunner {
+public class SchemaMigration implements CommandLineRunner, InitializingBean {
     private final JdbcTemplate jdbcTemplate;
+    private boolean migrated;
 
     public SchemaMigration(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
     }
 
+    @Bean
+    public static BeanFactoryPostProcessor schemaMigrationDependsOnPostProcessor() {
+        return beanFactory -> {
+            if (!beanFactory.containsBeanDefinition("entityManagerFactory")) {
+                return;
+            }
+            var beanDefinition = beanFactory.getBeanDefinition("entityManagerFactory");
+            LinkedHashSet<String> dependsOn = new LinkedHashSet<>();
+            String[] existing = beanDefinition.getDependsOn();
+            if (existing != null) {
+                dependsOn.addAll(java.util.Arrays.asList(existing));
+            }
+            dependsOn.add("schemaMigration");
+            beanDefinition.setDependsOn(dependsOn.toArray(String[]::new));
+        };
+    }
+
     @Override
     public void run(String... args) {
+        migrate();
+    }
+
+    @Override
+    public void afterPropertiesSet() {
+        migrate();
+    }
+
+    private synchronized void migrate() {
+        if (migrated) {
+            return;
+        }
         addBit("users", "locked", "0");
         addBit("users", "deleted", "0");
         addDateTime("users", "created_at");
@@ -75,6 +109,7 @@ public class SchemaMigration implements CommandLineRunner {
         normalizeVietnameseDepartmentNames();
         normalizeVersionColumns();
         createStorageMonitoringTables();
+        migrated = true;
     }
 
     private void addBit(String table, String column, String defaultValue) {

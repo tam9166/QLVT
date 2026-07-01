@@ -7,6 +7,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
+import java.util.Map;
 
 @Controller
 @RequestMapping("/purchases")
@@ -50,4 +51,14 @@ public class PurchaseController {
     public String orders(Model model) { model.addAttribute("items", orderRepository.findTop30ByOrderByCreatedAtDesc()); return "purchases/orders"; }
     @GetMapping("/orders/{id}")
     public String orderDetail(@PathVariable Long id, Model model) { model.addAttribute("item", orderRepository.findWithLinesById(id).orElseThrow()); return "purchases/order-detail"; }
+    @PostMapping("/orders/{id}/send")
+    public String sendOrder(@PathVariable Long id, Authentication authentication) {
+        workflowService.sendPurchaseOrder(id, authentication.getName());
+        return "redirect:/purchases/orders/" + id;
+    }
+    @PostMapping("/orders/{id}/receive")
+    public String receiveOrder(@PathVariable Long id, @RequestParam Map<String, String> params, Authentication authentication) {
+        workflowService.receivePurchaseOrder(id, params, authentication.getName());
+        return "redirect:/purchases/orders/" + id;
+    }
 }

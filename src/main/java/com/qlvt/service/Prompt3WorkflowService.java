@@ -544,6 +544,62 @@ public class Prompt3WorkflowService {
         return order;
     }
 
+    @Transactional
+    public void sendPurchaseOrder(Long orderId, String username) {
+        PurchaseOrder order = purchaseOrderRepository.findWithLinesById(orderId).orElseThrow();
+        ensure(order.getStatus() == PurchaseOrderStatus.DRAFT, "Chỉ gửi đơn hàng đang nháp");
+        ensure(!order.getLines().isEmpty(), "Đơn hàng phải có ít nhất một dòng vật tư");
+        order.setStatus(PurchaseOrderStatus.SENT);
+        purchaseOrderRepository.save(order);
+        notificationService.notify("Đơn mua đã gửi nhà cung cấp",
+                order.getOrderCode() + " đã sẵn sàng theo dõi giao hàng.",
+                "PURCHASE_ORDER", "WAREHOUSE_STAFF", "/purchases/orders/" + order.getId());
+        auditService.log(username, "SEND_PURCHASE_ORDER", "PURCHASE_ORDER", order.getOrderCode(), "Gửi đơn mua cho nhà cung cấp");
+    }
+
+    @Transactional
+    public void receivePurchaseOrder(Long orderId, Map<String, String> params, String username) {
+        PurchaseOrder order = purchaseOrderRepository.findWithLinesById(orderId).orElseThrow();
+        ensure(order.getStatus() == PurchaseOrderStatus.SENT || order.getStatus() == PurchaseOrderStatus.PARTIALLY_RECEIVED,
+                "Chỉ ghi nhận hàng về cho đơn đã gửi hoặc đang nhận một phần");
+
+        boolean receivedAny = false;
+        for (PurchaseOrderLine line : order.getLines()) {
+            int quantity = parseReceivedQuantity(params.get("receivedQuantity_" + line.getId()));
+            if (quantity == 0) {
+                continue;
+            }
+            int remaining = line.getOrderedQuantity() - line.getReceivedQuantity();
+            ensure(quantity <= remaining, "Số lượng nhận không được vượt số còn lại của " + line.getMaterial().getCode());
+            line.setReceivedQuantity(line.getReceivedQuantity() + quantity);
+            receivedAny = true;
+        }
+
+        ensure(receivedAny, "Cần nhập số lượng nhận lớn hơn 0 cho ít nhất một dòng");
+        boolean allReceived = order.getLines().stream()
+                .allMatch(line -> line.getReceivedQuantity() >= line.getOrderedQuantity());
+        order.setStatus(allReceived ? PurchaseOrderStatus.RECEIVED : PurchaseOrderStatus.PARTIALLY_RECEIVED);
+        if (allReceived && order.getReceivedAt() == null) {
+            order.setReceivedAt(LocalDateTime.now());
+        }
+        purchaseOrderRepository.save(order);
+        auditService.log(username, "RECEIVE_PURCHASE_ORDER", "PURCHASE_ORDER", order.getOrderCode(),
+                allReceived ? "Nhận đủ đơn mua" : "Ghi nhận nhận một phần đơn mua");
+    }
+
+    private int parseReceivedQuantity(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return 0;
+        }
+        try {
+            int quantity = Integer.parseInt(raw.trim());
+            ensure(quantity >= 0, "Số lượng nhận không được âm");
+            return quantity;
+        } catch (NumberFormatException ex) {
+            throw new IllegalArgumentException("Số lượng nhận không hợp lệ");
+        }
+    }
+
     private void moveBetweenBalances(Material material, MaterialBatch batch, Warehouse fromWarehouse, Warehouse toWarehouse,
                                      StorageLocation fromLocation, StorageLocation toLocation, int quantity, String username, String code) {
         applyBalanceOnly(material, batch, fromWarehouse, fromLocation, -quantity);
