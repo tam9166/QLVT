@@ -15,12 +15,18 @@ public class PurchaseController {
     private final PurchaseRequestRepository requestRepository;
     private final PurchaseOrderRepository orderRepository;
     private final SupplierRepository supplierRepository;
+    private final WarehouseRepository warehouseRepository;
+    private final StorageLocationRepository locationRepository;
     private final Prompt3WorkflowService workflowService;
 
-    public PurchaseController(PurchaseRequestRepository requestRepository, PurchaseOrderRepository orderRepository, SupplierRepository supplierRepository, Prompt3WorkflowService workflowService) {
+    public PurchaseController(PurchaseRequestRepository requestRepository, PurchaseOrderRepository orderRepository,
+                              SupplierRepository supplierRepository, WarehouseRepository warehouseRepository,
+                              StorageLocationRepository locationRepository, Prompt3WorkflowService workflowService) {
         this.requestRepository = requestRepository;
         this.orderRepository = orderRepository;
         this.supplierRepository = supplierRepository;
+        this.warehouseRepository = warehouseRepository;
+        this.locationRepository = locationRepository;
         this.workflowService = workflowService;
     }
 
@@ -50,7 +56,12 @@ public class PurchaseController {
     @GetMapping("/orders")
     public String orders(Model model) { model.addAttribute("items", orderRepository.findTop30ByOrderByCreatedAtDesc()); return "purchases/orders"; }
     @GetMapping("/orders/{id}")
-    public String orderDetail(@PathVariable Long id, Model model) { model.addAttribute("item", orderRepository.findWithLinesById(id).orElseThrow()); return "purchases/order-detail"; }
+    public String orderDetail(@PathVariable Long id, Model model) {
+        model.addAttribute("item", orderRepository.findWithLinesById(id).orElseThrow());
+        model.addAttribute("warehouses", warehouseRepository.findAll());
+        model.addAttribute("locations", locationRepository.findByDeletedFalseOrderByCodeAsc());
+        return "purchases/order-detail";
+    }
 
     @PostMapping("/orders/{id}/send")
     public String sendOrder(@PathVariable Long id, Authentication authentication) {
@@ -59,8 +70,9 @@ public class PurchaseController {
     }
 
     @PostMapping("/orders/{id}/receive")
-    public String receiveOrder(@PathVariable Long id, @RequestParam Map<String, String> parameters, Authentication authentication) {
-        workflowService.recordPurchaseOrderReceipt(id, parameters, authentication.getName());
-        return "redirect:/purchases/orders/" + id;
+    public String receiveOrder(@PathVariable Long id, @RequestParam Long warehouseId, @RequestParam Long locationId,
+                               @RequestParam Map<String, String> parameters, Authentication authentication) {
+        var receipt = workflowService.recordPurchaseOrderReceipt(id, warehouseId, locationId, parameters, authentication.getName());
+        return "redirect:/receipts/" + receipt.getId();
     }
 }
