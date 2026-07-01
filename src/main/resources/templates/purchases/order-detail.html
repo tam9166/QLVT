@@ -19,6 +19,27 @@
     </div>
 
     <form th:action="@{/purchases/orders/{id}/receive(id=${item.id})}" method="post">
+        <div class="row g-3 mb-3" th:if="${item.status.name() == 'SENT' || item.status.name() == 'PARTIALLY_RECEIVED'}">
+            <div class="col-md-4">
+                <label class="form-label">Kho nhập</label>
+                <select class="form-select" name="warehouseId" required>
+                    <option value="">Chọn kho</option>
+                    <option th:each="w : ${warehouses}" th:value="${w.id}" th:text="${w.code + ' - ' + w.name}"></option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Vị trí nhập</label>
+                <select class="form-select" name="locationId" required>
+                    <option value="">Chọn vị trí</option>
+                    <option th:each="loc : ${locations}"
+                            th:value="${loc.id}"
+                            th:text="${loc.code + ' - ' + loc.name + (loc.warehouse != null ? ' (' + loc.warehouse.code + ')' : '')}"></option>
+                </select>
+            </div>
+            <div class="col-md-4 d-flex align-items-end">
+                <div class="text-muted small">Sau khi ghi nhận, hệ thống tạo phiếu nhập nháp để kiểm tra và xác nhận nhập kho.</div>
+            </div>
+        </div>
         <div class="table-responsive">
             <table class="table table-hover align-middle">
                 <thead>
