@@ -2,6 +2,8 @@ package com.qlvt;
 
 import com.qlvt.entity.InventoryCountLine;
 import com.qlvt.entity.StockBalance;
+import com.qlvt.entity.StockTransfer;
+import com.qlvt.enums.StockTransferStatus;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -31,5 +33,27 @@ class Prompt3BusinessRuleTest {
         balance.setPendingIssueQuantity(3);
 
         assertThrows(IllegalStateException.class, balance::validate);
+    }
+
+    @Test
+    void stockTransferActionsFollowWorkflowState() {
+        StockTransfer transfer = new StockTransfer();
+
+        assertTrue(transfer.canSubmit());
+        assertTrue(transfer.canApprove());
+        assertFalse(transfer.canExecuteTransfer());
+        assertFalse(transfer.canReceive());
+
+        transfer.setStatus(StockTransferStatus.APPROVED);
+
+        assertFalse(transfer.canSubmit());
+        assertFalse(transfer.canApprove());
+        assertTrue(transfer.canExecuteTransfer());
+        assertFalse(transfer.canReceive());
+
+        transfer.setStatus(StockTransferStatus.TRANSFERRED);
+
+        assertFalse(transfer.canExecuteTransfer());
+        assertTrue(transfer.canReceive());
     }
 }
