@@ -1,8 +1,10 @@
 package com.qlvt;
 
+import com.qlvt.entity.DestructionSlip;
 import com.qlvt.entity.InventoryCountLine;
 import com.qlvt.entity.StockBalance;
 import com.qlvt.entity.StockTransfer;
+import com.qlvt.enums.DestructionStatus;
 import com.qlvt.enums.StockTransferStatus;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
@@ -55,5 +57,33 @@ class Prompt3BusinessRuleTest {
 
         assertFalse(transfer.canExecuteTransfer());
         assertTrue(transfer.canReceive());
+    }
+
+    @Test
+    void destructionActionsFollowWorkflowState() {
+        DestructionSlip slip = new DestructionSlip();
+
+        assertTrue(slip.canSubmit());
+        assertFalse(slip.canApproveManager());
+        assertFalse(slip.canApproveAccountant());
+        assertFalse(slip.canDestroy());
+
+        slip.setStatus(DestructionStatus.SUBMITTED);
+
+        assertFalse(slip.canSubmit());
+        assertTrue(slip.canApproveManager());
+        assertFalse(slip.canApproveAccountant());
+        assertFalse(slip.canDestroy());
+
+        slip.setStatus(DestructionStatus.APPROVED_BY_MANAGER);
+
+        assertFalse(slip.canApproveManager());
+        assertTrue(slip.canApproveAccountant());
+        assertFalse(slip.canDestroy());
+
+        slip.setStatus(DestructionStatus.APPROVED);
+
+        assertFalse(slip.canApproveAccountant());
+        assertTrue(slip.canDestroy());
     }
 }
