@@ -9,12 +9,14 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.BindingResult;
+import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
 public class UserAdminService {
-    public static final String DEFAULT_RESET_PASSWORD = "123456";
+    private static final String TEMP_PASSWORD_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     private final AppUserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -51,13 +53,13 @@ public class UserAdminService {
         Long id = form.getId() == null ? -1L : form.getId();
         if ((form.getId() == null && userRepository.existsByUsername(form.getUsername()))
                 || (form.getId() != null && userRepository.existsByUsernameAndIdNot(form.getUsername(), id))) {
-            bindingResult.rejectValue("username", "duplicate", "Username đã tồn tại");
+            bindingResult.rejectValue("username", "duplicate", "Username da ton tai");
         }
         if (form.getId() == null && (form.getPassword() == null || form.getPassword().isBlank())) {
-            bindingResult.rejectValue("password", "required", "Mật khẩu là bắt buộc khi tạo mới");
+            bindingResult.rejectValue("password", "required", "Mat khau la bat buoc khi tao moi");
         }
         if (RoleUtils.requiresDepartment(form.getRole()) && (form.getDepartment() == null || form.getDepartment().isBlank())) {
-            bindingResult.rejectValue("department", "required", "Khoa/phòng là bắt buộc với vai trò khoa/phòng");
+            bindingResult.rejectValue("department", "required", "Khoa/phong la bat buoc voi vai tro khoa/phong");
         }
         if (bindingResult.hasErrors()) {
             return false;
@@ -68,7 +70,7 @@ public class UserAdminService {
         user.setUsername(form.getUsername());
         if (form.getPassword() != null && !form.getPassword().isBlank()) {
             user.setPassword(passwordEncoder.encode(form.getPassword()));
-            user.setVisiblePassword(form.getPassword());
+            user.setMustChangePassword(true);
         }
         user.setFullName(form.getFullName());
         user.setEmail(form.getEmail());
@@ -79,7 +81,7 @@ public class UserAdminService {
         user.setUpdatedAt(LocalDateTime.now());
         userRepository.save(user);
         auditService.logChange(actor, form.getId() == null ? "CREATE_USER" : "UPDATE_USER", "AppUser", user.getUsername(),
-                oldValue, user.getUsername() + "|" + user.getRole(), "Lưu tài khoản " + user.getUsername());
+                oldValue, user.getUsername() + "|" + user.getRole(), "Save user " + user.getUsername());
         return true;
     }
 
@@ -88,7 +90,7 @@ public class UserAdminService {
         AppUser user = userRepository.findById(id).orElseThrow();
         user.setLocked(true);
         user.setUpdatedAt(LocalDateTime.now());
-        auditService.log(actor, "LOCK_USER", "AppUser", user.getUsername(), "Khóa tài khoản");
+        auditService.log(actor, "LOCK_USER", "AppUser", user.getUsername(), "Lock user");
     }
 
     @Transactional
@@ -96,16 +98,26 @@ public class UserAdminService {
         AppUser user = userRepository.findById(id).orElseThrow();
         user.setLocked(false);
         user.setUpdatedAt(LocalDateTime.now());
-        auditService.log(actor, "UNLOCK_USER", "AppUser", user.getUsername(), "Mở khóa tài khoản");
+        auditService.log(actor, "UNLOCK_USER", "AppUser", user.getUsername(), "Unlock user");
     }
 
     @Transactional
-    public void resetPassword(Long id, String actor) {
+    public String resetPassword(Long id, String actor) {
         AppUser user = userRepository.findById(id).orElseThrow();
-        user.setPassword(passwordEncoder.encode(DEFAULT_RESET_PASSWORD));
-        user.setVisiblePassword(DEFAULT_RESET_PASSWORD);
+        String temporaryPassword = generateTemporaryPassword();
+        user.setPassword(passwordEncoder.encode(temporaryPassword));
+        user.setMustChangePassword(true);
         user.setUpdatedAt(LocalDateTime.now());
-        auditService.log(actor, "RESET_PASSWORD", "AppUser", user.getUsername(), "Reset mật khẩu về " + DEFAULT_RESET_PASSWORD);
+        auditService.log(actor, "RESET_PASSWORD", "AppUser", user.getUsername(), "Reset temporary password without logging the secret");
+        return temporaryPassword;
+    }
+
+    private String generateTemporaryPassword() {
+        StringBuilder builder = new StringBuilder("Tmp-");
+        for (int i = 0; i < 12; i++) {
+            builder.append(TEMP_PASSWORD_ALPHABET.charAt(SECURE_RANDOM.nextInt(TEMP_PASSWORD_ALPHABET.length())));
+        }
+        return builder.toString();
     }
 
     @Transactional
@@ -114,7 +126,7 @@ public class UserAdminService {
         user.setDeleted(true);
         user.setEnabled(false);
         user.setUpdatedAt(LocalDateTime.now());
-        auditService.log(actor, "DELETE_USER", "AppUser", user.getUsername(), "Xóa mềm tài khoản");
+        auditService.log(actor, "DELETE_USER", "AppUser", user.getUsername(), "Soft delete user");
     }
 
     public UserRole[] roles() {

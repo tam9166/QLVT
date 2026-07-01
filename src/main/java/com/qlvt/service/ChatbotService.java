@@ -81,8 +81,13 @@ public class ChatbotService {
 
     @Transactional
     public ChatResponse answer(String question, String username, String department) {
+        return answer(question, username, department, Map.of());
+    }
+
+    @Transactional
+    public ChatResponse answer(String question, String username, String department, Map<String, Object> context) {
         ChatSession session = currentSession(username);
-        ChatbotNlpService.ParsedQuestion parsed = parseWithConversationContext(question, session);
+        ChatbotNlpService.ParsedQuestion parsed = parseWithConversationContext(question, session, context);
         ChatResponse response = route(parsed, username, department, session.getId());
 
         saveMessage(session, "USER", question, parsed.intent(), response.answer());
@@ -92,8 +97,12 @@ public class ChatbotService {
         return response;
     }
 
-    private ChatbotNlpService.ParsedQuestion parseWithConversationContext(String question, ChatSession session) {
+    private ChatbotNlpService.ParsedQuestion parseWithConversationContext(String question, ChatSession session, Map<String, Object> context) {
         ChatbotNlpService.ParsedQuestion parsed = nlpService.parse(question);
+        String contextualQuestion = enrichWithRequestContext(question, parsed, context);
+        if (!contextualQuestion.equals(question == null ? "" : question)) {
+            parsed = nlpService.parse(contextualQuestion);
+        }
         if (!shouldUseRecentMaterialContext(question, parsed)) {
             return parsed;
         }
@@ -321,7 +330,7 @@ public class ChatbotService {
 
     private ChatResponse recommendIssue(ChatbotNlpService.ParsedQuestion parsed, Long sessionId) {
         if (!parsed.hasMaterial()) {
-            return missingMaterial(ChatIntent.ASK_RECOMMEND_ISSUE, sessionId);
+            return globalFefoRecommendation(parsed, sessionId);
         }
         Material material = parsed.firstMaterial().orElseThrow();
         List<StockBalance> fefoBalances = parsed.warehouse() == null
@@ -343,6 +352,43 @@ public class ChatbotService {
                 + " trước. Hiện lô này còn " + formatNumber(item.availableQuantity()) + " " + item.unit()
                 + ".\n\nLý do: " + reason;
         return new ChatResponse(true, ChatIntent.ASK_RECOMMEND_ISSUE.name(), answer, answer, List.of(item), List.of("Xem vị trí trong kho", "Tạo yêu cầu cấp phát"), sessionId);
+    }
+
+    private ChatResponse globalFefoRecommendation(ChatbotNlpService.ParsedQuestion parsed, Long sessionId) {
+        List<StockBalance> balances = balanceRepository.findAll().stream()
+                .filter(balance -> parsed.warehouse() == null || balance.getWarehouse().getId().equals(parsed.warehouse().getId()))
+                .filter(balance -> available(balance) > 0 && isIssuable(balance))
+                .sorted(Comparator.comparing((StockBalance balance) -> balance.getBatch().getExpiryDate(), Comparator.nullsLast(Comparator.naturalOrder()))
+                        .thenComparing(balance -> balance.getBatch().getReceiptDate(), Comparator.nullsLast(Comparator.naturalOrder()))
+                        .thenComparing(balance -> balance.getMaterial().getCode())
+                        .thenComparing(balance -> balance.getWarehouse().getCode())
+                        .thenComparing(balance -> balance.getLocation().getCode()))
+                .limit(8)
+                .toList();
+        if (balances.isEmpty()) {
+            String scope = parsed.warehouse() == null ? "" : " tại " + parsed.warehouse().getName();
+            String answer = "Mình chưa thấy lô còn khả dụng để gợi ý FEFO" + scope
+                    + ". Bạn nên kiểm tra tồn thực tế, lô hết hạn và các phiếu đang giữ hàng.";
+            return simple(ChatIntent.ASK_RECOMMEND_ISSUE, answer, List.of("Xem lô sắp hết hạn", "Tra một vật tư cụ thể"), sessionId);
+        }
+
+        List<ChatItem> items = balances.stream()
+                .map(balance -> itemFromBalance(balance, available(balance)))
+                .toList();
+        String scope = parsed.warehouse() == null ? "toàn hệ thống" : parsed.warehouse().getName();
+        StringBuilder answer = new StringBuilder("Các lô nên ưu tiên xuất trước theo FEFO trong ")
+                .append(scope).append(":");
+        for (ChatItem item : items) {
+            answer.append("\n* ")
+                    .append(item.materialCode()).append(" - ").append(item.materialName())
+                    .append(" | lô ").append(item.batchCode())
+                    .append(" | còn ").append(formatNumber(item.availableQuantity())).append(" ").append(item.unit())
+                    .append(" | ").append(item.warehouseName()).append(" / ").append(item.locationName())
+                    .append(" | HSD ").append(item.expiryDate());
+        }
+        answer.append("\n\nKhi cấp phát cho một vật tư cụ thể, bạn có thể hỏi \"cần 20 khẩu trang thì lấy lô nào trước\" để mình lập kế hoạch số lượng theo từng lô.");
+        return new ChatResponse(true, ChatIntent.ASK_RECOMMEND_ISSUE.name(), answer.toString(), answer.toString(), items,
+                List.of("Cần 20 khẩu trang lấy lô nào?", "Xem lô sắp hết hạn"), sessionId);
     }
 
     private ChatResponse batchLookup(ChatbotNlpService.ParsedQuestion parsed, Long sessionId) {
@@ -546,7 +592,7 @@ public class ChatbotService {
                     .append(" | còn có thể cấp ").append(formatNumber(material.getAvailableQuantity())).append(" ")
                     .append(nullSafe(material.getUnit())).append("\n");
         }
-        answer.append("\nBạn nhắn lại bằng mã hoặc tên đầy đủ hơn, ví dụ: \"")
+        answer.append("\nBạn nhập lại bằng mã hoặc tên đầy đủ hơn, ví dụ: \"")
                 .append(parsed.candidates().isEmpty() ? "VT002" : parsed.candidates().get(0).getCode())
                 .append(" còn bao nhiêu?\".");
         List<ChatItem> items = parsed.candidates().stream()
@@ -667,6 +713,73 @@ public class ChatbotService {
             created.setTitle("Tra cứu QLVT");
             return sessionRepository.save(created);
         });
+    }
+
+    private String enrichWithRequestContext(String question, ChatbotNlpService.ParsedQuestion parsed, Map<String, Object> context) {
+        String baseQuestion = question == null ? "" : question;
+        if (context == null || context.isEmpty() || !shouldUseRequestContext(baseQuestion, parsed)) {
+            return baseQuestion;
+        }
+
+        StringBuilder enriched = new StringBuilder(baseQuestion);
+        materialFromContext(context)
+                .map(Material::getCode)
+                .filter(code -> !code.isBlank())
+                .ifPresent(code -> enriched.append(' ').append(code));
+        contextValue(context, "batchCode", "batchNumber", "lotCode", "lotNumber")
+                .filter(value -> !value.isBlank())
+                .ifPresent(value -> enriched.append(' ').append(value));
+        return enriched.toString();
+    }
+
+    private boolean shouldUseRequestContext(String question, ChatbotNlpService.ParsedQuestion parsed) {
+        if (!requiresSpecificMaterial(parsed.intent())) {
+            return false;
+        }
+        String normalized = VietnameseTextNormalizer.normalizeSearchText(question);
+        if (parsed.hasMaterial() && directlyMentionsResolvedMaterial(normalized, parsed)) {
+            return false;
+        }
+        return normalized.length() <= 80 || VietnameseTextNormalizer.containsAnyKeyword(normalized,
+                "vat tu nay", "vat tu do", "lo nay", "lo do", "hang nay", "hang do",
+                "cai nay", "cai do", "no", "muc nay", "dong nay", "trang nay",
+                "o dau", "han dung", "hsd", "lay lo nao", "xuat lo nao",
+                "nha cung cap", "xin them", "cap them", "lay them");
+    }
+
+    private Optional<Material> materialFromContext(Map<String, Object> context) {
+        Optional<Long> materialId = contextLong(context, "materialId", "material_id");
+        if (materialId.isPresent()) {
+            Optional<Material> material = materialRepository.findById(materialId.get());
+            if (material.isPresent()) {
+                return material;
+            }
+        }
+        return contextValue(context, "materialCode", "material_code", "code")
+                .flatMap(materialRepository::findByCode);
+    }
+
+    private Optional<Long> contextLong(Map<String, Object> context, String... keys) {
+        return contextValue(context, keys).flatMap(value -> {
+            try {
+                return Optional.of(Long.parseLong(value));
+            } catch (NumberFormatException ignored) {
+                return Optional.empty();
+            }
+        });
+    }
+
+    private Optional<String> contextValue(Map<String, Object> context, String... keys) {
+        if (context == null) {
+            return Optional.empty();
+        }
+        for (String key : keys) {
+            Object value = context.get(key);
+            if (value != null && !value.toString().isBlank()) {
+                return Optional.of(value.toString().trim());
+            }
+        }
+        return Optional.empty();
     }
 
     private boolean shouldUseRecentMaterialContext(String question, ChatbotNlpService.ParsedQuestion parsed) {

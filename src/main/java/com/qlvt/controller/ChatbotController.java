@@ -31,7 +31,12 @@ public class ChatbotController {
     private ChatbotService.ChatResponse answer(ChatbotRequest payload, Authentication authentication) {
         String username = authentication == null ? "anonymous" : authentication.getName();
         String department = userRepository.findByUsername(username).map(user -> user.getDepartment()).orElse(null);
-        return chatbotService.answer(payload == null ? "" : payload.message(), username, department);
+        return chatbotService.answer(
+                payload == null ? "" : payload.message(),
+                username,
+                department,
+                payload == null ? Map.of() : payload.context()
+        );
     }
 
     @GetMapping("/history")

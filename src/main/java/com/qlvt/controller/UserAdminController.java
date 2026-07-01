@@ -11,6 +11,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
 @RequestMapping("/users")
@@ -69,8 +70,10 @@ public class UserAdminController {
     }
 
     @PostMapping("/{id}/reset-password")
-    public String resetPassword(@PathVariable Long id, Authentication authentication) {
-        userAdminService.resetPassword(id, authentication.getName());
+    public String resetPassword(@PathVariable Long id, Authentication authentication, RedirectAttributes redirectAttributes) {
+        String temporaryPassword = userAdminService.resetPassword(id, authentication.getName());
+        redirectAttributes.addFlashAttribute("temporaryPassword", temporaryPassword);
+        redirectAttributes.addFlashAttribute("securityNotice", "Mật khẩu tạm chỉ hiển thị một lần. Người dùng phải đổi mật khẩu sau khi đăng nhập.");
         return "redirect:/users";
     }
 

@@ -69,4 +69,20 @@ public class StockTransfer {
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
     public List<StockTransferLine> getLines() { return lines; }
     public void setLines(List<StockTransferLine> lines) { this.lines = lines; }
+
+    public boolean canSubmit() {
+        return status == StockTransferStatus.DRAFT;
+    }
+
+    public boolean canApprove() {
+        return status == StockTransferStatus.DRAFT || status == StockTransferStatus.SUBMITTED;
+    }
+
+    public boolean canExecuteTransfer() {
+        return status == StockTransferStatus.APPROVED;
+    }
+
+    public boolean canReceive() {
+        return status == StockTransferStatus.TRANSFERRED;
+    }
 }
