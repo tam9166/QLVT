@@ -448,7 +448,7 @@ public class Prompt3WorkflowService {
             slip.setStatus(DestructionStatus.APPROVED_BY_MANAGER);
             notificationService.notify("Phiếu hủy chờ kế toán duyệt", slip.getDestructionCode() + " đã được quản lý duyệt và cần kế toán duyệt bước 2.", "DESTRUCTION_ACCOUNTANT", "ACCOUNTANT", "/destructions/" + id);
         } else {
-            slip.setStatus(DestructionStatus.APPROVED_BY_ACCOUNTANT);
+            slip.setStatus(DestructionStatus.APPROVED);
         }
         slip.setUpdatedAt(now);
         destructionSlipRepository.save(slip);

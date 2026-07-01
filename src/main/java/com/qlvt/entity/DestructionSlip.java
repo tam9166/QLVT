@@ -74,4 +74,20 @@ public class DestructionSlip {
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
     public List<DestructionSlipLine> getLines() { return lines; }
     public void setLines(List<DestructionSlipLine> lines) { this.lines = lines; }
+
+    public boolean canSubmit() {
+        return status == DestructionStatus.DRAFT;
+    }
+
+    public boolean canApproveManager() {
+        return status == DestructionStatus.SUBMITTED;
+    }
+
+    public boolean canApproveAccountant() {
+        return status == DestructionStatus.APPROVED_BY_MANAGER;
+    }
+
+    public boolean canDestroy() {
+        return status == DestructionStatus.APPROVED || status == DestructionStatus.APPROVED_BY_ACCOUNTANT;
+    }
 }
