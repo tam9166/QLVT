@@ -147,20 +147,36 @@ function renderAnswer(node, text, data = {}) {
 }
 
 function renderChatItems(items) {
+    const visibleItems = items.slice(0, 8);
     const table = document.createElement('div');
     table.className = 'chat-result-table';
-    const rows = items.slice(0, 6).map(item => `
+    const rows = visibleItems.map(item => `
         <tr>
             <td>${escapeHtml(item.materialName || '-')}<small>${escapeHtml(item.materialCode || '')}</small></td>
-            <td>${escapeHtml(formatQuantity(item.availableQuantity, item.unit))}</td>
+            <td>
+                <strong>${escapeHtml(formatQuantity(item.availableQuantity, item.unit))}</strong>
+                <small>Thực tế ${escapeHtml(formatQuantity(item.actualQuantity, item.unit))}</small>
+                <small>Đang giữ ${escapeHtml(formatQuantity(item.reservedQuantity, item.unit))}</small>
+            </td>
             <td>${escapeHtml(item.warehouseName || '-')}<small>${escapeHtml(item.locationName || '-')}</small></td>
-            <td>${escapeHtml(item.batchCode || '-')}<small>HSD ${escapeHtml(item.expiryDate || '-')}</small></td>
-            <td><span class="chat-status ${escapeHtml((item.status || '').toLowerCase())}">${escapeHtml(statusLabel(item.status))}</span></td>
+            <td>
+                ${escapeHtml(item.batchCode || '-')}
+                <small>Nhập ${escapeHtml(item.importDate || '-')}</small>
+                <small>HSD ${escapeHtml(item.expiryDate || '-')}${escapeHtml(expirySuffix(item.daysToExpiry))}</small>
+            </td>
+            <td>
+                <span class="chat-status ${escapeHtml(statusClass(item.status))}">${escapeHtml(statusLabel(item.status))}</span>
+                ${item.note ? `<small>${escapeHtml(item.note)}</small>` : ''}
+            </td>
         </tr>
     `).join('');
+    const summary = items.length > visibleItems.length
+        ? `<div class="chat-result-summary">Hiển thị ${visibleItems.length}/${items.length} dòng phù hợp nhất. Hỏi rõ mã vật tư hoặc kho để lọc thêm.</div>`
+        : `<div class="chat-result-summary">${items.length} dòng dữ liệu tồn kho được tìm thấy.</div>`;
     table.innerHTML = `
+        ${summary}
         <table>
-            <thead><tr><th>Vật tư</th><th>Còn</th><th>Kho/vị trí</th><th>Lô/HSD</th><th>Trạng thái</th></tr></thead>
+            <thead><tr><th>Vật tư</th><th>Tồn</th><th>Kho/vị trí</th><th>Lô/HSD</th><th>Trạng thái</th></tr></thead>
             <tbody>${rows}</tbody>
         </table>
     `;
@@ -192,8 +208,32 @@ function statusLabel(status) {
         case 'OUT_OF_STOCK': return 'Hết';
         case 'NEAR_EXPIRY': return 'Sắp HSD';
         case 'EXPIRED': return 'Hết HSD';
+        case 'RESERVED': return 'Đã giữ';
+        case 'PENDING': return 'Chờ xử lý';
+        case 'BLOCKED': return 'Đang khóa';
         default: return status || '-';
     }
+}
+
+function statusClass(status) {
+    return String(status || '').toLowerCase().replace(/[^a-z0-9_-]/g, '');
+}
+
+function expirySuffix(daysToExpiry) {
+    if (daysToExpiry === null || daysToExpiry === undefined || daysToExpiry === '') {
+        return '';
+    }
+    const days = Number(daysToExpiry);
+    if (!Number.isFinite(days)) {
+        return '';
+    }
+    if (days < 0) {
+        return `, quá hạn ${Math.abs(days).toLocaleString('vi-VN')} ngày`;
+    }
+    if (days === 0) {
+        return ', hết hạn hôm nay';
+    }
+    return `, còn ${days.toLocaleString('vi-VN')} ngày`;
 }
 
 function escapeHtml(value) {

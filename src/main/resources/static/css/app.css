@@ -1229,10 +1229,19 @@ main > form:not(.topbar-search):not(.chat-form):not(.m-0) {
 
 .chat-result-table table {
     width: 100%;
-    min-width: 520px;
+    min-width: 640px;
     margin: 0;
     border-collapse: collapse;
     font-size: .76rem;
+}
+
+.chat-result-summary {
+    padding: 8px 10px;
+    color: var(--muted-soft);
+    background: #f9fbff;
+    border-bottom: 1px solid #e8eef8;
+    font-size: .72rem;
+    font-weight: 700;
 }
 
 .chat-result-table th,
@@ -1260,6 +1269,12 @@ main > form:not(.topbar-search):not(.chat-form):not(.m-0) {
     display: block;
     margin-top: 2px;
     color: var(--muted-soft);
+}
+
+.chat-result-table strong {
+    display: block;
+    color: var(--text);
+    font-weight: 900;
 }
 
 .chat-status {
