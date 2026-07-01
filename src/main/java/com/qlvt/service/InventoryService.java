@@ -75,7 +75,7 @@ public class InventoryService {
         balanceRepository.save(balance);
 
         int after = inventorySyncService.syncMaterialActualQuantity(material);
-        movementRepository.save(movement(MovementType.IN, material, batch, warehouse, quantity, before, after, "RECEIPT", batchNumber, username));
+        movementRepository.save(movement(MovementType.IN, material, batch, warehouse, location, quantity, before, after, "RECEIPT", batchNumber, username));
         auditService.log(username, "RECEIVE_STOCK", "MATERIAL", material.getCode(), "Nhập " + quantity + " " + material.getUnit());
     }
 
@@ -90,6 +90,7 @@ public class InventoryService {
             throw new IllegalStateException("Không đủ tồn khả dụng để xuất kho");
         }
         int remaining = quantity;
+        int runningQuantity = before;
         List<String> allocations = new ArrayList<>();
 
         for (StockBalance balance : balanceRepository.findAvailableFefo(materialId, LocalDate.now())) {
@@ -107,14 +108,31 @@ public class InventoryService {
 
             batch.setQuantity(batch.getQuantity() - take);
             batchRepository.save(batch);
+            int afterTake = runningQuantity - take;
+            movementRepository.save(movement(
+                    MovementType.OUT,
+                    material,
+                    batch,
+                    balance.getWarehouse(),
+                    balance.getLocation(),
+                    -take,
+                    runningQuantity,
+                    afterTake,
+                    "ISSUE",
+                    department,
+                    username
+            ));
+            runningQuantity = afterTake;
             remaining -= take;
-            allocations.add(batch.getBatchNumber() + ": " + take);
+            allocations.add(balance.getWarehouse().getName()
+                    + " / " + balance.getLocation().getName()
+                    + " / lô " + batch.getBatchNumber()
+                    + ": " + take);
         }
         if (remaining > 0) {
             throw new IllegalStateException("Không có lô hợp lệ để xuất theo FEFO");
         }
         int after = inventorySyncService.syncMaterialActualQuantity(material);
-        movementRepository.save(movement(MovementType.OUT, material, null, null, -quantity, before, after, "ISSUE", department, username));
         auditService.log(username, "ISSUE_STOCK", "MATERIAL", material.getCode(), "Xuất " + quantity + " cho " + department + " theo FEFO: " + allocations);
         return allocations;
     }
@@ -140,13 +158,14 @@ public class InventoryService {
         });
     }
 
-    private StockMovement movement(MovementType type, Material material, MaterialBatch batch, Warehouse warehouse,
+    private StockMovement movement(MovementType type, Material material, MaterialBatch batch, Warehouse warehouse, StorageLocation location,
                                    int quantity, int before, int after, String refType, String refCode, String username) {
         StockMovement movement = new StockMovement();
         movement.setMovementType(type);
         movement.setMaterial(material);
         movement.setBatch(batch);
         movement.setWarehouse(warehouse);
+        movement.setLocation(location);
         movement.setQuantity(quantity);
         movement.setBeforeQuantity(before);
         movement.setAfterQuantity(after);
