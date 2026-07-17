@@ -623,12 +623,21 @@ public class Prompt3WorkflowService {
         }
         String candidate = base;
         int index = 1;
-        while (batchRepository.findByMaterial_IdAndBatchNumber(line.getMaterial().getId(), candidate).isPresent()
-                || receiptRepository.findAll().stream().flatMap(receipt -> receipt.getLines().stream())
-                .anyMatch(receiptLine -> candidate.equals(receiptLine.getBatchNumber()))) {
+        while (batchNumberExists(line.getMaterial().getId(), candidate)
+                || receiptBatchNumberExists(candidate)) {
             candidate = base + "-" + (++index);
         }
         return candidate;
+    }
+
+    private boolean batchNumberExists(Long materialId, String batchNumber) {
+        return batchRepository.findByMaterial_IdAndBatchNumber(materialId, batchNumber).isPresent();
+    }
+
+    private boolean receiptBatchNumberExists(String batchNumber) {
+        return receiptRepository.findAll().stream()
+                .flatMap(receipt -> receipt.getLines().stream())
+                .anyMatch(receiptLine -> batchNumber.equals(receiptLine.getBatchNumber()));
     }
 
     private void moveBetweenBalances(Material material, MaterialBatch batch, Warehouse fromWarehouse, Warehouse toWarehouse,
