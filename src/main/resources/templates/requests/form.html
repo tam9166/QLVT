@@ -40,6 +40,10 @@
             <input class="form-control" name="reason" th:value="${selectedReason}">
         </div>
         <div class="col-12">
+            <div id="additionalLines" class="row g-2"></div>
+            <button id="addLineBtn" type="button" class="btn btn-outline-primary btn-sm mt-2">Thêm vật tư</button>
+        </div>
+        <div class="col-12">
             <div id="stockHint" class="alert alert-info mb-0"></div>
         </div>
         <div class="col-12">
@@ -69,6 +73,27 @@
     materialSelect.addEventListener('change', updateStockHint);
     quantityInput.addEventListener('input', updateStockHint);
     updateStockHint();
+
+    document.getElementById('addLineBtn').addEventListener('click', () => {
+        const row = document.createElement('div');
+        row.className = 'col-12';
+        row.innerHTML = `
+            <div class="border rounded p-2 row g-2 align-items-end">
+                <div class="col-md-7">
+                    <label class="form-label mb-1">Vật tư bổ sung</label>
+                    <select class="form-select" name="materialId" required>${materialSelect.innerHTML}</select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label mb-1">Số lượng lấy</label>
+                    <input class="form-control" type="number" min="1" name="quantity" required>
+                </div>
+                <div class="col-md-2 d-grid">
+                    <button type="button" class="btn btn-outline-danger remove-line">Bỏ dòng</button>
+                </div>
+            </div>`;
+        row.querySelector('.remove-line').addEventListener('click', () => row.remove());
+        document.getElementById('additionalLines').appendChild(row);
+    });
 </script>
 </body>
 </html>
