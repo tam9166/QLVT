@@ -62,6 +62,15 @@ public class DataPermissionService {
         }
     }
 
+    public void checkCanCancelMaterialRequest(Long requestId) {
+        MaterialRequest request = requestRepository.findById(requestId).orElseThrow();
+        AppUser user = currentUser();
+        if (!(hasAny(user, UserRole.ADMIN, UserRole.MANAGER)
+                || sameText(user.getUsername(), request.getRequester()))) {
+            throw new AccessDeniedException("B\u1ea1n ch\u1ec9 c\u00f3 th\u1ec3 h\u1ee7y phi\u1ebfu y\u00eau c\u1ea7u do m\u00ecnh t\u1ea1o");
+        }
+    }
+
     public void checkCanProcessWarehouseStock() {
         if (!canProcessWarehouseStock(currentUser())) {
             throw new AccessDeniedException("Bạn không có quyền xử lý tồn kho");

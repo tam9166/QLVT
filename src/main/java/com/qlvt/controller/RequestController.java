@@ -192,6 +192,14 @@ public class RequestController {
         return "redirect:/requests/" + id;
     }
 
+    @PostMapping("/{id}/cancel")
+    public String cancel(@PathVariable Long id, @RequestParam(required = false) String reason,
+                         Authentication authentication) {
+        dataPermissionService.checkCanCancelMaterialRequest(id);
+        warehouseWorkflowService.cancelRequest(id, authentication.getName(), reason);
+        return "redirect:/requests/" + id;
+    }
+
     private String nextCode() {
         String code = "YC-" + java.time.LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
         return requestRepository.existsByCode(code) ? code + "-1" : code;

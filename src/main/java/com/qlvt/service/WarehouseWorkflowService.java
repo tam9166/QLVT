@@ -281,6 +281,43 @@ public class WarehouseWorkflowService {
     }
 
     @Transactional
+    public void cancelRequest(Long requestId, String username, String reason) {
+        MaterialRequest request = requestRepository.findById(requestId).orElseThrow();
+        if (request.getStatus() != RequestStatus.DRAFT
+                && request.getStatus() != RequestStatus.SUBMITTED
+                && request.getStatus() != RequestStatus.DEPARTMENT_APPROVED
+                && request.getStatus() != RequestStatus.WAREHOUSE_APPROVED
+                && request.getStatus() != RequestStatus.PARTIALLY_APPROVED
+                && request.getStatus() != RequestStatus.RESERVED) {
+            throw new IllegalStateException("Ch\u1ec9 c\u00f3 th\u1ec3 h\u1ee7y y\u00eau c\u1ea7u tr\u01b0\u1edbc khi t\u1ea1o phi\u1ebfu xu\u1ea5t kho");
+        }
+        LocalDateTime now = LocalDateTime.now();
+        for (StockReservation reservation : reservationRepository.findByMaterialRequest_IdAndStatus(requestId, ReservationStatus.ACTIVE)) {
+            StockBalance balance = reservation.getStockBalance();
+            balance.setReservedQuantity(Math.max(0, balance.getReservedQuantity() - reservation.getReservedQuantity()));
+            balance.setUpdatedAt(now);
+            balance.validate();
+            balanceRepository.save(balance);
+            Material material = reservation.getMaterial();
+            material.setReservedQuantity(Math.max(0, material.getReservedQuantity() - reservation.getReservedQuantity()));
+            materialRepository.save(material);
+            reservation.setStatus(ReservationStatus.CANCELLED);
+            reservation.setReleasedAt(now);
+            reservationRepository.save(reservation);
+        }
+        for (MaterialRequestLine line : request.getLines()) {
+            line.setApprovedQuantity(0);
+            line.setStatus("CANCELLED");
+        }
+        request.setStatus(RequestStatus.CANCELLED);
+        request.setRejectedReason(reason == null || reason.isBlank() ? "Ng\u01b0\u1eddi d\u00f9ng h\u1ee7y y\u00eau c\u1ea7u" : reason.trim());
+        request.setUpdatedAt(now);
+        requestRepository.save(request);
+        logApproval(request, "CANCELLED", username, request.getRejectedReason());
+        auditService.log(username, "CANCEL_REQUEST", "MATERIAL_REQUEST", request.getCode(), "H\u1ee7y y\u00eau c\u1ea7u v\u00e0 gi\u1ea3i ph\u00f3ng t\u1ed3n \u0111\u00e3 gi\u1eef");
+    }
+
+    @Transactional
     public List<IssueSlip> createIssueSlips(Long requestId, String username) {
         MaterialRequest request = requestRepository.findById(requestId).orElseThrow();
         if (request.getStatus() != RequestStatus.RESERVED && request.getStatus() != RequestStatus.PARTIALLY_APPROVED) {
