@@ -13,13 +13,19 @@
                 <span class="text-muted" th:if="${item.expectedDeliveryDate != null}" th:text="${'Dự kiến: ' + item.expectedDeliveryDate}"></span>
             </div>
         </div>
-        <form th:if="${item.status.name() == 'DRAFT'}" th:action="@{/purchases/orders/{id}/send(id=${item.id})}" method="post">
+        <div class="d-flex gap-2">
+        <form th:if="${item.canSend()}" th:action="@{/purchases/orders/{id}/send(id=${item.id})}" method="post">
             <button class="btn btn-primary">Gửi nhà cung cấp</button>
         </form>
+        <form th:if="${item.canCancel()}" th:action="@{/purchases/orders/{id}/cancel(id=${item.id})}" method="post">
+            <input type="hidden" name="reason" value="Hủy đơn đặt hàng">
+            <button class="btn btn-outline-danger" onclick="return confirm('Hủy đơn đặt hàng này?')">Hủy đơn</button>
+        </form>
+        </div>
     </div>
 
     <form th:action="@{/purchases/orders/{id}/receive(id=${item.id})}" method="post">
-        <div class="row g-3 mb-3" th:if="${item.status.name() == 'SENT' || item.status.name() == 'PARTIALLY_RECEIVED'}">
+        <div class="row g-3 mb-3" th:if="${item.canReceive()}">
             <div class="col-md-4">
                 <label class="form-label">Kho nhập</label>
                 <select class="form-select" name="warehouseId" required>
@@ -73,7 +79,7 @@
             </table>
         </div>
         <button class="btn btn-success"
-                th:if="${item.status.name() == 'SENT' || item.status.name() == 'PARTIALLY_RECEIVED'}">
+                th:if="${item.canReceive()}">
             Ghi nhận nhận hàng
         </button>
         <a class="btn btn-outline-secondary" th:href="@{/purchases/orders}">Quay lại</a>

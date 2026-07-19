@@ -48,6 +48,11 @@ public class PurchaseController {
     }
     @PostMapping("/requests/{id}/approve")
     public String approveRequest(@PathVariable Long id, Authentication authentication) { workflowService.approvePurchaseRequest(id, authentication.getName()); return "redirect:/purchases/requests/" + id; }
+    @PostMapping("/requests/{id}/cancel")
+    public String cancelRequest(@PathVariable Long id, @RequestParam(required = false) String reason, Authentication authentication) {
+        workflowService.cancelPurchaseRequest(id, authentication.getName(), reason);
+        return "redirect:/purchases/requests/" + id;
+    }
     @PostMapping("/requests/{id}/order")
     public String createOrder(@PathVariable Long id, @RequestParam Long supplierId, @RequestParam(required = false) LocalDate expectedDeliveryDate, Authentication authentication) {
         var order = workflowService.createPurchaseOrder(id, supplierId, expectedDeliveryDate, authentication.getName());
@@ -66,6 +71,12 @@ public class PurchaseController {
     @PostMapping("/orders/{id}/send")
     public String sendOrder(@PathVariable Long id, Authentication authentication) {
         workflowService.sendPurchaseOrder(id, authentication.getName());
+        return "redirect:/purchases/orders/" + id;
+    }
+
+    @PostMapping("/orders/{id}/cancel")
+    public String cancelOrder(@PathVariable Long id, @RequestParam(required = false) String reason, Authentication authentication) {
+        workflowService.cancelPurchaseOrder(id, authentication.getName(), reason);
         return "redirect:/purchases/orders/" + id;
     }
 

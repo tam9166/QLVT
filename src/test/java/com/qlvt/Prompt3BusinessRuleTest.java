@@ -4,7 +4,11 @@ import com.qlvt.entity.DestructionSlip;
 import com.qlvt.entity.InventoryCountLine;
 import com.qlvt.entity.StockBalance;
 import com.qlvt.entity.StockTransfer;
+import com.qlvt.entity.PurchaseOrder;
+import com.qlvt.entity.PurchaseRequest;
 import com.qlvt.enums.DestructionStatus;
+import com.qlvt.enums.PurchaseOrderStatus;
+import com.qlvt.enums.PurchaseRequestStatus;
 import com.qlvt.enums.StockTransferStatus;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
@@ -85,5 +89,29 @@ class Prompt3BusinessRuleTest {
 
         assertFalse(slip.canApproveAccountant());
         assertTrue(slip.canDestroy());
+    }
+
+    @Test
+    void purchaseActionsFollowWorkflowState() {
+        PurchaseRequest request = new PurchaseRequest();
+        assertTrue(request.canApprove());
+        assertTrue(request.canCancel());
+        assertFalse(request.canCreateOrder());
+        request.setStatus(PurchaseRequestStatus.APPROVED);
+        assertFalse(request.canApprove());
+        assertFalse(request.canCancel());
+        assertTrue(request.canCreateOrder());
+
+        PurchaseOrder order = new PurchaseOrder();
+        assertTrue(order.canSend());
+        assertTrue(order.canCancel());
+        assertFalse(order.canReceive());
+        order.setStatus(PurchaseOrderStatus.SENT);
+        assertFalse(order.canSend());
+        assertTrue(order.canCancel());
+        assertTrue(order.canReceive());
+        order.setStatus(PurchaseOrderStatus.PARTIALLY_RECEIVED);
+        assertFalse(order.canCancel());
+        assertTrue(order.canReceive());
     }
 }

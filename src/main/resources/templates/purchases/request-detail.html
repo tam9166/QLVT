@@ -9,11 +9,17 @@
             <h1 class="h3 mb-1" th:text="${item.requestCode}"></h1>
             <span class="badge text-bg-info" th:text="${item.status}"></span>
         </div>
-        <form th:if="${item.status.name() == 'DRAFT' || item.status.name() == 'SUBMITTED'}"
+        <div class="d-flex gap-2">
+        <form th:if="${item.canApprove()}"
               th:action="@{/purchases/requests/{id}/approve(id=${item.id})}"
               method="post">
             <button class="btn btn-success">Duyệt đề nghị</button>
         </form>
+        <form th:if="${item.canCancel()}" th:action="@{/purchases/requests/{id}/cancel(id=${item.id})}" method="post">
+            <input type="hidden" name="reason" value="Hủy đề nghị mua">
+            <button class="btn btn-outline-danger" onclick="return confirm('Hủy đề nghị mua này?')">Hủy đề nghị</button>
+        </form>
+        </div>
     </div>
 
     <div class="table-responsive">
@@ -35,7 +41,7 @@
         </table>
     </div>
 
-    <section th:if="${item.status.name() == 'APPROVED'}" class="mt-4">
+    <section th:if="${item.canCreateOrder()}" class="mt-4">
         <h2 class="h5">Tạo đơn đặt hàng</h2>
         <form th:action="@{/purchases/requests/{id}/order(id=${item.id})}" method="post" class="row g-2">
             <div class="col-md-5">

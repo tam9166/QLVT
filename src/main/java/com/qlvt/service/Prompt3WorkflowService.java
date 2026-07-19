@@ -518,12 +518,25 @@ public class Prompt3WorkflowService {
     @Transactional
     public void approvePurchaseRequest(Long id, String username) {
         PurchaseRequest request = purchaseRequestRepository.findById(id).orElseThrow();
+        ensure(request.canApprove(), "Chỉ duyệt được đề nghị mua đang nháp hoặc đã gửi");
+        ensureCanApprove(username, request.getCreatedBy());
         request.setStatus(PurchaseRequestStatus.APPROVED);
         request.setApprovedBy(username);
         request.setApprovedAt(LocalDateTime.now());
         request.setUpdatedAt(LocalDateTime.now());
         purchaseRequestRepository.save(request);
         auditService.log(username, "APPROVE_PURCHASE_REQUEST", "PURCHASE_REQUEST", request.getRequestCode(), "Duyệt đề nghị mua");
+    }
+
+    @Transactional
+    public void cancelPurchaseRequest(Long id, String username, String reason) {
+        PurchaseRequest request = purchaseRequestRepository.findById(id).orElseThrow();
+        ensure(request.canCancel(), "Chỉ hủy được đề nghị mua chưa duyệt");
+        request.setStatus(PurchaseRequestStatus.CANCELLED);
+        request.setUpdatedAt(LocalDateTime.now());
+        purchaseRequestRepository.save(request);
+        auditService.log(username, "CANCEL_PURCHASE_REQUEST", "PURCHASE_REQUEST", request.getRequestCode(),
+                reason == null || reason.isBlank() ? "Hủy đề nghị mua" : "Hủy đề nghị mua: " + reason.trim());
     }
 
     @Transactional
@@ -550,7 +563,7 @@ public class Prompt3WorkflowService {
     @Transactional
     public void sendPurchaseOrder(Long id, String username) {
         PurchaseOrder order = purchaseOrderRepository.findWithLinesById(id).orElseThrow();
-        ensure(order.getStatus() == PurchaseOrderStatus.DRAFT, "Chỉ gửi được đơn đang nháp");
+        ensure(order.canSend(), "Chỉ gửi được đơn đang nháp");
         ensure(!order.getLines().isEmpty(), "Đơn đặt hàng phải có ít nhất một dòng");
         order.setStatus(PurchaseOrderStatus.SENT);
         purchaseOrderRepository.save(order);
@@ -558,9 +571,19 @@ public class Prompt3WorkflowService {
     }
 
     @Transactional
+    public void cancelPurchaseOrder(Long id, String username, String reason) {
+        PurchaseOrder order = purchaseOrderRepository.findWithLinesById(id).orElseThrow();
+        ensure(order.canCancel(), "Chỉ hủy được đơn nháp hoặc đơn chưa nhận hàng");
+        order.setStatus(PurchaseOrderStatus.CANCELLED);
+        purchaseOrderRepository.save(order);
+        auditService.log(username, "CANCEL_PURCHASE_ORDER", "PURCHASE_ORDER", order.getOrderCode(),
+                reason == null || reason.isBlank() ? "Hủy đơn đặt hàng" : "Hủy đơn đặt hàng: " + reason.trim());
+    }
+
+    @Transactional
     public Receipt recordPurchaseOrderReceipt(Long id, Long warehouseId, Long locationId, Map<String, String> parameters, String username) {
         PurchaseOrder order = purchaseOrderRepository.findWithLinesById(id).orElseThrow();
-        ensure(order.getStatus() == PurchaseOrderStatus.SENT || order.getStatus() == PurchaseOrderStatus.PARTIALLY_RECEIVED,
+        ensure(order.canReceive(),
                 "Chỉ ghi nhận nhận hàng cho đơn đã gửi hoặc đã nhận một phần");
         Warehouse warehouse = warehouseRepository.findById(warehouseId).orElseThrow();
         StorageLocation location = locationRepository.findById(locationId).orElseThrow();
