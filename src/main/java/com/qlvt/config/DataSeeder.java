@@ -5,16 +5,23 @@ import com.qlvt.enums.UserRole;
 import com.qlvt.repository.*;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.core.annotation.Order;
+import org.springframework.context.annotation.Profile;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
+import java.security.SecureRandom;
 import java.time.LocalDate;
 import java.util.List;
 
 @Component
+@Profile("!prod")
 @Order(1)
 public class DataSeeder implements CommandLineRunner {
+    private static final String TEMP_PASSWORD_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+
     private final AppUserRepository userRepository;
     private final MaterialRepository materialRepository;
     private final SupplierRepository supplierRepository;
@@ -25,6 +32,7 @@ public class DataSeeder implements CommandLineRunner {
     private final NotificationRepository notificationRepository;
     private final PasswordEncoder passwordEncoder;
     private final com.qlvt.service.WarehouseWorkflowService warehouseWorkflowService;
+    private final String demoDefaultPassword;
 
     public DataSeeder(AppUserRepository userRepository,
                       MaterialRepository materialRepository,
@@ -35,7 +43,8 @@ public class DataSeeder implements CommandLineRunner {
                       MaterialBatchRepository batchRepository,
                       NotificationRepository notificationRepository,
                       PasswordEncoder passwordEncoder,
-                      com.qlvt.service.WarehouseWorkflowService warehouseWorkflowService) {
+                      com.qlvt.service.WarehouseWorkflowService warehouseWorkflowService,
+                      @Value("${app.demo.default-password:}") String demoDefaultPassword) {
         this.userRepository = userRepository;
         this.materialRepository = materialRepository;
         this.supplierRepository = supplierRepository;
@@ -46,6 +55,7 @@ public class DataSeeder implements CommandLineRunner {
         this.notificationRepository = notificationRepository;
         this.passwordEncoder = passwordEncoder;
         this.warehouseWorkflowService = warehouseWorkflowService;
+        this.demoDefaultPassword = demoDefaultPassword;
     }
 
     @Override
@@ -74,11 +84,9 @@ public class DataSeeder implements CommandLineRunner {
         AppUser user = userRepository.findByUsername(username).orElseGet(AppUser::new);
         user.setUsername(username);
         if (user.getPassword() == null || user.getPassword().isBlank()) {
-            user.setPassword(passwordEncoder.encode("123456"));
+            user.setPassword(passwordEncoder.encode(seedPassword()));
         }
-        if (user.getVisiblePassword() == null || user.getVisiblePassword().isBlank()) {
-            user.setVisiblePassword("123456");
-        }
+        user.setMustChangePassword(false);
         user.setFullName(fullName);
         user.setDepartment(department);
         user.setRole(role);
@@ -88,6 +96,17 @@ public class DataSeeder implements CommandLineRunner {
         user.setLocked(false);
         user.setDeleted(false);
         userRepository.save(user);
+    }
+
+    private String seedPassword() {
+        if (demoDefaultPassword != null && !demoDefaultPassword.isBlank()) {
+            return demoDefaultPassword;
+        }
+        StringBuilder builder = new StringBuilder("Seed-");
+        for (int i = 0; i < 16; i++) {
+            builder.append(TEMP_PASSWORD_ALPHABET.charAt(SECURE_RANDOM.nextInt(TEMP_PASSWORD_ALPHABET.length())));
+        }
+        return builder.toString();
     }
 
     private void seedDepartments() {

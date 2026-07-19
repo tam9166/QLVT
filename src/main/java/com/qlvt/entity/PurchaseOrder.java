@@ -50,4 +50,16 @@ public class PurchaseOrder {
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public List<PurchaseOrderLine> getLines() { return lines; }
     public void setLines(List<PurchaseOrderLine> lines) { this.lines = lines; }
+
+    public boolean canSend() {
+        return status == PurchaseOrderStatus.DRAFT;
+    }
+
+    public boolean canReceive() {
+        return status == PurchaseOrderStatus.SENT || status == PurchaseOrderStatus.PARTIALLY_RECEIVED;
+    }
+
+    public boolean canCancel() {
+        return status == PurchaseOrderStatus.DRAFT || status == PurchaseOrderStatus.SENT;
+    }
 }

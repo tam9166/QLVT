@@ -2,22 +2,38 @@ package com.qlvt;
 
 import com.qlvt.chatbot.RuleBasedAiProvider;
 import com.qlvt.entity.Department;
+import com.qlvt.entity.MaterialBatch;
 import com.qlvt.entity.Material;
+import com.qlvt.entity.StockBalance;
+import com.qlvt.entity.StorageLocation;
+import com.qlvt.entity.Warehouse;
+import com.qlvt.enums.BatchStatus;
 import com.qlvt.enums.ChatIntent;
+import com.qlvt.repository.ChatMessageRepository;
+import com.qlvt.repository.ChatSessionRepository;
 import com.qlvt.repository.DepartmentRepository;
+import com.qlvt.repository.DepartmentStockRepository;
+import com.qlvt.repository.IssueSlipRepository;
+import com.qlvt.repository.MaterialBatchRepository;
 import com.qlvt.repository.MaterialRepository;
+import com.qlvt.repository.MaterialRequestRepository;
+import com.qlvt.repository.StockBalanceRepository;
 import com.qlvt.repository.WarehouseRepository;
+import com.qlvt.entity.ChatSession;
 import com.qlvt.service.ChatbotNlpService;
+import com.qlvt.service.ChatbotService;
 import com.qlvt.service.MaterialSearchService;
 import com.qlvt.util.VietnameseTextNormalizer;
 import org.junit.jupiter.api.Test;
 
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 class ChatbotRuleTest {
     @Test
@@ -132,6 +148,64 @@ class ChatbotRuleTest {
         assertTrue(thisWeek.expiryWindowDays() >= 1 && thisWeek.expiryWindowDays() <= 7);
     }
 
+    @Test
+    void nlpDetectsGenericFefoRecommendationQuestion() {
+        MaterialSearchService searchService = new MaterialSearchService(materialRepository());
+        ChatbotNlpService nlp = new ChatbotNlpService(searchService, emptyWarehouses(), emptyDepartments());
+
+        ChatbotNlpService.ParsedQuestion parsed = nlp.parse("Nen xuat lo nao truoc?");
+
+        assertEquals(ChatIntent.ASK_RECOMMEND_ISSUE, parsed.intent());
+        assertTrue(parsed.materials().isEmpty());
+    }
+
+    @Test
+    void chatbotUsesRequestContextForShortMaterialFollowUp() {
+        Material material = material(1L, "VT001", "Khẩu trang y tế", "mask", "cái");
+        MaterialRepository materialRepository = materialRepository(material);
+        MaterialSearchService searchService = new MaterialSearchService(materialRepository);
+        ChatbotNlpService nlp = new ChatbotNlpService(searchService, emptyWarehouses(), emptyDepartments());
+        StockBalanceRepository balanceRepository = mock(StockBalanceRepository.class);
+        when(balanceRepository.findByMaterial_IdOrderByWarehouse_CodeAscLocation_CodeAsc(1L))
+                .thenReturn(List.of(balance(material)));
+        when(materialRepository.findById(1L)).thenReturn(Optional.of(material));
+        when(materialRepository.findByCode("VT001")).thenReturn(Optional.of(material));
+
+        ChatSessionRepository sessionRepository = mock(ChatSessionRepository.class);
+        when(sessionRepository.findFirstByUserOrderByUpdatedAtDesc("user")).thenReturn(Optional.empty());
+        when(sessionRepository.save(any(ChatSession.class))).thenAnswer(invocation -> {
+            ChatSession session = invocation.getArgument(0);
+            if (session.getId() == null) {
+                session.setId(1L);
+            }
+            return session;
+        });
+
+        ChatbotService service = new ChatbotService(
+                nlp,
+                searchService,
+                materialRepository,
+                mock(MaterialBatchRepository.class),
+                balanceRepository,
+                mock(MaterialRequestRepository.class),
+                mock(IssueSlipRepository.class),
+                mock(DepartmentStockRepository.class),
+                sessionRepository,
+                mock(ChatMessageRepository.class)
+        );
+
+        ChatbotService.ChatResponse response = service.answer(
+                "nằm ở đâu?",
+                "user",
+                null,
+                Map.of("materialCode", "VT001")
+        );
+
+        assertEquals(ChatIntent.ASK_LOCATION.name(), response.intent());
+        assertFalse(response.items().isEmpty());
+        assertEquals("VT001", response.items().get(0).materialCode());
+    }
+
     private MaterialRepository materialRepository(Material... materials) {
         MaterialRepository repository = mock(MaterialRepository.class);
         when(repository.findByDeletedFalseOrderByCodeAsc()).thenReturn(List.of(materials));
@@ -174,5 +248,38 @@ class ChatbotRuleTest {
         department.setCode(code);
         department.setName(name);
         return department;
+    }
+
+    private StockBalance balance(Material material) {
+        Warehouse warehouse = new Warehouse();
+        warehouse.setId(1L);
+        warehouse.setCode("KHO1");
+        warehouse.setName("Kho chính");
+
+        StorageLocation location = new StorageLocation();
+        location.setId(1L);
+        location.setCode("A1");
+        location.setName("Kệ A1");
+        location.setWarehouse(warehouse);
+
+        MaterialBatch batch = new MaterialBatch();
+        batch.setId(1L);
+        batch.setMaterial(material);
+        batch.setWarehouse(warehouse);
+        batch.setLocation(location);
+        batch.setBatchNumber("B001");
+        batch.setReceiptDate(LocalDate.now().minusDays(3));
+        batch.setExpiryDate(LocalDate.now().plusMonths(6));
+        batch.setStatus(BatchStatus.AVAILABLE);
+        batch.setQuantity(80);
+
+        StockBalance balance = new StockBalance();
+        balance.setId(1L);
+        balance.setMaterial(material);
+        balance.setWarehouse(warehouse);
+        balance.setLocation(location);
+        balance.setBatch(batch);
+        balance.setActualQuantity(80);
+        return balance;
     }
 }

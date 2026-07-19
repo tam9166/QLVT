@@ -99,26 +99,49 @@ public class RequestController {
     @PostMapping
     @Transactional
     public String create(@RequestParam String department,
-                         @RequestParam Long materialId,
-                         @RequestParam int quantity,
+                         @RequestParam List<Long> materialId,
+                         @RequestParam List<Integer> quantity,
                          @RequestParam(defaultValue = "BINH_THUONG") String priority,
-                         @RequestParam(required = false) String reason,
-                         Authentication authentication,
-                         Model model) {
-        if (quantity <= 0) {
-            throw new IllegalArgumentException("Số lượng yêu cầu phải lớn hơn 0");
+                          @RequestParam(required = false) String reason,
+                          Authentication authentication,
+                          Model model) {
+        return createMultiple(department, materialId, quantity, priority, reason, authentication, model);
+    }
+
+    private String createMultiple(String department, List<Long> materialIds, List<Integer> quantities,
+                                  String priority, String reason, Authentication authentication, Model model) {
+        if (materialIds.isEmpty() || materialIds.size() != quantities.size()) {
+            throw new IllegalArgumentException("Phải chọn ít nhất một vật tư với số lượng hợp lệ");
         }
-        Material material = materialRepository.findById(materialId).orElseThrow();
-        long available = availableQuantity(materialId);
-        if (quantity > available) {
-            if (available == 0) {
-                inventoryAlertService.notifyOutOfStockIfNeeded(material, available, "/alerts#stock-alerts");
+        Map<Long, Integer> requestedByMaterial = new LinkedHashMap<>();
+        for (int index = 0; index < materialIds.size(); index++) {
+            Long selectedMaterialId = materialIds.get(index);
+            Integer requestedQuantity = quantities.get(index);
+            if (selectedMaterialId == null || requestedQuantity == null || requestedQuantity <= 0) {
+                throw new IllegalArgumentException("Số lượng yêu cầu phải lớn hơn 0");
             }
-            populateRequestForm(model, department, materialId, quantity, priority, reason,
-                    material.getCode() + " - " + material.getName()
-                            + " chỉ còn " + available + " " + (material.getUnit() == null ? "" : material.getUnit())
-                            + ", không đủ để lấy " + quantity + ".");
-            return "requests/form";
+            if (requestedByMaterial.putIfAbsent(selectedMaterialId, requestedQuantity) != null) {
+                populateRequestForm(model, department, null, null, priority, reason,
+                        "Mỗi vật tư chỉ được chọn một lần trong cùng phiếu yêu cầu.");
+                return "requests/form";
+            }
+        }
+
+        Map<Long, Material> materialsById = new LinkedHashMap<>();
+        for (Map.Entry<Long, Integer> requested : requestedByMaterial.entrySet()) {
+            Material material = materialRepository.findById(requested.getKey()).orElseThrow();
+            long available = availableQuantity(material.getId());
+            if (requested.getValue() > available) {
+                if (available == 0) {
+                    inventoryAlertService.notifyOutOfStockIfNeeded(material, available, "/alerts#stock-alerts");
+                }
+                populateRequestForm(model, department, null, null, priority, reason,
+                        material.getCode() + " - " + material.getName() + " chỉ còn " + available + " "
+                                + (material.getUnit() == null ? "" : material.getUnit())
+                                + ", không đủ để lấy " + requested.getValue() + ".");
+                return "requests/form";
+            }
+            materialsById.put(material.getId(), material);
         }
 
         LocalDateTime now = LocalDateTime.now();
@@ -134,15 +157,17 @@ public class RequestController {
         request.setDepartmentApprovedAt(now);
         request.setUpdatedAt(now);
 
-        MaterialRequestLine line = new MaterialRequestLine();
-        line.setRequest(request);
-        line.setMaterial(material);
-        line.setRequestedQuantity(quantity);
-        line.setReason(reason);
-        line.setStatus("Chờ kho xử lý");
-        request.getLines().add(line);
-
+        for (Map.Entry<Long, Integer> requested : requestedByMaterial.entrySet()) {
+            MaterialRequestLine line = new MaterialRequestLine();
+            line.setRequest(request);
+            line.setMaterial(materialsById.get(requested.getKey()));
+            line.setRequestedQuantity(requested.getValue());
+            line.setReason(reason);
+            line.setStatus("Chờ kho xử lý");
+            request.getLines().add(line);
+        }
         requestRepository.save(request);
+
         RequestApprovalLog log = new RequestApprovalLog();
         log.setMaterialRequest(request);
         log.setAction("NURSE_SUBMITTED");
@@ -164,6 +189,14 @@ public class RequestController {
     public String approveWarehouse(@PathVariable Long id, Authentication authentication) {
         dataPermissionService.checkCanProcessWarehouseRequest(id);
         warehouseWorkflowService.reserveForRequest(id, authentication.getName());
+        return "redirect:/requests/" + id;
+    }
+
+    @PostMapping("/{id}/cancel")
+    public String cancel(@PathVariable Long id, @RequestParam(required = false) String reason,
+                         Authentication authentication) {
+        dataPermissionService.checkCanCancelMaterialRequest(id);
+        warehouseWorkflowService.cancelRequest(id, authentication.getName(), reason);
         return "redirect:/requests/" + id;
     }
 

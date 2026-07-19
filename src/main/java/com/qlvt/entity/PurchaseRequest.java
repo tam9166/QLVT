@@ -45,4 +45,16 @@ public class PurchaseRequest {
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
     public List<PurchaseRequestLine> getLines() { return lines; }
     public void setLines(List<PurchaseRequestLine> lines) { this.lines = lines; }
+
+    public boolean canApprove() {
+        return status == PurchaseRequestStatus.DRAFT || status == PurchaseRequestStatus.SUBMITTED;
+    }
+
+    public boolean canCancel() {
+        return status == PurchaseRequestStatus.DRAFT || status == PurchaseRequestStatus.SUBMITTED;
+    }
+
+    public boolean canCreateOrder() {
+        return status == PurchaseRequestStatus.APPROVED;
+    }
 }

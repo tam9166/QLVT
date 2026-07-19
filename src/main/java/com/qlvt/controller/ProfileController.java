@@ -66,7 +66,7 @@ public class ProfileController {
         String username = authentication == null ? "" : authentication.getName();
         var user = userRepository.findByUsername(username).orElseThrow();
         user.setPassword(passwordEncoder.encode(newPassword));
-        user.setVisiblePassword(newPassword);
+        user.setMustChangePassword(false);
         user.setUpdatedAt(LocalDateTime.now());
         userRepository.save(user);
         redirectAttributes.addFlashAttribute("success", "Đã đổi mật khẩu.");

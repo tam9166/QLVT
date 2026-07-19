@@ -1,7 +1,15 @@
 package com.qlvt;
 
+import com.qlvt.entity.DestructionSlip;
 import com.qlvt.entity.InventoryCountLine;
 import com.qlvt.entity.StockBalance;
+import com.qlvt.entity.StockTransfer;
+import com.qlvt.entity.PurchaseOrder;
+import com.qlvt.entity.PurchaseRequest;
+import com.qlvt.enums.DestructionStatus;
+import com.qlvt.enums.PurchaseOrderStatus;
+import com.qlvt.enums.PurchaseRequestStatus;
+import com.qlvt.enums.StockTransferStatus;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -31,5 +39,79 @@ class Prompt3BusinessRuleTest {
         balance.setPendingIssueQuantity(3);
 
         assertThrows(IllegalStateException.class, balance::validate);
+    }
+
+    @Test
+    void stockTransferActionsFollowWorkflowState() {
+        StockTransfer transfer = new StockTransfer();
+
+        assertTrue(transfer.canSubmit());
+        assertTrue(transfer.canApprove());
+        assertFalse(transfer.canExecuteTransfer());
+        assertFalse(transfer.canReceive());
+
+        transfer.setStatus(StockTransferStatus.APPROVED);
+
+        assertFalse(transfer.canSubmit());
+        assertFalse(transfer.canApprove());
+        assertTrue(transfer.canExecuteTransfer());
+        assertFalse(transfer.canReceive());
+
+        transfer.setStatus(StockTransferStatus.TRANSFERRED);
+
+        assertFalse(transfer.canExecuteTransfer());
+        assertTrue(transfer.canReceive());
+    }
+
+    @Test
+    void destructionActionsFollowWorkflowState() {
+        DestructionSlip slip = new DestructionSlip();
+
+        assertTrue(slip.canSubmit());
+        assertFalse(slip.canApproveManager());
+        assertFalse(slip.canApproveAccountant());
+        assertFalse(slip.canDestroy());
+
+        slip.setStatus(DestructionStatus.SUBMITTED);
+
+        assertFalse(slip.canSubmit());
+        assertTrue(slip.canApproveManager());
+        assertFalse(slip.canApproveAccountant());
+        assertFalse(slip.canDestroy());
+
+        slip.setStatus(DestructionStatus.APPROVED_BY_MANAGER);
+
+        assertFalse(slip.canApproveManager());
+        assertTrue(slip.canApproveAccountant());
+        assertFalse(slip.canDestroy());
+
+        slip.setStatus(DestructionStatus.APPROVED);
+
+        assertFalse(slip.canApproveAccountant());
+        assertTrue(slip.canDestroy());
+    }
+
+    @Test
+    void purchaseActionsFollowWorkflowState() {
+        PurchaseRequest request = new PurchaseRequest();
+        assertTrue(request.canApprove());
+        assertTrue(request.canCancel());
+        assertFalse(request.canCreateOrder());
+        request.setStatus(PurchaseRequestStatus.APPROVED);
+        assertFalse(request.canApprove());
+        assertFalse(request.canCancel());
+        assertTrue(request.canCreateOrder());
+
+        PurchaseOrder order = new PurchaseOrder();
+        assertTrue(order.canSend());
+        assertTrue(order.canCancel());
+        assertFalse(order.canReceive());
+        order.setStatus(PurchaseOrderStatus.SENT);
+        assertFalse(order.canSend());
+        assertTrue(order.canCancel());
+        assertTrue(order.canReceive());
+        order.setStatus(PurchaseOrderStatus.PARTIALLY_RECEIVED);
+        assertFalse(order.canCancel());
+        assertTrue(order.canReceive());
     }
 }

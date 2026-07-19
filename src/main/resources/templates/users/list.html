@@ -13,6 +13,10 @@
             <div class="col-md-5"><input class="form-control" name="q" th:value="${q}" placeholder="Tìm tên đăng nhập, họ tên, email"></div>
             <div class="col-auto"><button class="btn btn-outline-light">Tìm</button></div>
         </form>
+        <div class="alert alert-warning" th:if="${temporaryPassword}">
+            <div th:text="${securityNotice}"></div>
+            <div>Mật khẩu tạm: <strong th:text="${temporaryPassword}"></strong></div>
+        </div>
         <div class="table-responsive">
             <table class="table table-modern align-middle">
                 <thead>
@@ -20,9 +24,9 @@
                     <th>Tên đăng nhập</th>
                     <th>Họ tên</th>
                     <th>Email</th>
-                    <th>Mật khẩu</th>
                     <th>Vai trò</th>
                     <th>Khoa</th>
+                    <th>Đổi mật khẩu</th>
                     <th>Trạng thái</th>
                     <th></th>
                 </tr>
@@ -32,15 +36,15 @@
                     <td><span class="code-pill" th:text="${u.username}"></span></td>
                     <td th:text="${u.fullName}"></td>
                     <td th:text="${u.email}"></td>
-                    <td><span class="code-pill" th:text="${u.visiblePassword ?: '123456'}"></span></td>
                     <td th:text="${u.role}"></td>
                     <td th:text="${u.department}"></td>
+                    <td th:text="${u.mustChangePassword ? 'Bắt buộc' : 'Không'}"></td>
                     <td th:text="${u.locked ? 'Đã khóa' : (u.enabled ? 'Hoạt động' : 'Tắt')}"></td>
                     <td class="text-end">
                         <a class="btn btn-sm btn-outline-light" th:href="@{/users/{id}/edit(id=${u.id})}">Sửa</a>
                         <form class="d-inline" method="post" th:action="@{/users/{id}/lock(id=${u.id})}" th:if="${!u.locked}"><button class="btn btn-sm btn-outline-light">Khóa</button></form>
                         <form class="d-inline" method="post" th:action="@{/users/{id}/unlock(id=${u.id})}" th:if="${u.locked}"><button class="btn btn-sm btn-outline-light">Mở</button></form>
-                        <form class="d-inline" method="post" th:action="@{/users/{id}/reset-password(id=${u.id})}" onsubmit="return confirm('Reset mật khẩu về 123456?')"><button class="btn btn-sm btn-outline-light">Reset</button></form>
+                        <form class="d-inline" method="post" th:action="@{/users/{id}/reset-password(id=${u.id})}" onsubmit="return confirm('Tạo mật khẩu tạm mới cho tài khoản này?')"><button class="btn btn-sm btn-outline-light">Reset</button></form>
                         <form class="d-inline" method="post" th:action="@{/users/{id}/delete(id=${u.id})}" onsubmit="return confirm('Xóa mềm người dùng này?')"><button class="btn btn-sm btn-outline-light">Xóa</button></form>
                     </td>
                 </tr>

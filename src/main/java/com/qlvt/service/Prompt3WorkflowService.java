@@ -21,6 +21,7 @@ public class Prompt3WorkflowService {
     private final DestructionSlipRepository destructionSlipRepository;
     private final PurchaseRequestRepository purchaseRequestRepository;
     private final PurchaseOrderRepository purchaseOrderRepository;
+    private final ReceiptRepository receiptRepository;
     private final MaterialRepository materialRepository;
     private final MaterialBatchRepository batchRepository;
     private final WarehouseRepository warehouseRepository;
@@ -44,6 +45,7 @@ public class Prompt3WorkflowService {
                                   DestructionSlipRepository destructionSlipRepository,
                                   PurchaseRequestRepository purchaseRequestRepository,
                                   PurchaseOrderRepository purchaseOrderRepository,
+                                  ReceiptRepository receiptRepository,
                                   MaterialRepository materialRepository,
                                   MaterialBatchRepository batchRepository,
                                   WarehouseRepository warehouseRepository,
@@ -66,6 +68,7 @@ public class Prompt3WorkflowService {
         this.destructionSlipRepository = destructionSlipRepository;
         this.purchaseRequestRepository = purchaseRequestRepository;
         this.purchaseOrderRepository = purchaseOrderRepository;
+        this.receiptRepository = receiptRepository;
         this.materialRepository = materialRepository;
         this.batchRepository = batchRepository;
         this.warehouseRepository = warehouseRepository;
@@ -448,7 +451,7 @@ public class Prompt3WorkflowService {
             slip.setStatus(DestructionStatus.APPROVED_BY_MANAGER);
             notificationService.notify("Phiếu hủy chờ kế toán duyệt", slip.getDestructionCode() + " đã được quản lý duyệt và cần kế toán duyệt bước 2.", "DESTRUCTION_ACCOUNTANT", "ACCOUNTANT", "/destructions/" + id);
         } else {
-            slip.setStatus(DestructionStatus.APPROVED_BY_ACCOUNTANT);
+            slip.setStatus(DestructionStatus.APPROVED);
         }
         slip.setUpdatedAt(now);
         destructionSlipRepository.save(slip);
@@ -515,12 +518,25 @@ public class Prompt3WorkflowService {
     @Transactional
     public void approvePurchaseRequest(Long id, String username) {
         PurchaseRequest request = purchaseRequestRepository.findById(id).orElseThrow();
+        ensure(request.canApprove(), "Chỉ duyệt được đề nghị mua đang nháp hoặc đã gửi");
+        ensureCanApprove(username, request.getCreatedBy());
         request.setStatus(PurchaseRequestStatus.APPROVED);
         request.setApprovedBy(username);
         request.setApprovedAt(LocalDateTime.now());
         request.setUpdatedAt(LocalDateTime.now());
         purchaseRequestRepository.save(request);
         auditService.log(username, "APPROVE_PURCHASE_REQUEST", "PURCHASE_REQUEST", request.getRequestCode(), "Duyệt đề nghị mua");
+    }
+
+    @Transactional
+    public void cancelPurchaseRequest(Long id, String username, String reason) {
+        PurchaseRequest request = purchaseRequestRepository.findById(id).orElseThrow();
+        ensure(request.canCancel(), "Chỉ hủy được đề nghị mua chưa duyệt");
+        request.setStatus(PurchaseRequestStatus.CANCELLED);
+        request.setUpdatedAt(LocalDateTime.now());
+        purchaseRequestRepository.save(request);
+        auditService.log(username, "CANCEL_PURCHASE_REQUEST", "PURCHASE_REQUEST", request.getRequestCode(),
+                reason == null || reason.isBlank() ? "Hủy đề nghị mua" : "Hủy đề nghị mua: " + reason.trim());
     }
 
     @Transactional
@@ -542,6 +558,109 @@ public class Prompt3WorkflowService {
         }
         purchaseOrderRepository.save(order);
         return order;
+    }
+
+    @Transactional
+    public void sendPurchaseOrder(Long id, String username) {
+        PurchaseOrder order = purchaseOrderRepository.findWithLinesById(id).orElseThrow();
+        ensure(order.canSend(), "Chỉ gửi được đơn đang nháp");
+        ensure(!order.getLines().isEmpty(), "Đơn đặt hàng phải có ít nhất một dòng");
+        order.setStatus(PurchaseOrderStatus.SENT);
+        purchaseOrderRepository.save(order);
+        auditService.log(username, "SEND_PURCHASE_ORDER", "PURCHASE_ORDER", order.getOrderCode(), "Gửi đơn đặt hàng cho nhà cung cấp");
+    }
+
+    @Transactional
+    public void cancelPurchaseOrder(Long id, String username, String reason) {
+        PurchaseOrder order = purchaseOrderRepository.findWithLinesById(id).orElseThrow();
+        ensure(order.canCancel(), "Chỉ hủy được đơn nháp hoặc đơn chưa nhận hàng");
+        order.setStatus(PurchaseOrderStatus.CANCELLED);
+        purchaseOrderRepository.save(order);
+        auditService.log(username, "CANCEL_PURCHASE_ORDER", "PURCHASE_ORDER", order.getOrderCode(),
+                reason == null || reason.isBlank() ? "Hủy đơn đặt hàng" : "Hủy đơn đặt hàng: " + reason.trim());
+    }
+
+    @Transactional
+    public Receipt recordPurchaseOrderReceipt(Long id, Long warehouseId, Long locationId, Map<String, String> parameters, String username) {
+        PurchaseOrder order = purchaseOrderRepository.findWithLinesById(id).orElseThrow();
+        ensure(order.canReceive(),
+                "Chỉ ghi nhận nhận hàng cho đơn đã gửi hoặc đã nhận một phần");
+        Warehouse warehouse = warehouseRepository.findById(warehouseId).orElseThrow();
+        StorageLocation location = locationRepository.findById(locationId).orElseThrow();
+        ensure(location.getWarehouse() != null && location.getWarehouse().getId().equals(warehouse.getId()),
+                "Vị trí nhập phải thuộc kho đã chọn");
+
+        Receipt receipt = new Receipt();
+        receipt.setReceiptCode(nextCode("PN", code -> receiptRepository.existsByReceiptCode(code)));
+        receipt.setSupplier(order.getSupplier());
+        receipt.setWarehouse(warehouse);
+        receipt.setCreatedBy(username);
+        receipt.setNote("Nhận hàng từ đơn " + order.getOrderCode());
+
+        boolean changed = false;
+        for (PurchaseOrderLine line : order.getLines()) {
+            String value = parameters.get("received_" + line.getId());
+            if (value == null || value.isBlank()) {
+                continue;
+            }
+            int receivedNow = Integer.parseInt(value);
+            ensure(receivedNow >= 0, "Số lượng nhận không được âm");
+            if (receivedNow == 0) {
+                continue;
+            }
+            int remaining = line.getOrderedQuantity() - line.getReceivedQuantity();
+            ensure(receivedNow <= remaining, "Số lượng nhận không được vượt số còn lại của đơn");
+            line.setReceivedQuantity(line.getReceivedQuantity() + receivedNow);
+
+            ReceiptLine receiptLine = new ReceiptLine();
+            receiptLine.setReceipt(receipt);
+            receiptLine.setMaterial(line.getMaterial());
+            receiptLine.setBatchNumber(nextReceiptBatchNumber(order, line, receipt.getLines().size() + 1));
+            receiptLine.setQuantity(receivedNow);
+            receiptLine.setUnitPrice(line.getUnitPrice());
+            receiptLine.setLocation(location);
+            receiptLine.setNote("Từ đơn " + order.getOrderCode());
+            receipt.getLines().add(receiptLine);
+            changed = true;
+        }
+        ensure(changed, "Phải nhập số lượng nhận lớn hơn 0");
+        int orderedTotal = order.getLines().stream().mapToInt(PurchaseOrderLine::getOrderedQuantity).sum();
+        int receivedTotal = order.getLines().stream().mapToInt(PurchaseOrderLine::getReceivedQuantity).sum();
+        order.setStatus(receivedTotal >= orderedTotal ? PurchaseOrderStatus.RECEIVED : PurchaseOrderStatus.PARTIALLY_RECEIVED);
+        if (order.getStatus() == PurchaseOrderStatus.RECEIVED) {
+            order.setReceivedAt(LocalDateTime.now());
+        }
+        purchaseOrderRepository.save(order);
+        receiptRepository.save(receipt);
+        auditService.log(username, "RECEIVE_PURCHASE_ORDER", "PURCHASE_ORDER", order.getOrderCode(), "Ghi nhận nhà cung cấp giao hàng");
+        auditService.log(username, "CREATE_RECEIPT_FROM_PURCHASE", "RECEIPT", receipt.getReceiptCode(), "Tạo phiếu nhập nháp từ đơn " + order.getOrderCode());
+        return receipt;
+    }
+
+    private String nextReceiptBatchNumber(PurchaseOrder order, PurchaseOrderLine line, int sequence) {
+        String code = order.getOrderCode() == null ? "DH" : order.getOrderCode().replaceAll("[^A-Za-z0-9-]", "");
+        String material = line.getMaterial() == null ? "VT" : line.getMaterial().getCode().replaceAll("[^A-Za-z0-9-]", "");
+        String base = ("LO-" + code + "-" + material + "-" + sequence);
+        if (base.length() > 70) {
+            base = base.substring(0, 70);
+        }
+        String candidate = base;
+        int index = 1;
+        while (batchNumberExists(line.getMaterial().getId(), candidate)
+                || receiptBatchNumberExists(candidate)) {
+            candidate = base + "-" + (++index);
+        }
+        return candidate;
+    }
+
+    private boolean batchNumberExists(Long materialId, String batchNumber) {
+        return batchRepository.findByMaterial_IdAndBatchNumber(materialId, batchNumber).isPresent();
+    }
+
+    private boolean receiptBatchNumberExists(String batchNumber) {
+        return receiptRepository.findAll().stream()
+                .flatMap(receipt -> receipt.getLines().stream())
+                .anyMatch(receiptLine -> batchNumber.equals(receiptLine.getBatchNumber()));
     }
 
     private void moveBetweenBalances(Material material, MaterialBatch batch, Warehouse fromWarehouse, Warehouse toWarehouse,
