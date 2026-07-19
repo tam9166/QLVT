@@ -5,7 +5,7 @@
 <main class="container-fluid py-4">
     <div class="d-flex justify-content-between mb-3">
         <div><h1 class="h3" th:text="${item.returnCode}"></h1><span class="badge text-bg-info" th:text="${item.status}"></span></div>
-        <form th:action="@{/department-returns/{id}/receive(id=${item.id})}" method="post" onsubmit="return confirm('Kho xác nhận nhận lại vật tư?')"><button class="btn btn-success">Kho xác nhận nhận lại</button></form>
+        <form th:if="${item.canReceiveByWarehouse()}" th:action="@{/department-returns/{id}/receive(id=${item.id})}" method="post" onsubmit="return confirm('Kho xác nhận nhận lại vật tư?')"><button class="btn btn-success">Kho xác nhận nhận lại</button></form>
     </div>
     <table class="table table-hover"><thead><tr><th>Vật tư</th><th>Lô</th><th>Vị trí nhận</th><th>Số lượng</th><th>Ghi chú</th></tr></thead>
         <tbody><tr th:each="l:${item.lines}"><td th:text="${l.material.code + ' - ' + l.material.name}"></td><td th:text="${l.batch.batchNumber}"></td><td th:text="${l.location.code}"></td><td th:text="${l.quantity}"></td><td th:text="${l.note}"></td></tr></tbody></table>
