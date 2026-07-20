@@ -75,4 +75,16 @@ public class StockAdjustment {
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
     public List<StockAdjustmentLine> getLines() { return lines; }
     public void setLines(List<StockAdjustmentLine> lines) { this.lines = lines; }
+
+    public boolean canSubmit() {
+        return status == StockAdjustmentStatus.DRAFT;
+    }
+
+    public boolean canApproveManager() {
+        return status == StockAdjustmentStatus.SUBMITTED;
+    }
+
+    public boolean canApproveAccountant() {
+        return status == StockAdjustmentStatus.APPROVED_BY_MANAGER;
+    }
 }

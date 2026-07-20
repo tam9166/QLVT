@@ -14,13 +14,13 @@
             </div>
         </div>
         <div class="d-flex flex-wrap gap-2 justify-content-end">
-            <form th:action="@{/stock-adjustments/{id}/submit(id=${item.id})}" method="post">
+            <form th:if="${item.canSubmit()}" th:action="@{/stock-adjustments/{id}/submit(id=${item.id})}" method="post">
                 <button class="btn btn-outline-primary">Gửi duyệt</button>
             </form>
-            <form th:action="@{/stock-adjustments/{id}/approve(id=${item.id})}" method="post" onsubmit="return confirm('Quản lý duyệt phiếu điều chỉnh?')">
+            <form th:if="${item.canApproveManager()}" th:action="@{/stock-adjustments/{id}/approve(id=${item.id})}" method="post" onsubmit="return confirm('Quản lý duyệt phiếu điều chỉnh?')">
                 <button class="btn btn-success">Duyệt bước quản lý</button>
             </form>
-            <form th:action="@{/stock-adjustments/{id}/approve-accountant(id=${item.id})}" method="post" onsubmit="return confirm('Kế toán duyệt bước 2 và áp dụng điều chỉnh?')">
+            <form th:if="${item.canApproveAccountant()}" th:action="@{/stock-adjustments/{id}/approve-accountant(id=${item.id})}" method="post" onsubmit="return confirm('Kế toán duyệt bước 2 và áp dụng điều chỉnh?')">
                 <button class="btn btn-warning">Kế toán duyệt bước 2</button>
             </form>
         </div>

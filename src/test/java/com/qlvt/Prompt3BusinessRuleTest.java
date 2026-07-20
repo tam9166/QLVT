@@ -3,6 +3,7 @@ package com.qlvt;
 import com.qlvt.entity.DestructionSlip;
 import com.qlvt.entity.InventoryCountLine;
 import com.qlvt.entity.StockBalance;
+import com.qlvt.entity.StockAdjustment;
 import com.qlvt.entity.StockTransfer;
 import com.qlvt.entity.PurchaseOrder;
 import com.qlvt.entity.PurchaseRequest;
@@ -10,6 +11,7 @@ import com.qlvt.enums.DestructionStatus;
 import com.qlvt.enums.PurchaseOrderStatus;
 import com.qlvt.enums.PurchaseRequestStatus;
 import com.qlvt.enums.StockTransferStatus;
+import com.qlvt.enums.StockAdjustmentStatus;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -89,6 +91,29 @@ class Prompt3BusinessRuleTest {
 
         assertFalse(slip.canApproveAccountant());
         assertTrue(slip.canDestroy());
+    }
+
+    @Test
+    void stockAdjustmentActionsFollowWorkflowState() {
+        StockAdjustment adjustment = new StockAdjustment();
+
+        assertTrue(adjustment.canSubmit());
+        assertFalse(adjustment.canApproveManager());
+        assertFalse(adjustment.canApproveAccountant());
+
+        adjustment.setStatus(StockAdjustmentStatus.SUBMITTED);
+        assertFalse(adjustment.canSubmit());
+        assertTrue(adjustment.canApproveManager());
+        assertFalse(adjustment.canApproveAccountant());
+
+        adjustment.setStatus(StockAdjustmentStatus.APPROVED_BY_MANAGER);
+        assertFalse(adjustment.canApproveManager());
+        assertTrue(adjustment.canApproveAccountant());
+
+        adjustment.setStatus(StockAdjustmentStatus.COMPLETED);
+        assertFalse(adjustment.canSubmit());
+        assertFalse(adjustment.canApproveManager());
+        assertFalse(adjustment.canApproveAccountant());
     }
 
     @Test
