@@ -8,6 +8,8 @@ import java.util.Optional;
 
 public interface StockAdjustmentRepository extends JpaRepository<StockAdjustment, Long> {
     boolean existsByAdjustmentCode(String adjustmentCode);
+    boolean existsByInventoryCount_Id(Long inventoryCountId);
+    Optional<StockAdjustment> findFirstByInventoryCount_IdOrderByCreatedAtDesc(Long inventoryCountId);
     List<StockAdjustment> findTop30ByOrderByCreatedAtDesc();
 
     @EntityGraph(attributePaths = {"warehouse", "inventoryCount", "lines", "lines.material", "lines.batch", "lines.location"})

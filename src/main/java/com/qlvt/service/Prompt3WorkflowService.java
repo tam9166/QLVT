@@ -143,6 +143,8 @@ public class Prompt3WorkflowService {
     public StockAdjustment createAdjustmentFromCount(Long countId, String username) {
         InventoryCount count = inventoryCountRepository.findById(countId).orElseThrow();
         ensure(count.getStatus() == InventoryCountStatus.COMPLETED, "Chỉ tạo điều chỉnh từ kiểm kê đã hoàn tất");
+        ensure(!stockAdjustmentRepository.existsByInventoryCount_Id(countId),
+                "Đợt kiểm kê này đã có phiếu điều chỉnh");
         StockAdjustment adjustment = new StockAdjustment();
         adjustment.setAdjustmentCode(nextCode("DC", code -> stockAdjustmentRepository.existsByAdjustmentCode(code)));
         adjustment.setInventoryCount(count);

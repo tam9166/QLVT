@@ -1,6 +1,7 @@
 package com.qlvt.controller;
 
 import com.qlvt.repository.InventoryCountRepository;
+import com.qlvt.repository.StockAdjustmentRepository;
 import com.qlvt.repository.WarehouseRepository;
 import com.qlvt.service.Prompt3WorkflowService;
 import org.springframework.security.core.Authentication;
@@ -15,11 +16,14 @@ import java.util.Map;
 public class InventoryCountController {
     private final InventoryCountRepository inventoryCountRepository;
     private final WarehouseRepository warehouseRepository;
+    private final StockAdjustmentRepository stockAdjustmentRepository;
     private final Prompt3WorkflowService workflowService;
 
-    public InventoryCountController(InventoryCountRepository inventoryCountRepository, WarehouseRepository warehouseRepository, Prompt3WorkflowService workflowService) {
+    public InventoryCountController(InventoryCountRepository inventoryCountRepository, WarehouseRepository warehouseRepository,
+                                    StockAdjustmentRepository stockAdjustmentRepository, Prompt3WorkflowService workflowService) {
         this.inventoryCountRepository = inventoryCountRepository;
         this.warehouseRepository = warehouseRepository;
+        this.stockAdjustmentRepository = stockAdjustmentRepository;
         this.workflowService = workflowService;
     }
 
@@ -44,6 +48,8 @@ public class InventoryCountController {
     @GetMapping("/{id}")
     public String detail(@PathVariable Long id, Model model) {
         model.addAttribute("item", inventoryCountRepository.findWithLinesById(id).orElseThrow());
+        stockAdjustmentRepository.findFirstByInventoryCount_IdOrderByCreatedAtDesc(id)
+                .ifPresent(adjustment -> model.addAttribute("adjustment", adjustment));
         return "inventory-counts/detail";
     }
 

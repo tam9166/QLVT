@@ -52,4 +52,16 @@ public class InventoryCount {
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
     public List<InventoryCountLine> getLines() { return lines; }
     public void setLines(List<InventoryCountLine> lines) { this.lines = lines; }
+
+    public boolean canEditLines() {
+        return status == InventoryCountStatus.DRAFT || status == InventoryCountStatus.COUNTING;
+    }
+
+    public boolean canComplete() {
+        return canEditLines();
+    }
+
+    public boolean canCreateAdjustment() {
+        return status == InventoryCountStatus.COMPLETED;
+    }
 }

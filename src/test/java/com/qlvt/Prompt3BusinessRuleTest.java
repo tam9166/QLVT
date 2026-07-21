@@ -2,6 +2,7 @@ package com.qlvt;
 
 import com.qlvt.entity.DestructionSlip;
 import com.qlvt.entity.InventoryCountLine;
+import com.qlvt.entity.InventoryCount;
 import com.qlvt.entity.StockBalance;
 import com.qlvt.entity.StockAdjustment;
 import com.qlvt.entity.StockTransfer;
@@ -12,6 +13,7 @@ import com.qlvt.enums.PurchaseOrderStatus;
 import com.qlvt.enums.PurchaseRequestStatus;
 import com.qlvt.enums.StockTransferStatus;
 import com.qlvt.enums.StockAdjustmentStatus;
+import com.qlvt.enums.InventoryCountStatus;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -23,6 +25,25 @@ class Prompt3BusinessRuleTest {
         line.setActualQuantity(17);
 
         assertEquals(-3, line.getDifferenceQuantity());
+    }
+
+    @Test
+    void inventoryCountActionsFollowWorkflowState() {
+        InventoryCount count = new InventoryCount();
+
+        assertTrue(count.canEditLines());
+        assertTrue(count.canComplete());
+        assertFalse(count.canCreateAdjustment());
+
+        count.setStatus(InventoryCountStatus.COMPLETED);
+        assertFalse(count.canEditLines());
+        assertFalse(count.canComplete());
+        assertTrue(count.canCreateAdjustment());
+
+        count.setStatus(InventoryCountStatus.CANCELLED);
+        assertFalse(count.canEditLines());
+        assertFalse(count.canComplete());
+        assertFalse(count.canCreateAdjustment());
     }
 
     @Test
