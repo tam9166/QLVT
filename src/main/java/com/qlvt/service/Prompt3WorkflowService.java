@@ -348,7 +348,8 @@ public class Prompt3WorkflowService {
     @Transactional
     public void activateRecall(Long id, String username) {
         RecallOrder recall = recallOrderRepository.findById(id).orElseThrow();
-        ensure(recall.getStatus() == RecallStatus.DRAFT, "Chỉ kích hoạt lệnh thu hồi nháp");
+        ensure(recall.canActivate(), "Chỉ kích hoạt lệnh thu hồi nháp");
+        ensureCanApprove(username, recall.getCreatedBy());
         recall.setStatus(RecallStatus.ACTIVE);
         recall.setApprovedBy(username);
         recall.setUpdatedAt(LocalDateTime.now());
@@ -397,7 +398,7 @@ public class Prompt3WorkflowService {
     @Transactional
     public void completeRecall(Long id, String username) {
         RecallOrder recall = recallOrderRepository.findById(id).orElseThrow();
-        ensure(recall.getStatus() == RecallStatus.ACTIVE, "Chỉ hoàn tất lệnh đang active");
+        ensure(recall.canComplete(), "Chỉ hoàn tất lệnh đang thu hồi sau khi tất cả khoa đã phản hồi");
         recall.setStatus(RecallStatus.COMPLETED);
         recall.setUpdatedAt(LocalDateTime.now());
         recallOrderRepository.save(recall);

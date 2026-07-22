@@ -8,12 +8,15 @@ import com.qlvt.entity.StockAdjustment;
 import com.qlvt.entity.StockTransfer;
 import com.qlvt.entity.PurchaseOrder;
 import com.qlvt.entity.PurchaseRequest;
+import com.qlvt.entity.RecallOrder;
+import com.qlvt.entity.RecallOrderLine;
 import com.qlvt.enums.DestructionStatus;
 import com.qlvt.enums.PurchaseOrderStatus;
 import com.qlvt.enums.PurchaseRequestStatus;
 import com.qlvt.enums.StockTransferStatus;
 import com.qlvt.enums.StockAdjustmentStatus;
 import com.qlvt.enums.InventoryCountStatus;
+import com.qlvt.enums.RecallStatus;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -159,5 +162,30 @@ class Prompt3BusinessRuleTest {
         order.setStatus(PurchaseOrderStatus.PARTIALLY_RECEIVED);
         assertFalse(order.canCancel());
         assertTrue(order.canReceive());
+    }
+
+    @Test
+    void recallActionsRequireEveryDepartmentResponse() {
+        RecallOrder recall = new RecallOrder();
+        RecallOrderLine line = new RecallOrderLine();
+        recall.getLines().add(line);
+
+        assertTrue(recall.canActivate());
+        assertFalse(recall.canRespond());
+        assertFalse(recall.canComplete());
+
+        recall.setStatus(RecallStatus.ACTIVE);
+        assertFalse(recall.canActivate());
+        assertTrue(recall.canRespond());
+        assertTrue(recall.hasPendingResponses());
+        assertFalse(recall.canComplete());
+
+        line.setStatus("RESPONDED");
+        assertFalse(recall.hasPendingResponses());
+        assertTrue(recall.canComplete());
+
+        recall.setStatus(RecallStatus.COMPLETED);
+        assertFalse(recall.canRespond());
+        assertFalse(recall.canComplete());
     }
 }

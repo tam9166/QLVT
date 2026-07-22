@@ -15,13 +15,13 @@
             <span class="badge text-bg-warning mt-2" th:text="${item.status}">ACTIVE</span>
         </div>
         <div class="d-flex gap-2">
-            <form th:if="${item.status.name() == 'DRAFT'}"
+            <form th:if="${item.canActivate()}"
                   th:action="@{/recalls/{id}/activate(id=${item.id})}"
                   method="post"
                   onsubmit="return confirm('Kích hoạt thu hồi và khóa lô?')">
                 <button class="btn btn-warning">Kích hoạt</button>
             </form>
-            <form th:if="${item.status.name() == 'ACTIVE'}"
+            <form th:if="${item.canComplete()}"
                   th:action="@{/recalls/{id}/complete(id=${item.id})}"
                   method="post"
                   onsubmit="return confirm('Hoàn tất lệnh thu hồi?')">
@@ -60,7 +60,11 @@
         </div>
     </section>
 
-    <section th:if="${item.status.name() == 'ACTIVE'}" class="mb-4">
+    <div th:if="${item.canRespond() && item.hasPendingResponses()}" class="alert alert-warning">
+        Chỉ có thể hoàn tất lệnh thu hồi sau khi tất cả khoa đã phản hồi.
+    </div>
+
+    <section th:if="${item.canRespond()}" class="mb-4">
         <h2 class="h5">Ghi nhận phản hồi khoa</h2>
         <form th:action="@{/recalls/{id}/department-response(id=${item.id})}" method="post" class="row g-3">
             <div class="col-md-4">

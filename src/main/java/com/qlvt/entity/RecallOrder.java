@@ -54,4 +54,20 @@ public class RecallOrder {
     public void setNote(String note) { this.note = note; }
     public List<RecallOrderLine> getLines() { return lines; }
     public void setLines(List<RecallOrderLine> lines) { this.lines = lines; }
+
+    public boolean canActivate() {
+        return status == RecallStatus.DRAFT;
+    }
+
+    public boolean canRespond() {
+        return status == RecallStatus.ACTIVE;
+    }
+
+    public boolean hasPendingResponses() {
+        return lines.stream().anyMatch(line -> !"RESPONDED".equals(line.getStatus()));
+    }
+
+    public boolean canComplete() {
+        return status == RecallStatus.ACTIVE && !hasPendingResponses();
+    }
 }
