@@ -58,4 +58,12 @@ public class Receipt {
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
     public List<ReceiptLine> getLines() { return lines; }
     public void setLines(List<ReceiptLine> lines) { this.lines = lines; }
+
+    public boolean canEdit() {
+        return status == ReceiptStatus.DRAFT;
+    }
+
+    public boolean canConfirm() {
+        return status == ReceiptStatus.DRAFT;
+    }
 }

@@ -14,18 +14,18 @@
             <div class="d-flex gap-2 flex-wrap justify-content-end">
                 <a class="btn btn-outline-light" th:href="@{/issues}">Quay lại</a>
                 <a class="btn btn-outline-light"
-                   th:if="${issue.status.name() == 'PREPARING' or issue.status.name() == 'DRAFT'}"
+                   th:if="${issue.canEdit()}"
                    th:href="@{/issues/{id}/edit(id=${issue.id})}">
                     <i class="bi bi-pencil-square"></i> Sửa phiếu
                 </a>
                 <a class="btn btn-outline-light" th:href="@{/issues/{id}/invoice.pdf(id=${issue.id})}">
                     <i class="bi bi-file-earmark-pdf"></i> Xuất hóa đơn PDF
                 </a>
-                <form th:if="${issue.status.name() == 'PREPARING' or issue.status.name() == 'DRAFT'}"
+                <form th:if="${issue.canIssue()}"
                       th:action="@{/issues/{id}/issue(id=${issue.id})}" method="post">
                     <button class="btn btn-primary"><i class="bi bi-box-arrow-up"></i> Xuất kho và chuyển về khoa</button>
                 </form>
-                <form th:if="${issue.status.name() == 'ISSUED'}" th:action="@{/issues/{id}/receive(id=${issue.id})}" method="post">
+                <form th:if="${issue.canReceive()}" th:action="@{/issues/{id}/receive(id=${issue.id})}" method="post">
                     <button class="btn btn-primary"><i class="bi bi-check2-circle"></i> Xác nhận nhận</button>
                 </form>
                 <form sec:authorize="hasRole('ADMIN')"

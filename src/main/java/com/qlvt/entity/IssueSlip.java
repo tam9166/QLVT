@@ -67,4 +67,16 @@ public class IssueSlip {
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
     public List<IssueSlipLine> getLines() { return lines; }
     public void setLines(List<IssueSlipLine> lines) { this.lines = lines; }
+
+    public boolean canEdit() {
+        return status == IssueStatus.DRAFT || status == IssueStatus.PREPARING;
+    }
+
+    public boolean canIssue() {
+        return status == IssueStatus.DRAFT || status == IssueStatus.PREPARING;
+    }
+
+    public boolean canReceive() {
+        return status == IssueStatus.ISSUED;
+    }
 }

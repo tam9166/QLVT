@@ -3,6 +3,8 @@ package com.qlvt;
 import com.qlvt.entity.DestructionSlip;
 import com.qlvt.entity.InventoryCountLine;
 import com.qlvt.entity.InventoryCount;
+import com.qlvt.entity.IssueSlip;
+import com.qlvt.entity.Receipt;
 import com.qlvt.entity.StockBalance;
 import com.qlvt.entity.StockAdjustment;
 import com.qlvt.entity.StockTransfer;
@@ -16,11 +18,34 @@ import com.qlvt.enums.PurchaseRequestStatus;
 import com.qlvt.enums.StockTransferStatus;
 import com.qlvt.enums.StockAdjustmentStatus;
 import com.qlvt.enums.InventoryCountStatus;
+import com.qlvt.enums.IssueStatus;
+import com.qlvt.enums.ReceiptStatus;
 import com.qlvt.enums.RecallStatus;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class Prompt3BusinessRuleTest {
+    @Test
+    void warehouseDocumentActionsFollowWorkflowState() {
+        Receipt receipt = new Receipt();
+        assertTrue(receipt.canEdit());
+        assertTrue(receipt.canConfirm());
+        receipt.setStatus(ReceiptStatus.CONFIRMED);
+        assertFalse(receipt.canEdit());
+        assertFalse(receipt.canConfirm());
+
+        IssueSlip issue = new IssueSlip();
+        assertTrue(issue.canEdit());
+        assertTrue(issue.canIssue());
+        assertFalse(issue.canReceive());
+        issue.setStatus(IssueStatus.ISSUED);
+        assertFalse(issue.canEdit());
+        assertFalse(issue.canIssue());
+        assertTrue(issue.canReceive());
+        issue.setStatus(IssueStatus.RECEIVED);
+        assertFalse(issue.canReceive());
+    }
+
     @Test
     void inventoryCountLineCalculatesDifference() {
         InventoryCountLine line = new InventoryCountLine();
