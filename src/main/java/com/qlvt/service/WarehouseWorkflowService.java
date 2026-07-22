@@ -208,7 +208,7 @@ public class WarehouseWorkflowService {
     @Transactional
     public void approveDepartment(Long requestId, String username) {
         MaterialRequest request = requestRepository.findById(requestId).orElseThrow();
-        if (request.getStatus() != RequestStatus.SUBMITTED && request.getStatus() != RequestStatus.DRAFT) {
+        if (!request.canApproveDepartment()) {
             throw new IllegalStateException("Yêu cầu không ở trạng thái chờ trưởng khoa duyệt");
         }
         request.setStatus(RequestStatus.DEPARTMENT_APPROVED);
@@ -223,7 +223,7 @@ public class WarehouseWorkflowService {
     @Transactional
     public void reserveForRequest(Long requestId, String username) {
         MaterialRequest request = requestRepository.findById(requestId).orElseThrow();
-        if (request.getStatus() != RequestStatus.DEPARTMENT_APPROVED && request.getStatus() != RequestStatus.WAREHOUSE_APPROVED) {
+        if (!request.canReserveStock()) {
             throw new IllegalStateException("Yêu cầu phải được điều dưỡng gửi sang kho trước khi giữ hàng");
         }
         if (!reservationRepository.findByMaterialRequest_IdAndStatus(requestId, ReservationStatus.ACTIVE).isEmpty()) {
@@ -283,12 +283,7 @@ public class WarehouseWorkflowService {
     @Transactional
     public void cancelRequest(Long requestId, String username, String reason) {
         MaterialRequest request = requestRepository.findById(requestId).orElseThrow();
-        if (request.getStatus() != RequestStatus.DRAFT
-                && request.getStatus() != RequestStatus.SUBMITTED
-                && request.getStatus() != RequestStatus.DEPARTMENT_APPROVED
-                && request.getStatus() != RequestStatus.WAREHOUSE_APPROVED
-                && request.getStatus() != RequestStatus.PARTIALLY_APPROVED
-                && request.getStatus() != RequestStatus.RESERVED) {
+        if (!request.canCancel()) {
             throw new IllegalStateException("Ch\u1ec9 c\u00f3 th\u1ec3 h\u1ee7y y\u00eau c\u1ea7u tr\u01b0\u1edbc khi t\u1ea1o phi\u1ebfu xu\u1ea5t kho");
         }
         LocalDateTime now = LocalDateTime.now();
@@ -320,7 +315,7 @@ public class WarehouseWorkflowService {
     @Transactional
     public List<IssueSlip> createIssueSlips(Long requestId, String username) {
         MaterialRequest request = requestRepository.findById(requestId).orElseThrow();
-        if (request.getStatus() != RequestStatus.RESERVED && request.getStatus() != RequestStatus.PARTIALLY_APPROVED) {
+        if (!request.canCreateIssueSlip()) {
             throw new IllegalStateException("Chỉ tạo phiếu xuất cho yêu cầu đã giữ hàng");
         }
         List<IssueSlip> existing = issueSlipRepository.findByMaterialRequest_IdOrderByIdAsc(requestId);
@@ -455,7 +450,7 @@ public class WarehouseWorkflowService {
     @Transactional
     public IssueSlip createIssueSlip(Long requestId, String username) {
         MaterialRequest request = requestRepository.findById(requestId).orElseThrow();
-        if (request.getStatus() != RequestStatus.RESERVED && request.getStatus() != RequestStatus.PARTIALLY_APPROVED) {
+        if (!request.canCreateIssueSlip()) {
             throw new IllegalStateException("Chỉ tạo phiếu xuất cho yêu cầu đã giữ hàng");
         }
         IssueSlip issueSlip = issueSlipRepository.findByMaterialRequest_IdOrderByIdAsc(requestId).stream().findFirst().orElseGet(IssueSlip::new);

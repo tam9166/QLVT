@@ -12,6 +12,7 @@ import com.qlvt.entity.PurchaseOrder;
 import com.qlvt.entity.PurchaseRequest;
 import com.qlvt.entity.RecallOrder;
 import com.qlvt.entity.RecallOrderLine;
+import com.qlvt.entity.MaterialRequest;
 import com.qlvt.enums.DestructionStatus;
 import com.qlvt.enums.PurchaseOrderStatus;
 import com.qlvt.enums.PurchaseRequestStatus;
@@ -21,10 +22,35 @@ import com.qlvt.enums.InventoryCountStatus;
 import com.qlvt.enums.IssueStatus;
 import com.qlvt.enums.ReceiptStatus;
 import com.qlvt.enums.RecallStatus;
+import com.qlvt.enums.RequestStatus;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class Prompt3BusinessRuleTest {
+    @Test
+    void materialRequestActionsFollowWorkflowState() {
+        MaterialRequest request = new MaterialRequest();
+        assertTrue(request.canApproveDepartment());
+        assertFalse(request.canReserveStock());
+        assertFalse(request.canCreateIssueSlip());
+        assertTrue(request.canCancel());
+
+        request.setStatus(RequestStatus.DEPARTMENT_APPROVED);
+        assertFalse(request.canApproveDepartment());
+        assertTrue(request.canReserveStock());
+        assertFalse(request.canCreateIssueSlip());
+        assertTrue(request.canCancel());
+
+        request.setStatus(RequestStatus.PARTIALLY_APPROVED);
+        assertFalse(request.canReserveStock());
+        assertTrue(request.canCreateIssueSlip());
+        assertTrue(request.canCancel());
+
+        request.setStatus(RequestStatus.PREPARING);
+        assertFalse(request.canCreateIssueSlip());
+        assertFalse(request.canCancel());
+    }
+
     @Test
     void warehouseDocumentActionsFollowWorkflowState() {
         Receipt receipt = new Receipt();

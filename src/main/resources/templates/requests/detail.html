@@ -12,15 +12,15 @@
         </div>
         <div class="d-flex gap-2 flex-wrap justify-content-end">
             <a class="btn btn-outline-light" th:href="@{/requests}">Quay lại</a>
-            <form th:if="${request.status.name() == 'DEPARTMENT_APPROVED' || request.status.name() == 'WAREHOUSE_APPROVED'}"
+            <form th:if="${request.canReserveStock()}"
                   th:action="@{/requests/{id}/approve-warehouse(id=${request.id})}" method="post">
                 <button class="btn btn-primary">Kho xử lý và giữ hàng</button>
             </form>
-            <form th:if="${request.status.name() == 'RESERVED' || request.status.name() == 'PARTIALLY_APPROVED'}"
+            <form th:if="${request.canCreateIssueSlip()}"
                   th:action="@{/issues/from-request/{id}(id=${request.id})}" method="post">
                 <button class="btn btn-primary">Tạo phiếu xuất</button>
             </form>
-            <form th:if="${request.status.name() == 'DRAFT' || request.status.name() == 'SUBMITTED' || request.status.name() == 'DEPARTMENT_APPROVED' || request.status.name() == 'WAREHOUSE_APPROVED' || request.status.name() == 'PARTIALLY_APPROVED' || request.status.name() == 'RESERVED'}"
+            <form th:if="${request.canCancel()}"
                   th:action="@{/requests/{id}/cancel(id=${request.id})}" method="post" class="d-flex gap-1">
                 <input class="form-control form-control-sm" name="reason" placeholder="Lý do hủy (tùy chọn)">
                 <button class="btn btn-outline-danger" onclick="return confirm('Hủy yêu cầu và giải phóng tồn đã giữ?')">Hủy yêu cầu</button>

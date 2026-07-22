@@ -83,4 +83,25 @@ public class MaterialRequest {
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public List<MaterialRequestLine> getLines() { return lines; }
     public void setLines(List<MaterialRequestLine> lines) { this.lines = lines; }
+
+    public boolean canApproveDepartment() {
+        return status == RequestStatus.DRAFT || status == RequestStatus.SUBMITTED;
+    }
+
+    public boolean canReserveStock() {
+        return status == RequestStatus.DEPARTMENT_APPROVED || status == RequestStatus.WAREHOUSE_APPROVED;
+    }
+
+    public boolean canCreateIssueSlip() {
+        return status == RequestStatus.RESERVED || status == RequestStatus.PARTIALLY_APPROVED;
+    }
+
+    public boolean canCancel() {
+        return status == RequestStatus.DRAFT
+                || status == RequestStatus.SUBMITTED
+                || status == RequestStatus.DEPARTMENT_APPROVED
+                || status == RequestStatus.WAREHOUSE_APPROVED
+                || status == RequestStatus.PARTIALLY_APPROVED
+                || status == RequestStatus.RESERVED;
+    }
 }
