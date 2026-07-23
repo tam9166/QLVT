@@ -292,6 +292,20 @@ public class Prompt3WorkflowService {
     }
 
     @Transactional
+    public void rejectTransfer(Long id, String rejectionReason, String username) {
+        StockTransfer transfer = stockTransferRepository.findById(id).orElseThrow();
+        ensure(transfer.getStatus() == StockTransferStatus.SUBMITTED, "Chỉ từ chối phiếu đang chờ duyệt");
+        String reason = rejectionReason == null ? "" : rejectionReason.trim();
+        ensure(!reason.isEmpty(), "Cần nhập lý do từ chối");
+
+        transfer.setStatus(StockTransferStatus.REJECTED);
+        transfer.setNote("Từ chối: " + reason);
+        transfer.setUpdatedAt(LocalDateTime.now());
+        stockTransferRepository.save(transfer);
+        auditService.log(username, "REJECT_TRANSFER", "STOCK_TRANSFER", transfer.getTransferCode(), "Từ chối chuyển kho: " + reason);
+    }
+
+    @Transactional
     public void executeTransfer(Long id, String username) {
         StockTransfer transfer = stockTransferRepository.findById(id).orElseThrow();
         ensure(transfer.getStatus() == StockTransferStatus.APPROVED, "Phiếu phải được duyệt trước khi chuyển");

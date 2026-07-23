@@ -78,6 +78,10 @@ public class StockTransfer {
         return status == StockTransferStatus.DRAFT || status == StockTransferStatus.SUBMITTED;
     }
 
+    public boolean canReject() {
+        return status == StockTransferStatus.SUBMITTED;
+    }
+
     public boolean canExecuteTransfer() {
         return status == StockTransferStatus.APPROVED;
     }

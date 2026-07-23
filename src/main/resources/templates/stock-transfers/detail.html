@@ -22,6 +22,11 @@
                   onsubmit="return confirm('Duyệt chuyển kho?')">
                 <button class="btn btn-success">Duyệt</button>
             </form>
+            <form th:if="${item.canReject()}" th:action="@{/stock-transfers/{id}/reject(id=${item.id})}" method="post"
+                  class="d-flex gap-2" onsubmit="return confirm('Từ chối phiếu chuyển kho?')">
+                <input class="form-control form-control-sm" name="reason" required maxlength="1000" placeholder="Lý do từ chối">
+                <button class="btn btn-outline-danger">Từ chối</button>
+            </form>
             <form th:if="${item.canExecuteTransfer()}" th:action="@{/stock-transfers/{id}/transfer(id=${item.id})}" method="post"
                   onsubmit="return confirm('Thực hiện chuyển kho?')">
                 <button class="btn btn-warning">Thực hiện chuyển</button>
@@ -32,6 +37,8 @@
             </form>
         </div>
     </div>
+
+    <div th:if="${item.status.name() == 'REJECTED' and item.note != null}" class="alert alert-warning" th:text="${item.note}"></div>
 
     <div class="row g-3 mb-3">
         <div class="col-md-3">
