@@ -52,11 +52,16 @@ public class PriceHistoryService {
     }
 
     @Transactional
-    public void resolveAlert(Long alertId) {
+    public void resolveAlert(Long alertId, String username) {
         PriceAlert alert = alertRepository.findById(alertId).orElseThrow();
+        if (alert.isResolved()) {
+            throw new IllegalStateException("Cảnh báo giá đã được xử lý");
+        }
         alert.setResolved(true);
         alert.setResolvedAt(LocalDateTime.now());
         alertRepository.save(alert);
+        auditService.log(username, "RESOLVE_PRICE_ALERT", "PRICE_ALERT", String.valueOf(alertId),
+                "Đánh dấu đã xử lý cảnh báo giá vật tư " + alert.getMaterial().getCode());
     }
 
     private void createAlertIfNeeded(MaterialPriceHistory previous, MaterialPriceHistory current) {

@@ -10,8 +10,12 @@ import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Optional;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -45,5 +49,47 @@ class PriceHistoryServiceTest {
         service.recordReceiptLine(receipt, line, "admin");
 
         verify(alertRepository).save(any(PriceAlert.class));
+    }
+
+    @Test
+    void resolvingAlertRecordsActorAndAuditTrail() {
+        MaterialPriceHistoryRepository historyRepository = mock(MaterialPriceHistoryRepository.class);
+        PriceAlertRepository alertRepository = mock(PriceAlertRepository.class);
+        AuditService auditService = mock(AuditService.class);
+        PriceHistoryService service = new PriceHistoryService(
+                historyRepository, alertRepository, mock(NotificationService.class), auditService);
+        Material material = new Material();
+        material.setCode("VT001");
+        PriceAlert alert = new PriceAlert();
+        alert.setMaterial(material);
+        when(alertRepository.findById(7L)).thenReturn(Optional.of(alert));
+
+        service.resolveAlert(7L, "accountant");
+
+        assertTrue(alert.isResolved());
+        assertTrue(alert.getResolvedAt().isAfter(LocalDateTime.now().minusSeconds(2)));
+        verify(alertRepository).save(alert);
+        verify(auditService).log("accountant", "RESOLVE_PRICE_ALERT", "PRICE_ALERT", "7",
+                "Đánh dấu đã xử lý cảnh báo giá vật tư VT001");
+    }
+
+    @Test
+    void resolvedAlertCannotBeResolvedAgain() {
+        PriceAlertRepository alertRepository = mock(PriceAlertRepository.class);
+        PriceHistoryService service = new PriceHistoryService(
+                mock(MaterialPriceHistoryRepository.class), alertRepository,
+                mock(NotificationService.class), mock(AuditService.class));
+        PriceAlert alert = new PriceAlert();
+        alert.setResolved(true);
+        LocalDateTime firstResolvedAt = LocalDateTime.now().minusDays(1);
+        alert.setResolvedAt(firstResolvedAt);
+        when(alertRepository.findById(7L)).thenReturn(Optional.of(alert));
+
+        IllegalStateException error = assertThrows(IllegalStateException.class,
+                () -> service.resolveAlert(7L, "accountant"));
+
+        assertEquals("Cảnh báo giá đã được xử lý", error.getMessage());
+        assertEquals(firstResolvedAt, alert.getResolvedAt());
+        verify(alertRepository, never()).save(any());
     }
 }
