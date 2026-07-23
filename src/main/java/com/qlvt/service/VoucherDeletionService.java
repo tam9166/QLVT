@@ -11,8 +11,10 @@ import com.qlvt.entity.MaterialRequestLine;
 import com.qlvt.entity.Receipt;
 import com.qlvt.entity.ReceiptLine;
 import com.qlvt.entity.StockBalance;
+import com.qlvt.entity.StockMovement;
 import com.qlvt.entity.StockReservation;
 import com.qlvt.enums.IssueStatus;
+import com.qlvt.enums.MovementType;
 import com.qlvt.enums.ReceiptStatus;
 import com.qlvt.enums.RequestStatus;
 import com.qlvt.enums.ReservationStatus;
@@ -24,6 +26,7 @@ import com.qlvt.repository.MaterialRepository;
 import com.qlvt.repository.PriceAlertRepository;
 import com.qlvt.repository.ReceiptRepository;
 import com.qlvt.repository.StockBalanceRepository;
+import com.qlvt.repository.StockMovementRepository;
 import com.qlvt.repository.StockReservationRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,6 +41,7 @@ public class VoucherDeletionService {
     private final MaterialRepository materialRepository;
     private final MaterialBatchRepository batchRepository;
     private final StockBalanceRepository balanceRepository;
+    private final StockMovementRepository movementRepository;
     private final StockReservationRepository reservationRepository;
     private final DepartmentStockRepository departmentStockRepository;
     private final MaterialPriceHistoryRepository priceHistoryRepository;
@@ -50,6 +54,7 @@ public class VoucherDeletionService {
                                   MaterialRepository materialRepository,
                                   MaterialBatchRepository batchRepository,
                                   StockBalanceRepository balanceRepository,
+                                  StockMovementRepository movementRepository,
                                   StockReservationRepository reservationRepository,
                                   DepartmentStockRepository departmentStockRepository,
                                   MaterialPriceHistoryRepository priceHistoryRepository,
@@ -61,6 +66,7 @@ public class VoucherDeletionService {
         this.materialRepository = materialRepository;
         this.batchRepository = batchRepository;
         this.balanceRepository = balanceRepository;
+        this.movementRepository = movementRepository;
         this.reservationRepository = reservationRepository;
         this.departmentStockRepository = departmentStockRepository;
         this.priceHistoryRepository = priceHistoryRepository;
@@ -74,7 +80,7 @@ public class VoucherDeletionService {
         Receipt receipt = receiptRepository.findById(receiptId).orElseThrow();
         List<ReceiptLine> lines = receipt.getLines().stream().toList();
         if (receipt.getStatus() == ReceiptStatus.CONFIRMED) {
-            reverseConfirmedReceipt(receipt, lines);
+            reverseConfirmedReceipt(receipt, lines, username);
         }
 
         priceHistoryRepository.deleteAll(priceHistoryRepository.findByReceipt_Id(receiptId));
@@ -90,7 +96,7 @@ public class VoucherDeletionService {
     public void deleteIssue(Long issueId, String username) {
         IssueSlip issue = issueSlipRepository.findById(issueId).orElseThrow();
         if (issue.getStatus() == IssueStatus.ISSUED || issue.getStatus() == IssueStatus.RECEIVED) {
-            reverseIssuedSlip(issue);
+            reverseIssuedSlip(issue, username);
         }
         MaterialRequest request = issue.getMaterialRequest();
         String code = issue.getIssueCode();
@@ -99,9 +105,10 @@ public class VoucherDeletionService {
         auditService.log(username, "DELETE_ISSUE", "ISSUE_SLIP", code, "Xóa phiếu xuất kho");
     }
 
-    private void reverseConfirmedReceipt(Receipt receipt, List<ReceiptLine> lines) {
+    private void reverseConfirmedReceipt(Receipt receipt, List<ReceiptLine> lines, String username) {
         for (ReceiptLine line : lines) {
             Material material = line.getMaterial();
+            int before = material.getActualQuantity();
             MaterialBatch batch = batchRepository.findByMaterial_IdAndBatchNumber(material.getId(), line.getBatchNumber()).orElseThrow();
             if (batch.getQuantity() < line.getQuantity()) {
                 throw new IllegalStateException("Không thể xóa phiếu nhập vì lô " + batch.getBatchNumber() + " đã được xuất hoặc không đủ tồn để đảo.");
@@ -125,11 +132,14 @@ public class VoucherDeletionService {
             batch.setUpdatedAt(LocalDateTime.now());
             batchRepository.save(batch);
 
-            inventorySyncService.syncMaterialActualQuantity(material);
+            int after = inventorySyncService.syncMaterialActualQuantity(material);
+            movementRepository.save(reversalMovement(MovementType.OUT, material, batch, receipt.getWarehouse(),
+                    line.getLocation(), -line.getQuantity(), before, after, "DELETE_RECEIPT", receipt.getReceiptCode(),
+                    "Đảo tồn do xóa phiếu nhập", username));
         }
     }
 
-    private void reverseIssuedSlip(IssueSlip issue) {
+    private void reverseIssuedSlip(IssueSlip issue, String username) {
         for (IssueSlipLine line : issue.getLines()) {
             MaterialRequestLine requestLine = issue.getMaterialRequest().getLines().stream()
                     .filter(item -> item.getMaterial().getId().equals(line.getMaterial().getId()))
@@ -140,6 +150,7 @@ public class VoucherDeletionService {
                     reverseDepartmentStock(issue, allocation);
                 }
                 Material material = allocation.getMaterial();
+                int before = material.getActualQuantity();
                 MaterialBatch batch = allocation.getBatch();
                 StockBalance balance = balanceRepository.findByMaterial_IdAndBatch_IdAndWarehouse_IdAndLocation_Id(
                         material.getId(), batch.getId(), allocation.getWarehouse().getId(), allocation.getLocation().getId()).orElseThrow();
@@ -154,7 +165,10 @@ public class VoucherDeletionService {
                 batch.setUpdatedAt(LocalDateTime.now());
                 batchRepository.save(batch);
 
-                inventorySyncService.syncMaterialActualQuantity(material);
+                int after = inventorySyncService.syncMaterialActualQuantity(material);
+                movementRepository.save(reversalMovement(MovementType.IN, material, batch, allocation.getWarehouse(),
+                        allocation.getLocation(), allocation.getQuantity(), before, after, "DELETE_ISSUE", issue.getIssueCode(),
+                        "Hoàn tồn do xóa phiếu xuất", username));
                 material.setReservedQuantity(material.getReservedQuantity() + allocation.getQuantity());
                 materialRepository.save(material);
 
@@ -225,5 +239,27 @@ public class VoucherDeletionService {
             request.setStatus(RequestStatus.DEPARTMENT_APPROVED);
         }
         request.setUpdatedAt(LocalDateTime.now());
+    }
+
+    static StockMovement reversalMovement(MovementType type, Material material, MaterialBatch batch,
+                                          com.qlvt.entity.Warehouse warehouse,
+                                          com.qlvt.entity.StorageLocation location,
+                                          int quantity, int before, int after,
+                                          String referenceType, String referenceCode,
+                                          String note, String createdBy) {
+        StockMovement movement = new StockMovement();
+        movement.setMovementType(type);
+        movement.setMaterial(material);
+        movement.setBatch(batch);
+        movement.setWarehouse(warehouse);
+        movement.setLocation(location);
+        movement.setQuantity(quantity);
+        movement.setBeforeQuantity(before);
+        movement.setAfterQuantity(after);
+        movement.setReferenceType(referenceType);
+        movement.setReferenceCode(referenceCode);
+        movement.setNote(note);
+        movement.setCreatedBy(createdBy);
+        return movement;
     }
 }
