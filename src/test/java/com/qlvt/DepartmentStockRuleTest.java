@@ -28,4 +28,19 @@ class DepartmentStockRuleTest {
         item.setStatus(DepartmentReturnStatus.RECEIVED_BY_WAREHOUSE);
         assertFalse(item.canReceiveByWarehouse());
     }
+
+    @Test
+    void onlySubmittedDepartmentReturnCanBeRejectedOrCancelled() {
+        DepartmentReturn item = new DepartmentReturn();
+        assertFalse(item.canRejectByWarehouse());
+        assertFalse(item.canCancel());
+
+        item.setStatus(DepartmentReturnStatus.SUBMITTED);
+        assertTrue(item.canRejectByWarehouse());
+        assertTrue(item.canCancel());
+
+        item.setStatus(DepartmentReturnStatus.REJECTED);
+        assertFalse(item.canRejectByWarehouse());
+        assertFalse(item.canCancel());
+    }
 }

@@ -42,6 +42,8 @@ public class DepartmentReturn {
     public DepartmentReturnStatus getStatus() { return status; }
     public void setStatus(DepartmentReturnStatus status) { this.status = status; }
     public boolean canReceiveByWarehouse() { return status == DepartmentReturnStatus.SUBMITTED; }
+    public boolean canRejectByWarehouse() { return status == DepartmentReturnStatus.SUBMITTED; }
+    public boolean canCancel() { return status == DepartmentReturnStatus.SUBMITTED; }
     public String getReason() { return reason; }
     public void setReason(String reason) { this.reason = reason; }
     public String getCreatedBy() { return createdBy; }

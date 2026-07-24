@@ -76,6 +76,8 @@ public class DepartmentReturnController {
             throw new AccessDeniedException("Bạn không có quyền xem phiếu trả của khoa/phòng khác");
         }
         model.addAttribute("item", item);
+        model.addAttribute("canCancel", item.canCancel()
+                && dataPermissionService.canCancelDepartmentReturn(item, currentUserService.currentUser()));
         model.addAttribute("attachments", attachmentService.list(AttachmentReferenceType.DEPARTMENT_RETURN, id));
         model.addAttribute("attachmentType", AttachmentReferenceType.DEPARTMENT_RETURN);
         return "department-returns/detail";
@@ -85,6 +87,20 @@ public class DepartmentReturnController {
     public String receive(@PathVariable Long id, Authentication authentication) {
         dataPermissionService.checkCanProcessWarehouseStock();
         stockService.receiveReturn(id, authentication.getName());
+        return "redirect:/department-returns/" + id;
+    }
+
+    @PostMapping("/{id}/reject")
+    public String reject(@PathVariable Long id, @RequestParam String reason, Authentication authentication) {
+        dataPermissionService.checkCanProcessWarehouseStock();
+        stockService.rejectReturn(id, reason, authentication.getName());
+        return "redirect:/department-returns/" + id;
+    }
+
+    @PostMapping("/{id}/cancel")
+    public String cancel(@PathVariable Long id, @RequestParam String reason, Authentication authentication) {
+        dataPermissionService.checkCanCancelDepartmentReturn(id);
+        stockService.cancelReturn(id, reason, authentication.getName());
         return "redirect:/department-returns/" + id;
     }
 }

@@ -2,8 +2,10 @@ package com.qlvt.service;
 
 import com.qlvt.entity.AppUser;
 import com.qlvt.entity.MaterialRequest;
+import com.qlvt.entity.DepartmentReturn;
 import com.qlvt.enums.UserRole;
 import com.qlvt.repository.MaterialRequestRepository;
+import com.qlvt.repository.DepartmentReturnRepository;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
@@ -13,10 +15,14 @@ import java.util.Objects;
 public class DataPermissionService {
     private final CurrentUserService currentUserService;
     private final MaterialRequestRepository requestRepository;
+    private final DepartmentReturnRepository departmentReturnRepository;
 
-    public DataPermissionService(CurrentUserService currentUserService, MaterialRequestRepository requestRepository) {
+    public DataPermissionService(CurrentUserService currentUserService,
+                                 MaterialRequestRepository requestRepository,
+                                 DepartmentReturnRepository departmentReturnRepository) {
         this.currentUserService = currentUserService;
         this.requestRepository = requestRepository;
+        this.departmentReturnRepository = departmentReturnRepository;
     }
 
     public AppUser currentUser() {
@@ -74,6 +80,18 @@ public class DataPermissionService {
     public void checkCanProcessWarehouseStock() {
         if (!canProcessWarehouseStock(currentUser())) {
             throw new AccessDeniedException("Bạn không có quyền xử lý tồn kho");
+        }
+    }
+
+    public boolean canCancelDepartmentReturn(DepartmentReturn item, AppUser user) {
+        return hasAny(user, UserRole.ADMIN, UserRole.MANAGER)
+                || sameText(user.getUsername(), item.getCreatedBy());
+    }
+
+    public void checkCanCancelDepartmentReturn(Long returnId) {
+        DepartmentReturn item = departmentReturnRepository.findById(returnId).orElseThrow();
+        if (!canCancelDepartmentReturn(item, currentUser())) {
+            throw new AccessDeniedException("Bạn chỉ có thể hủy phiếu trả do mình tạo");
         }
     }
 

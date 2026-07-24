@@ -204,6 +204,50 @@ public class DepartmentStockService {
         auditService.log(username, "RECEIVE_DEPARTMENT_RETURN", "DEPARTMENT_RETURN", departmentReturn.getReturnCode(), "Kho xác nhận nhận lại vật tư từ khoa");
     }
 
+    @Transactional
+    public void rejectReturn(Long returnId, String reason, String username) {
+        DepartmentReturn departmentReturn = returnRepository.findById(returnId).orElseThrow();
+        if (!departmentReturn.canRejectByWarehouse()) {
+            throw new IllegalStateException("Chỉ từ chối phiếu trả đang chờ kho nhận");
+        }
+        String normalizedReason = requireReason(reason, "Phải nhập lý do từ chối");
+        departmentReturn.setStatus(DepartmentReturnStatus.REJECTED);
+        departmentReturn.setReason(appendDecision(departmentReturn.getReason(), "Kho từ chối", normalizedReason));
+        departmentReturn.setUpdatedAt(LocalDateTime.now());
+        returnRepository.save(departmentReturn);
+        auditService.log(username, "REJECT_DEPARTMENT_RETURN", "DEPARTMENT_RETURN",
+                departmentReturn.getReturnCode(), "Kho từ chối phiếu trả: " + normalizedReason);
+    }
+
+    @Transactional
+    public void cancelReturn(Long returnId, String reason, String username) {
+        DepartmentReturn departmentReturn = returnRepository.findById(returnId).orElseThrow();
+        if (!departmentReturn.canCancel()) {
+            throw new IllegalStateException("Chỉ hủy phiếu trả đang chờ kho nhận");
+        }
+        String normalizedReason = requireReason(reason, "Phải nhập lý do hủy");
+        departmentReturn.setStatus(DepartmentReturnStatus.CANCELLED);
+        departmentReturn.setReason(appendDecision(departmentReturn.getReason(), "Đã hủy", normalizedReason));
+        departmentReturn.setUpdatedAt(LocalDateTime.now());
+        returnRepository.save(departmentReturn);
+        auditService.log(username, "CANCEL_DEPARTMENT_RETURN", "DEPARTMENT_RETURN",
+                departmentReturn.getReturnCode(), "Hủy phiếu trả: " + normalizedReason);
+    }
+
+    private String requireReason(String reason, String message) {
+        if (reason == null || reason.isBlank()) {
+            throw new IllegalArgumentException(message);
+        }
+        return reason.trim();
+    }
+
+    private String appendDecision(String currentReason, String action, String decisionReason) {
+        String decision = action + ": " + decisionReason;
+        return currentReason == null || currentReason.isBlank()
+                ? decision
+                : currentReason.trim() + System.lineSeparator() + decision;
+    }
+
     private DepartmentStock findOrCreate(String department, Material material, MaterialBatch batch) {
         return stockRepository.findByDepartmentAndMaterial_IdAndBatch_Id(department, material.getId(), batch.getId()).orElseGet(() -> {
             DepartmentStock stock = new DepartmentStock();
