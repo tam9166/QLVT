@@ -77,6 +77,12 @@ public class InventoryCountController {
         return "redirect:/inventory-counts/" + id;
     }
 
+    @PostMapping("/{id}/cancel")
+    public String cancel(@PathVariable Long id, @RequestParam String reason, Authentication authentication) {
+        workflowService.cancelInventoryCount(id, reason, authentication.getName());
+        return "redirect:/inventory-counts/" + id;
+    }
+
     @PostMapping("/{id}/create-adjustment")
     public String createAdjustment(@PathVariable Long id, Authentication authentication) {
         var adjustment = workflowService.createAdjustmentFromCount(id, authentication.getName());

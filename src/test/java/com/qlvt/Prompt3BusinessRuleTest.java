@@ -87,16 +87,19 @@ class Prompt3BusinessRuleTest {
 
         assertTrue(count.canEditLines());
         assertTrue(count.canComplete());
+        assertTrue(count.canCancel());
         assertFalse(count.canCreateAdjustment());
 
         count.setStatus(InventoryCountStatus.COMPLETED);
         assertFalse(count.canEditLines());
         assertFalse(count.canComplete());
+        assertFalse(count.canCancel());
         assertTrue(count.canCreateAdjustment());
 
         count.setStatus(InventoryCountStatus.CANCELLED);
         assertFalse(count.canEditLines());
         assertFalse(count.canComplete());
+        assertFalse(count.canCancel());
         assertFalse(count.canCreateAdjustment());
     }
 

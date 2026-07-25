@@ -61,6 +61,10 @@ public class InventoryCount {
         return canEditLines();
     }
 
+    public boolean canCancel() {
+        return canEditLines();
+    }
+
     public boolean canCreateAdjustment() {
         return status == InventoryCountStatus.COMPLETED;
     }

@@ -140,6 +140,22 @@ public class Prompt3WorkflowService {
     }
 
     @Transactional
+    public void cancelInventoryCount(Long countId, String reason, String username) {
+        InventoryCount count = inventoryCountRepository.findById(countId).orElseThrow();
+        ensure(count.canCancel(), "Chỉ được hủy đợt kiểm kê đang thực hiện");
+        ensure(reason != null && !reason.isBlank(), "Phải nhập lý do hủy");
+        String cancellationReason = reason.trim();
+        count.setStatus(InventoryCountStatus.CANCELLED);
+        count.setNote(count.getNote() == null || count.getNote().isBlank()
+                ? "Lý do hủy: " + cancellationReason
+                : count.getNote().trim() + "\nLý do hủy: " + cancellationReason);
+        count.setUpdatedAt(LocalDateTime.now());
+        inventoryCountRepository.save(count);
+        auditService.log(username, "CANCEL_INVENTORY_COUNT", "INVENTORY_COUNT", count.getCountCode(),
+                "Hủy đợt kiểm kê: " + cancellationReason);
+    }
+
+    @Transactional
     public StockAdjustment createAdjustmentFromCount(Long countId, String username) {
         InventoryCount count = inventoryCountRepository.findById(countId).orElseThrow();
         ensure(count.getStatus() == InventoryCountStatus.COMPLETED, "Chỉ tạo điều chỉnh từ kiểm kê đã hoàn tất");
