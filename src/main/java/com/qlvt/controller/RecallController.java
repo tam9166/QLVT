@@ -43,6 +43,11 @@ public class RecallController {
     }
     @PostMapping("/{id}/activate")
     public String activate(@PathVariable Long id, Authentication authentication) { workflowService.activateRecall(id, authentication.getName()); return "redirect:/recalls/" + id; }
+    @PostMapping("/{id}/cancel")
+    public String cancel(@PathVariable Long id, @RequestParam String reason, Authentication authentication) {
+        workflowService.cancelRecall(id, reason, authentication.getName());
+        return "redirect:/recalls/" + id;
+    }
     @PostMapping("/{id}/department-response")
     public String response(@PathVariable Long id, @RequestParam String department, @RequestParam int remainingQuantity,
                            @RequestParam int usedQuantity, @RequestParam int returnedQuantity, @RequestParam(required = false) String note,

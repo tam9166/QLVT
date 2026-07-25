@@ -245,11 +245,13 @@ class Prompt3BusinessRuleTest {
         recall.getLines().add(line);
 
         assertTrue(recall.canActivate());
+        assertTrue(recall.canCancel());
         assertFalse(recall.canRespond());
         assertFalse(recall.canComplete());
 
         recall.setStatus(RecallStatus.ACTIVE);
         assertFalse(recall.canActivate());
+        assertFalse(recall.canCancel());
         assertTrue(recall.canRespond());
         assertTrue(recall.hasPendingResponses());
         assertFalse(recall.canComplete());

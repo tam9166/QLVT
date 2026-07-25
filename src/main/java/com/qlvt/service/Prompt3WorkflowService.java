@@ -375,6 +375,19 @@ public class Prompt3WorkflowService {
     }
 
     @Transactional
+    public void cancelRecall(Long id, String reason, String username) {
+        RecallOrder recall = recallOrderRepository.findById(id).orElseThrow();
+        ensure(recall.canCancel(), "Chỉ được hủy lệnh thu hồi nháp");
+        ensure(reason != null && !reason.isBlank(), "Phải nhập lý do hủy");
+        recall.setStatus(RecallStatus.CANCELLED);
+        recall.setNote(reason.trim());
+        recall.setUpdatedAt(LocalDateTime.now());
+        recallOrderRepository.save(recall);
+        auditService.log(username, "CANCEL_RECALL", "RECALL_ORDER", recall.getRecallCode(),
+                "Hủy lệnh thu hồi: " + reason.trim());
+    }
+
+    @Transactional
     public void respondRecall(Long recallId, String department, int remaining, int used, int returned, String note, String username) {
         ensure(remaining >= 0 && used >= 0 && returned >= 0, "Số lượng phản hồi không được âm");
         RecallOrder recall = recallOrderRepository.findById(recallId).orElseThrow();

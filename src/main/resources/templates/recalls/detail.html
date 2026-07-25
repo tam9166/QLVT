@@ -27,6 +27,14 @@
                   onsubmit="return confirm('Hoàn tất lệnh thu hồi?')">
                 <button class="btn btn-success">Hoàn tất</button>
             </form>
+            <form th:if="${item.canCancel()}"
+                  th:action="@{/recalls/{id}/cancel(id=${item.id})}"
+                  method="post"
+                  class="d-flex gap-2"
+                  onsubmit="return confirm('Hủy lệnh thu hồi nháp này?')">
+                <input class="form-control" name="reason" placeholder="Lý do hủy" required>
+                <button class="btn btn-outline-danger">Hủy lệnh</button>
+            </form>
             <a class="btn btn-outline-secondary" th:href="@{/recalls}">Quay lại</a>
         </div>
     </div>

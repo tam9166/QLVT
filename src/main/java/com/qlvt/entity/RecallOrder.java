@@ -59,6 +59,10 @@ public class RecallOrder {
         return status == RecallStatus.DRAFT;
     }
 
+    public boolean canCancel() {
+        return status == RecallStatus.DRAFT;
+    }
+
     public boolean canRespond() {
         return status == RecallStatus.ACTIVE;
     }
