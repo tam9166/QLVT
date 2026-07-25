@@ -222,10 +222,12 @@ class Prompt3BusinessRuleTest {
         PurchaseRequest request = new PurchaseRequest();
         assertTrue(request.canApprove());
         assertTrue(request.canCancel());
+        assertTrue(request.canReject());
         assertFalse(request.canCreateOrder());
         request.setStatus(PurchaseRequestStatus.APPROVED);
         assertFalse(request.canApprove());
         assertFalse(request.canCancel());
+        assertFalse(request.canReject());
         assertTrue(request.canCreateOrder());
 
         PurchaseOrder order = new PurchaseOrder();

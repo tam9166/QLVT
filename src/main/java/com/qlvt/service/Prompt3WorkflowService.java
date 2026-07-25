@@ -615,6 +615,22 @@ public class Prompt3WorkflowService {
     }
 
     @Transactional
+    public void rejectPurchaseRequest(Long id, String username, String reason) {
+        PurchaseRequest request = purchaseRequestRepository.findById(id).orElseThrow();
+        ensure(request.canReject(), "Chỉ từ chối được đề nghị mua chưa duyệt");
+        String decisionReason = requireDecisionReason(reason, "Lý do từ chối là bắt buộc");
+        ensureCanApprove(username, request.getCreatedBy());
+        request.setStatus(PurchaseRequestStatus.REJECTED);
+        request.setApprovedBy(username);
+        request.setApprovedAt(LocalDateTime.now());
+        request.setReason(appendDecision(request.getReason(), "Từ chối", decisionReason));
+        request.setUpdatedAt(LocalDateTime.now());
+        purchaseRequestRepository.save(request);
+        auditService.log(username, "REJECT_PURCHASE_REQUEST", "PURCHASE_REQUEST", request.getRequestCode(),
+                "Từ chối đề nghị mua: " + decisionReason);
+    }
+
+    @Transactional
     public PurchaseOrder createPurchaseOrder(Long purchaseRequestId, Long supplierId, LocalDate expectedDate, String username) {
         PurchaseRequest request = purchaseRequestRepository.findById(purchaseRequestId).orElseThrow();
         ensure(request.getStatus() == PurchaseRequestStatus.APPROVED, "Đề nghị mua phải được duyệt");

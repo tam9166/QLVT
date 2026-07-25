@@ -54,6 +54,10 @@ public class PurchaseRequest {
         return status == PurchaseRequestStatus.DRAFT || status == PurchaseRequestStatus.SUBMITTED;
     }
 
+    public boolean canReject() {
+        return status == PurchaseRequestStatus.DRAFT || status == PurchaseRequestStatus.SUBMITTED;
+    }
+
     public boolean canCreateOrder() {
         return status == PurchaseRequestStatus.APPROVED;
     }

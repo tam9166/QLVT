@@ -53,6 +53,11 @@ public class PurchaseController {
         workflowService.cancelPurchaseRequest(id, authentication.getName(), reason);
         return "redirect:/purchases/requests/" + id;
     }
+    @PostMapping("/requests/{id}/reject")
+    public String rejectRequest(@PathVariable Long id, @RequestParam String reason, Authentication authentication) {
+        workflowService.rejectPurchaseRequest(id, authentication.getName(), reason);
+        return "redirect:/purchases/requests/" + id;
+    }
     @PostMapping("/requests/{id}/order")
     public String createOrder(@PathVariable Long id, @RequestParam Long supplierId, @RequestParam(required = false) LocalDate expectedDeliveryDate, Authentication authentication) {
         var order = workflowService.createPurchaseOrder(id, supplierId, expectedDeliveryDate, authentication.getName());
