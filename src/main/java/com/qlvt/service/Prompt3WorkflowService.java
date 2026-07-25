@@ -491,6 +491,35 @@ public class Prompt3WorkflowService {
     }
 
     @Transactional
+    public void rejectDestruction(Long id, String reason, String username) {
+        DestructionSlip slip = destructionSlipRepository.findById(id).orElseThrow();
+        ensure(slip.canReject(), "Chỉ từ chối phiếu đang chờ duyệt");
+        String normalizedReason = requireDecisionReason(reason, "Phải nhập lý do từ chối");
+        LocalDateTime now = LocalDateTime.now();
+        slip.setStatus(DestructionStatus.REJECTED);
+        slip.setRejectedBy(username);
+        slip.setRejectedAt(now);
+        slip.setRejectedReason(normalizedReason);
+        slip.setUpdatedAt(now);
+        destructionSlipRepository.save(slip);
+        auditService.log(username, "REJECT_DESTRUCTION", "DESTRUCTION", slip.getDestructionCode(),
+                "Từ chối phiếu hủy: " + normalizedReason);
+    }
+
+    @Transactional
+    public void cancelDestruction(Long id, String reason, String username) {
+        DestructionSlip slip = destructionSlipRepository.findById(id).orElseThrow();
+        ensure(slip.canCancel(), "Chỉ hủy phiếu hủy vật tư ở trạng thái nháp");
+        String normalizedReason = requireDecisionReason(reason, "Phải nhập lý do hủy phiếu");
+        slip.setStatus(DestructionStatus.CANCELLED);
+        slip.setNote(appendDecision(slip.getNote(), "Đã hủy phiếu", normalizedReason));
+        slip.setUpdatedAt(LocalDateTime.now());
+        destructionSlipRepository.save(slip);
+        auditService.log(username, "CANCEL_DESTRUCTION", "DESTRUCTION", slip.getDestructionCode(),
+                "Hủy phiếu hủy vật tư: " + normalizedReason);
+    }
+
+    @Transactional
     public void destroy(Long id, String username) {
         DestructionSlip slip = destructionSlipRepository.findById(id).orElseThrow();
         ensure(slip.getStatus() == DestructionStatus.APPROVED_BY_ACCOUNTANT || slip.getStatus() == DestructionStatus.APPROVED, "Phiếu phải hoàn tất duyệt hai bước trước khi hủy");
@@ -780,6 +809,18 @@ public class Prompt3WorkflowService {
     private String nextCode(String prefix, java.util.function.Predicate<String> exists) {
         String code = prefix + "-" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
         return exists.test(code) ? code + "-1" : code;
+    }
+
+    private String requireDecisionReason(String reason, String message) {
+        if (reason == null || reason.isBlank()) {
+            throw new IllegalArgumentException(message);
+        }
+        return reason.trim();
+    }
+
+    private String appendDecision(String current, String action, String reason) {
+        String decision = action + ": " + reason;
+        return current == null || current.isBlank() ? decision : current + System.lineSeparator() + decision;
     }
 
     private void ensure(boolean condition, String message) {

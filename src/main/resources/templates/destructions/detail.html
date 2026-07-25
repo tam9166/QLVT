@@ -14,6 +14,14 @@
             </div>
         </div>
         <div class="d-flex flex-wrap gap-2 justify-content-end">
+            <form th:if="${item.canReject()}" th:action="@{/destructions/{id}/reject(id=${item.id})}" method="post" class="d-flex gap-2">
+                <input class="form-control" name="reason" required placeholder="Lý do từ chối">
+                <button class="btn btn-outline-danger">Từ chối</button>
+            </form>
+            <form th:if="${item.canCancel()}" th:action="@{/destructions/{id}/cancel(id=${item.id})}" method="post" class="d-flex gap-2" onsubmit="return confirm('Hủy phiếu hủy vật tư này?')">
+                <input class="form-control" name="reason" required placeholder="Lý do hủy phiếu">
+                <button class="btn btn-secondary">Hủy phiếu</button>
+            </form>
             <form th:if="${item.canSubmit()}" th:action="@{/destructions/{id}/submit(id=${item.id})}" method="post">
                 <button class="btn btn-outline-primary">Gửi duyệt</button>
             </form>
@@ -28,6 +36,10 @@
             </form>
         </div>
     </div>
+    <div th:if="${item.rejectedReason != null and !item.rejectedReason.isBlank()}" class="alert alert-danger">
+        <strong>Lý do từ chối:</strong> <span th:text="${item.rejectedReason}"></span>
+    </div>
+    <div th:if="${item.note != null and !item.note.isBlank()}" class="alert alert-light border" style="white-space: pre-line" th:text="${item.note}"></div>
     <table class="table table-hover">
         <thead>
         <tr><th>Vật tư</th><th>Lô</th><th>Kho</th><th>Vị trí</th><th>Số lượng</th><th>Lý do</th></tr>

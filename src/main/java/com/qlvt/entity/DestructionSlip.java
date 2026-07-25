@@ -90,4 +90,12 @@ public class DestructionSlip {
     public boolean canDestroy() {
         return status == DestructionStatus.APPROVED || status == DestructionStatus.APPROVED_BY_ACCOUNTANT;
     }
+
+    public boolean canReject() {
+        return status == DestructionStatus.SUBMITTED || status == DestructionStatus.APPROVED_BY_MANAGER;
+    }
+
+    public boolean canCancel() {
+        return status == DestructionStatus.DRAFT;
+    }
 }

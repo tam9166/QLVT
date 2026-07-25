@@ -48,6 +48,10 @@ public class DestructionController {
     public String approve(@PathVariable Long id, Authentication authentication) { workflowService.approveDestruction(id, authentication.getName()); return "redirect:/destructions/" + id; }
     @PostMapping("/{id}/approve-accountant")
     public String approveAccountant(@PathVariable Long id, Authentication authentication) { workflowService.approveDestructionByAccountant(id, authentication.getName()); return "redirect:/destructions/" + id; }
+    @PostMapping("/{id}/reject")
+    public String reject(@PathVariable Long id, @RequestParam String reason, Authentication authentication) { workflowService.rejectDestruction(id, reason, authentication.getName()); return "redirect:/destructions/" + id; }
+    @PostMapping("/{id}/cancel")
+    public String cancel(@PathVariable Long id, @RequestParam String reason, Authentication authentication) { workflowService.cancelDestruction(id, reason, authentication.getName()); return "redirect:/destructions/" + id; }
     @PostMapping("/{id}/destroy")
     public String destroy(@PathVariable Long id, Authentication authentication) { workflowService.destroy(id, authentication.getName()); return "redirect:/destructions/" + id; }
 }

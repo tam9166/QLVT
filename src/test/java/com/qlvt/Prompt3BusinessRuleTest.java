@@ -172,6 +172,23 @@ class Prompt3BusinessRuleTest {
 
         assertFalse(slip.canApproveAccountant());
         assertTrue(slip.canDestroy());
+        assertFalse(slip.canReject());
+        assertFalse(slip.canCancel());
+
+        slip.setStatus(DestructionStatus.DRAFT);
+        assertTrue(slip.canCancel());
+        assertFalse(slip.canReject());
+
+        slip.setStatus(DestructionStatus.SUBMITTED);
+        assertFalse(slip.canCancel());
+        assertTrue(slip.canReject());
+
+        slip.setStatus(DestructionStatus.APPROVED_BY_MANAGER);
+        assertTrue(slip.canReject());
+
+        slip.setStatus(DestructionStatus.REJECTED);
+        assertFalse(slip.canReject());
+        assertFalse(slip.canCancel());
     }
 
     @Test
