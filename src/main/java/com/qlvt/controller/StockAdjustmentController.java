@@ -48,4 +48,16 @@ public class StockAdjustmentController {
 
     @PostMapping("/{id}/approve-accountant")
     public String approveAccountant(@PathVariable Long id, Authentication authentication) { workflowService.approveAdjustmentByAccountant(id, authentication.getName()); return "redirect:/stock-adjustments/" + id; }
+
+    @PostMapping("/{id}/reject")
+    public String reject(@PathVariable Long id, @RequestParam String reason, Authentication authentication) {
+        workflowService.rejectAdjustment(id, reason, authentication.getName());
+        return "redirect:/stock-adjustments/" + id;
+    }
+
+    @PostMapping("/{id}/cancel")
+    public String cancel(@PathVariable Long id, @RequestParam String reason, Authentication authentication) {
+        workflowService.cancelAdjustment(id, reason, authentication.getName());
+        return "redirect:/stock-adjustments/" + id;
+    }
 }

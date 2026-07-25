@@ -23,7 +23,19 @@
             <form th:if="${item.canApproveAccountant()}" th:action="@{/stock-adjustments/{id}/approve-accountant(id=${item.id})}" method="post" onsubmit="return confirm('Kế toán duyệt bước 2 và áp dụng điều chỉnh?')">
                 <button class="btn btn-warning">Kế toán duyệt bước 2</button>
             </form>
+            <form th:if="${item.canReject()}" th:action="@{/stock-adjustments/{id}/reject(id=${item.id})}" method="post" class="d-flex gap-2">
+                <input class="form-control" name="reason" required maxlength="1000" placeholder="Lý do từ chối">
+                <button class="btn btn-outline-danger" onclick="return confirm('Từ chối phiếu điều chỉnh này?')">Từ chối</button>
+            </form>
+            <form th:if="${item.canCancel()}" th:action="@{/stock-adjustments/{id}/cancel(id=${item.id})}" method="post" class="d-flex gap-2">
+                <input class="form-control" name="reason" required maxlength="1000" placeholder="Lý do hủy">
+                <button class="btn btn-outline-danger" onclick="return confirm('Hủy phiếu điều chỉnh này?')">Hủy phiếu</button>
+            </form>
         </div>
+    </div>
+    <div class="alert alert-danger" th:if="${item.rejectedReason != null and !item.rejectedReason.isBlank()}">
+        <strong>Lý do từ chối:</strong> <span th:text="${item.rejectedReason}"></span>
+        <span class="ms-2 text-muted" th:if="${item.rejectedBy != null}" th:text="${'Bởi ' + item.rejectedBy}"></span>
     </div>
     <table class="table table-hover">
         <thead>

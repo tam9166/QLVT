@@ -87,4 +87,13 @@ public class StockAdjustment {
     public boolean canApproveAccountant() {
         return status == StockAdjustmentStatus.APPROVED_BY_MANAGER;
     }
+
+    public boolean canReject() {
+        return status == StockAdjustmentStatus.SUBMITTED
+                || status == StockAdjustmentStatus.APPROVED_BY_MANAGER;
+    }
+
+    public boolean canCancel() {
+        return status == StockAdjustmentStatus.DRAFT;
+    }
 }

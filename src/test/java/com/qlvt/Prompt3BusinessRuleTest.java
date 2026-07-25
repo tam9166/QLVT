@@ -197,21 +197,28 @@ class Prompt3BusinessRuleTest {
     @Test
     void stockAdjustmentActionsFollowWorkflowState() {
         StockAdjustment adjustment = new StockAdjustment();
+        assertTrue(adjustment.canCancel());
+        assertFalse(adjustment.canReject());
 
         assertTrue(adjustment.canSubmit());
         assertFalse(adjustment.canApproveManager());
         assertFalse(adjustment.canApproveAccountant());
 
         adjustment.setStatus(StockAdjustmentStatus.SUBMITTED);
+        assertFalse(adjustment.canCancel());
+        assertTrue(adjustment.canReject());
         assertFalse(adjustment.canSubmit());
         assertTrue(adjustment.canApproveManager());
         assertFalse(adjustment.canApproveAccountant());
 
         adjustment.setStatus(StockAdjustmentStatus.APPROVED_BY_MANAGER);
+        assertTrue(adjustment.canReject());
         assertFalse(adjustment.canApproveManager());
         assertTrue(adjustment.canApproveAccountant());
 
         adjustment.setStatus(StockAdjustmentStatus.COMPLETED);
+        assertFalse(adjustment.canCancel());
+        assertFalse(adjustment.canReject());
         assertFalse(adjustment.canSubmit());
         assertFalse(adjustment.canApproveManager());
         assertFalse(adjustment.canApproveAccountant());

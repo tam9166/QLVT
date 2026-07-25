@@ -259,6 +259,35 @@ public class Prompt3WorkflowService {
     }
 
     @Transactional
+    public void rejectAdjustment(Long adjustmentId, String reason, String username) {
+        StockAdjustment adjustment = stockAdjustmentRepository.findById(adjustmentId).orElseThrow();
+        ensure(adjustment.canReject(), "Chỉ từ chối phiếu điều chỉnh đang chờ duyệt");
+        String decisionReason = requireDecisionReason(reason, "Phải nhập lý do từ chối");
+        LocalDateTime now = LocalDateTime.now();
+        adjustment.setStatus(StockAdjustmentStatus.REJECTED);
+        adjustment.setRejectedBy(username);
+        adjustment.setRejectedAt(now);
+        adjustment.setRejectedReason(decisionReason);
+        adjustment.setUpdatedAt(now);
+        stockAdjustmentRepository.save(adjustment);
+        auditService.log(username, "REJECT_ADJUSTMENT", "STOCK_ADJUSTMENT", adjustment.getAdjustmentCode(),
+                "Từ chối phiếu điều chỉnh tồn: " + decisionReason);
+    }
+
+    @Transactional
+    public void cancelAdjustment(Long adjustmentId, String reason, String username) {
+        StockAdjustment adjustment = stockAdjustmentRepository.findById(adjustmentId).orElseThrow();
+        ensure(adjustment.canCancel(), "Chỉ hủy phiếu điều chỉnh đang nháp");
+        String decisionReason = requireDecisionReason(reason, "Phải nhập lý do hủy");
+        adjustment.setStatus(StockAdjustmentStatus.CANCELLED);
+        adjustment.setReason(appendDecision(adjustment.getReason(), "Đã hủy phiếu", decisionReason));
+        adjustment.setUpdatedAt(LocalDateTime.now());
+        stockAdjustmentRepository.save(adjustment);
+        auditService.log(username, "CANCEL_ADJUSTMENT", "STOCK_ADJUSTMENT", adjustment.getAdjustmentCode(),
+                "Hủy phiếu điều chỉnh tồn: " + decisionReason);
+    }
+
+    @Transactional
     public StockTransfer createTransfer(Long fromWarehouseId, Long toWarehouseId, Long balanceId, Long toLocationId, int quantity, String reason, String username) {
         ensure(quantity > 0, "Số lượng chuyển phải lớn hơn 0");
         ensure(!fromWarehouseId.equals(toWarehouseId), "Kho đi và kho đến phải khác nhau");
