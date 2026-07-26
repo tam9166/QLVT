@@ -49,7 +49,7 @@ public class PurchaseController {
     @PostMapping("/requests/{id}/approve")
     public String approveRequest(@PathVariable Long id, Authentication authentication) { workflowService.approvePurchaseRequest(id, authentication.getName()); return "redirect:/purchases/requests/" + id; }
     @PostMapping("/requests/{id}/cancel")
-    public String cancelRequest(@PathVariable Long id, @RequestParam(required = false) String reason, Authentication authentication) {
+    public String cancelRequest(@PathVariable Long id, @RequestParam String reason, Authentication authentication) {
         workflowService.cancelPurchaseRequest(id, authentication.getName(), reason);
         return "redirect:/purchases/requests/" + id;
     }

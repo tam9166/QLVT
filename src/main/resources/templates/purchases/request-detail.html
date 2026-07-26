@@ -15,12 +15,19 @@
               method="post">
             <button class="btn btn-success">Duyệt đề nghị</button>
         </form>
-        <form th:if="${item.canCancel()}" th:action="@{/purchases/requests/{id}/cancel(id=${item.id})}" method="post">
-            <input type="hidden" name="reason" value="Hủy đề nghị mua">
-            <button class="btn btn-outline-danger" onclick="return confirm('Hủy đề nghị mua này?')">Hủy đề nghị</button>
-        </form>
         </div>
     </div>
+
+    <form th:if="${item.canCancel()}" th:action="@{/purchases/requests/{id}/cancel(id=${item.id})}"
+          method="post" class="card card-body mb-3">
+        <label class="form-label" for="cancelReason">Lý do hủy đề nghị mua</label>
+        <div class="d-flex gap-2">
+            <input id="cancelReason" class="form-control" name="reason" required maxlength="1000"
+                   placeholder="Nhập lý do hủy đề nghị mua">
+            <button class="btn btn-outline-danger text-nowrap"
+                    onclick="return confirm('Hủy đề nghị mua này?')">Hủy đề nghị</button>
+        </div>
+    </form>
 
     <form th:if="${item.canReject()}" th:action="@{/purchases/requests/{id}/reject(id=${item.id})}"
           method="post" class="card card-body mb-3">

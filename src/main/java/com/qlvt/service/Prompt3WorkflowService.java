@@ -651,11 +651,13 @@ public class Prompt3WorkflowService {
     public void cancelPurchaseRequest(Long id, String username, String reason) {
         PurchaseRequest request = purchaseRequestRepository.findById(id).orElseThrow();
         ensure(request.canCancel(), "Chỉ hủy được đề nghị mua chưa duyệt");
+        String cancellationReason = requireDecisionReason(reason, "Phải nhập lý do hủy đề nghị mua");
         request.setStatus(PurchaseRequestStatus.CANCELLED);
+        request.setReason(appendDecision(request.getReason(), "Đã hủy đề nghị", cancellationReason));
         request.setUpdatedAt(LocalDateTime.now());
         purchaseRequestRepository.save(request);
         auditService.log(username, "CANCEL_PURCHASE_REQUEST", "PURCHASE_REQUEST", request.getRequestCode(),
-                reason == null || reason.isBlank() ? "Hủy đề nghị mua" : "Hủy đề nghị mua: " + reason.trim());
+                "Hủy đề nghị mua: " + cancellationReason);
     }
 
     @Transactional
