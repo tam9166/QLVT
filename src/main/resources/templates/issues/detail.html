@@ -28,6 +28,14 @@
                 <form th:if="${issue.canReceive()}" th:action="@{/issues/{id}/receive(id=${issue.id})}" method="post">
                     <button class="btn btn-primary"><i class="bi bi-check2-circle"></i> Xác nhận nhận</button>
                 </form>
+                <form th:if="${issue.canCancel()}"
+                      th:action="@{/issues/{id}/cancel(id=${issue.id})}"
+                      method="post"
+                      class="d-flex gap-2"
+                      onsubmit="return confirm('Hủy phiếu xuất này và giải phóng toàn bộ tồn giữ?')">
+                    <input class="form-control" name="reason" required maxlength="500" placeholder="Lý do hủy">
+                    <button class="btn btn-outline-danger"><i class="bi bi-x-circle"></i> Hủy phiếu</button>
+                </form>
                 <form sec:authorize="hasRole('ADMIN')"
                       th:action="@{/issues/{id}/delete(id=${issue.id})}"
                       method="post"
@@ -62,6 +70,11 @@
                     <strong th:text="${issue.issuedAt != null ? #temporals.format(issue.issuedAt, 'dd/MM/yyyy HH:mm') : '-'}"></strong>
                 </div>
             </div>
+        </div>
+
+        <div class="alert alert-secondary" th:if="${issue.note != null and !#strings.isEmpty(issue.note)}">
+            <strong>Ghi chú:</strong>
+            <span class="text-pre-wrap" th:text="${issue.note}"></span>
         </div>
 
         <div class="table-responsive">

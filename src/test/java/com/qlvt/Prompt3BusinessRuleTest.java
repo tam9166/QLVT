@@ -69,12 +69,22 @@ class Prompt3BusinessRuleTest {
         IssueSlip issue = new IssueSlip();
         assertTrue(issue.canEdit());
         assertTrue(issue.canIssue());
+        assertTrue(issue.canCancel());
         assertFalse(issue.canReceive());
         issue.setStatus(IssueStatus.ISSUED);
         assertFalse(issue.canEdit());
         assertFalse(issue.canIssue());
+        assertFalse(issue.canCancel());
         assertTrue(issue.canReceive());
         issue.setStatus(IssueStatus.RECEIVED);
+        assertFalse(issue.canEdit());
+        assertFalse(issue.canIssue());
+        assertFalse(issue.canCancel());
+        assertFalse(issue.canReceive());
+        issue.setStatus(IssueStatus.CANCELLED);
+        assertFalse(issue.canEdit());
+        assertFalse(issue.canIssue());
+        assertFalse(issue.canCancel());
         assertFalse(issue.canReceive());
     }
 

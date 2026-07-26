@@ -783,6 +783,65 @@ public class WarehouseWorkflowService {
         auditService.log(username, "RECEIVE_ISSUE", "ISSUE_SLIP", issueSlip.getIssueCode(), "Khoa xác nhận đã nhận vật tư");
     }
 
+    @Transactional
+    public void cancelIssue(Long issueId, String cancellationReason, String username) {
+        IssueSlip issueSlip = issueSlipRepository.findById(issueId).orElseThrow();
+        if (!issueSlip.canCancel()) {
+            throw new IllegalStateException("Chỉ được hủy phiếu xuất chưa xuất kho");
+        }
+        String reason = cancellationReason == null ? "" : cancellationReason.trim();
+        if (reason.isEmpty()) {
+            throw new IllegalArgumentException("Vui lòng nhập lý do hủy phiếu xuất");
+        }
+
+        MaterialRequest request = issueSlip.getMaterialRequest();
+        for (IssueSlipLine slipLine : issueSlip.getLines()) {
+            MaterialRequestLine requestLine = request.getLines().stream()
+                    .filter(line -> line.getMaterial().getId().equals(slipLine.getMaterial().getId()))
+                    .findFirst()
+                    .orElseThrow();
+            List<StockReservation> reservations = reservationRepository
+                    .findByMaterialRequestLine_IdAndStatus(requestLine.getId(), ReservationStatus.ACTIVE);
+            for (StockReservation reservation : reservations) {
+                int quantity = reservation.getReservedQuantity();
+                StockBalance balance = reservation.getStockBalance();
+                balance.setReservedQuantity(Math.max(0, balance.getReservedQuantity() - quantity));
+                balance.setUpdatedAt(LocalDateTime.now());
+                balance.validate();
+                balanceRepository.save(balance);
+
+                Material material = reservation.getMaterial();
+                material.setReservedQuantity(Math.max(0, material.getReservedQuantity() - quantity));
+                materialRepository.save(material);
+
+                reservation.setStatus(ReservationStatus.CANCELLED);
+                reservationRepository.save(reservation);
+            }
+            requestLine.setStatus("CANCELLED");
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        issueSlip.setStatus(IssueStatus.CANCELLED);
+        issueSlip.setNote(appendNote(issueSlip.getNote(), "Lý do hủy: " + reason));
+        issueSlip.setUpdatedAt(now);
+        issueSlipRepository.save(issueSlip);
+
+        boolean allCancelled = issueSlipRepository.findByMaterialRequest_IdOrderByIdAsc(request.getId()).stream()
+                .allMatch(item -> item.getStatus() == IssueStatus.CANCELLED || item.getId().equals(issueSlip.getId()));
+        if (allCancelled) {
+            request.setStatus(RequestStatus.CANCELLED);
+            request.setNote(appendNote(request.getNote(), "Lý do hủy phiếu xuất: " + reason));
+        }
+        request.setUpdatedAt(now);
+        requestRepository.save(request);
+        auditService.log(username, "CANCEL_ISSUE", "ISSUE_SLIP", issueSlip.getIssueCode(),
+                "Hủy phiếu xuất. Lý do: " + reason);
+    }
+
+    private String appendNote(String currentNote, String detail) {
+        return currentNote == null || currentNote.isBlank() ? detail : currentNote + System.lineSeparator() + detail;
+    }
+
     private StockBalance findOrCreateBalance(Material material, MaterialBatch batch, Warehouse warehouse, StorageLocation location) {
         return balanceRepository.findByMaterial_IdAndBatch_IdAndWarehouse_IdAndLocation_Id(
                 material.getId(), batch.getId(), warehouse.getId(), location.getId()).orElseGet(() -> {

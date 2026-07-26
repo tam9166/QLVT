@@ -79,4 +79,8 @@ public class IssueSlip {
     public boolean canReceive() {
         return status == IssueStatus.ISSUED;
     }
+
+    public boolean canCancel() {
+        return status == IssueStatus.DRAFT || status == IssueStatus.PREPARING;
+    }
 }
