@@ -128,12 +128,14 @@ class Prompt3BusinessRuleTest {
         assertTrue(transfer.canSubmit());
         assertTrue(transfer.canApprove());
         assertFalse(transfer.canReject());
+        assertTrue(transfer.canCancel());
         assertFalse(transfer.canExecuteTransfer());
         assertFalse(transfer.canReceive());
 
         transfer.setStatus(StockTransferStatus.SUBMITTED);
         assertTrue(transfer.canApprove());
         assertTrue(transfer.canReject());
+        assertFalse(transfer.canCancel());
 
         transfer.setStatus(StockTransferStatus.APPROVED);
 
@@ -147,6 +149,14 @@ class Prompt3BusinessRuleTest {
 
         assertFalse(transfer.canExecuteTransfer());
         assertTrue(transfer.canReceive());
+
+        transfer.setStatus(StockTransferStatus.CANCELLED);
+        assertFalse(transfer.canSubmit());
+        assertFalse(transfer.canApprove());
+        assertFalse(transfer.canReject());
+        assertFalse(transfer.canCancel());
+        assertFalse(transfer.canExecuteTransfer());
+        assertFalse(transfer.canReceive());
     }
 
     @Test

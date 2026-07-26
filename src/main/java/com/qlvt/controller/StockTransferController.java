@@ -54,6 +54,11 @@ public class StockTransferController {
         workflowService.rejectTransfer(id, reason, authentication.getName());
         return "redirect:/stock-transfers/" + id;
     }
+    @PostMapping("/{id}/cancel")
+    public String cancel(@PathVariable Long id, @RequestParam String reason, Authentication authentication) {
+        workflowService.cancelTransfer(id, reason, authentication.getName());
+        return "redirect:/stock-transfers/" + id;
+    }
     @PostMapping("/{id}/transfer")
     public String transfer(@PathVariable Long id, Authentication authentication) { workflowService.executeTransfer(id, authentication.getName()); return "redirect:/stock-transfers/" + id; }
     @PostMapping("/{id}/receive")

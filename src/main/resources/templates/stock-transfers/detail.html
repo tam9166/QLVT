@@ -27,6 +27,11 @@
                 <input class="form-control form-control-sm" name="reason" required maxlength="1000" placeholder="Lý do từ chối">
                 <button class="btn btn-outline-danger">Từ chối</button>
             </form>
+            <form th:if="${item.canCancel()}" th:action="@{/stock-transfers/{id}/cancel(id=${item.id})}" method="post"
+                  class="d-flex gap-2" onsubmit="return confirm('Hủy phiếu chuyển kho?')">
+                <input class="form-control form-control-sm" name="reason" required maxlength="1000" placeholder="Lý do hủy">
+                <button class="btn btn-outline-secondary">Hủy phiếu</button>
+            </form>
             <form th:if="${item.canExecuteTransfer()}" th:action="@{/stock-transfers/{id}/transfer(id=${item.id})}" method="post"
                   onsubmit="return confirm('Thực hiện chuyển kho?')">
                 <button class="btn btn-warning">Thực hiện chuyển</button>
@@ -38,7 +43,8 @@
         </div>
     </div>
 
-    <div th:if="${item.status.name() == 'REJECTED' and item.note != null}" class="alert alert-warning" th:text="${item.note}"></div>
+    <div th:if="${(item.status.name() == 'REJECTED' or item.status.name() == 'CANCELLED') and item.note != null}"
+         class="alert alert-warning" th:text="${item.note}"></div>
 
     <div class="row g-3 mb-3">
         <div class="col-md-3">

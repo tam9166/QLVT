@@ -351,6 +351,21 @@ public class Prompt3WorkflowService {
     }
 
     @Transactional
+    public void cancelTransfer(Long id, String cancellationReason, String username) {
+        StockTransfer transfer = stockTransferRepository.findById(id).orElseThrow();
+        ensure(transfer.canCancel(), "Chỉ hủy phiếu chuyển kho nháp");
+        String reason = cancellationReason == null ? "" : cancellationReason.trim();
+        ensure(!reason.isEmpty(), "Cần nhập lý do hủy");
+
+        transfer.setStatus(StockTransferStatus.CANCELLED);
+        transfer.setNote("Hủy: " + reason);
+        transfer.setUpdatedAt(LocalDateTime.now());
+        stockTransferRepository.save(transfer);
+        auditService.log(username, "CANCEL_TRANSFER", "STOCK_TRANSFER", transfer.getTransferCode(),
+                "Hủy phiếu chuyển kho: " + reason);
+    }
+
+    @Transactional
     public void executeTransfer(Long id, String username) {
         StockTransfer transfer = stockTransferRepository.findById(id).orElseThrow();
         ensure(transfer.getStatus() == StockTransferStatus.APPROVED, "Phiếu phải được duyệt trước khi chuyển");
