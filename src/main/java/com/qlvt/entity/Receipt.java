@@ -66,4 +66,8 @@ public class Receipt {
     public boolean canConfirm() {
         return status == ReceiptStatus.DRAFT;
     }
+
+    public boolean canCancel() {
+        return status == ReceiptStatus.DRAFT;
+    }
 }

@@ -22,6 +22,14 @@
                 <form th:if="${receipt.canConfirm()}" th:action="@{/receipts/{id}/confirm(id=${receipt.id})}" method="post">
                     <button class="btn btn-primary"><i class="bi bi-check2-circle"></i> Xác nhận nhập</button>
                 </form>
+                <form th:if="${receipt.canCancel()}"
+                      th:action="@{/receipts/{id}/cancel(id=${receipt.id})}"
+                      method="post"
+                      class="d-flex gap-2"
+                      onsubmit="return confirm('Hủy phiếu nhập kho?')">
+                    <input class="form-control form-control-sm" name="reason" required maxlength="1000" placeholder="Lý do hủy">
+                    <button class="btn btn-outline-secondary">Hủy phiếu</button>
+                </form>
                 <form sec:authorize="hasRole('ADMIN')"
                       th:action="@{/receipts/{id}/delete(id=${receipt.id})}"
                       method="post"
@@ -30,6 +38,9 @@
                 </form>
             </div>
         </div>
+
+        <div th:if="${receipt.status.name() == 'CANCELLED' and receipt.note != null}"
+             class="alert alert-warning" th:text="${receipt.note}"></div>
 
         <div class="row g-3 mb-3">
             <div class="col-md-3">

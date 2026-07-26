@@ -125,6 +125,14 @@ public class ReceiptController {
         return "redirect:/receipts/" + id;
     }
 
+    @PostMapping("/{id}/cancel")
+    public String cancel(@PathVariable Long id,
+                         @RequestParam String reason,
+                         Authentication authentication) {
+        workflowService.cancelReceipt(id, reason, authentication.getName());
+        return "redirect:/receipts/" + id;
+    }
+
     @PostMapping("/{id}/delete")
     @PreAuthorize("hasRole('ADMIN')")
     public String delete(@PathVariable Long id, Authentication authentication) {

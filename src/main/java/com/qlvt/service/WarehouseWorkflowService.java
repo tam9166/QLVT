@@ -206,6 +206,25 @@ public class WarehouseWorkflowService {
     }
 
     @Transactional
+    public void cancelReceipt(Long receiptId, String cancellationReason, String username) {
+        Receipt receipt = receiptRepository.findById(receiptId).orElseThrow();
+        if (!receipt.canCancel()) {
+            throw new IllegalStateException("Chỉ hủy phiếu nhập nháp");
+        }
+        String reason = cancellationReason == null ? "" : cancellationReason.trim();
+        if (reason.isEmpty()) {
+            throw new IllegalArgumentException("Cần nhập lý do hủy");
+        }
+
+        receipt.setStatus(ReceiptStatus.CANCELLED);
+        receipt.setNote("Hủy: " + reason);
+        receipt.setUpdatedAt(LocalDateTime.now());
+        receiptRepository.save(receipt);
+        auditService.log(username, "CANCEL_RECEIPT", "RECEIPT", receipt.getReceiptCode(),
+                "Hủy phiếu nhập kho: " + reason);
+    }
+
+    @Transactional
     public void approveDepartment(Long requestId, String username) {
         MaterialRequest request = requestRepository.findById(requestId).orElseThrow();
         if (!request.canApproveDepartment()) {

@@ -56,9 +56,15 @@ class Prompt3BusinessRuleTest {
         Receipt receipt = new Receipt();
         assertTrue(receipt.canEdit());
         assertTrue(receipt.canConfirm());
+        assertTrue(receipt.canCancel());
         receipt.setStatus(ReceiptStatus.CONFIRMED);
         assertFalse(receipt.canEdit());
         assertFalse(receipt.canConfirm());
+        assertFalse(receipt.canCancel());
+        receipt.setStatus(ReceiptStatus.CANCELLED);
+        assertFalse(receipt.canEdit());
+        assertFalse(receipt.canConfirm());
+        assertFalse(receipt.canCancel());
 
         IssueSlip issue = new IssueSlip();
         assertTrue(issue.canEdit());
