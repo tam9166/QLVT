@@ -80,7 +80,7 @@ public class PurchaseController {
     }
 
     @PostMapping("/orders/{id}/cancel")
-    public String cancelOrder(@PathVariable Long id, @RequestParam(required = false) String reason, Authentication authentication) {
+    public String cancelOrder(@PathVariable Long id, @RequestParam String reason, Authentication authentication) {
         workflowService.cancelPurchaseOrder(id, authentication.getName(), reason);
         return "redirect:/purchases/orders/" + id;
     }

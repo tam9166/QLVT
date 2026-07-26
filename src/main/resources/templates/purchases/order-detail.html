@@ -17,9 +17,9 @@
         <form th:if="${item.canSend()}" th:action="@{/purchases/orders/{id}/send(id=${item.id})}" method="post">
             <button class="btn btn-primary">Gửi nhà cung cấp</button>
         </form>
-        <form th:if="${item.canCancel()}" th:action="@{/purchases/orders/{id}/cancel(id=${item.id})}" method="post">
-            <input type="hidden" name="reason" value="Hủy đơn đặt hàng">
-            <button class="btn btn-outline-danger" onclick="return confirm('Hủy đơn đặt hàng này?')">Hủy đơn</button>
+        <form class="d-flex gap-2" th:if="${item.canCancel()}" th:action="@{/purchases/orders/{id}/cancel(id=${item.id})}" method="post">
+            <input class="form-control" name="reason" required maxlength="500" placeholder="Lý do hủy đơn">
+            <button class="btn btn-outline-danger text-nowrap" onclick="return confirm('Hủy đơn đặt hàng này?')">Hủy đơn</button>
         </form>
         </div>
     </div>
@@ -84,6 +84,12 @@
         </button>
         <a class="btn btn-outline-secondary" th:href="@{/purchases/orders}">Quay lại</a>
     </form>
+    <div class="card mt-3" th:if="${item.note != null && !item.note.isBlank()}">
+        <div class="card-body">
+            <h2 class="h6">Ghi chú</h2>
+            <div class="text-muted" style="white-space: pre-line" th:text="${item.note}"></div>
+        </div>
+    </div>
 </main>
 </body>
 </html>

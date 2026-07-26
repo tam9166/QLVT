@@ -248,6 +248,13 @@ class Prompt3BusinessRuleTest {
         order.setStatus(PurchaseOrderStatus.PARTIALLY_RECEIVED);
         assertFalse(order.canCancel());
         assertTrue(order.canReceive());
+        order.setStatus(PurchaseOrderStatus.RECEIVED);
+        assertFalse(order.canCancel());
+        assertFalse(order.canReceive());
+        order.setStatus(PurchaseOrderStatus.CANCELLED);
+        assertFalse(order.canSend());
+        assertFalse(order.canCancel());
+        assertFalse(order.canReceive());
     }
 
     @Test

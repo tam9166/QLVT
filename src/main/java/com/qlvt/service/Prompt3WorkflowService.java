@@ -694,10 +694,12 @@ public class Prompt3WorkflowService {
     public void cancelPurchaseOrder(Long id, String username, String reason) {
         PurchaseOrder order = purchaseOrderRepository.findWithLinesById(id).orElseThrow();
         ensure(order.canCancel(), "Chỉ hủy được đơn nháp hoặc đơn chưa nhận hàng");
+        String cancellationReason = requireDecisionReason(reason, "Phải nhập lý do hủy đơn đặt hàng");
         order.setStatus(PurchaseOrderStatus.CANCELLED);
+        order.setNote(appendDecision(order.getNote(), "Đã hủy đơn", cancellationReason));
         purchaseOrderRepository.save(order);
         auditService.log(username, "CANCEL_PURCHASE_ORDER", "PURCHASE_ORDER", order.getOrderCode(),
-                reason == null || reason.isBlank() ? "Hủy đơn đặt hàng" : "Hủy đơn đặt hàng: " + reason.trim());
+                "Hủy đơn đặt hàng: " + cancellationReason);
     }
 
     @Transactional
