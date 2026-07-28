@@ -152,9 +152,7 @@ public class RequestController {
         request.setPriority(priority);
         request.setNote(reason);
         request.setSubmittedAt(now);
-        request.setStatus(RequestStatus.DEPARTMENT_APPROVED);
-        request.setDepartmentApprovedBy(authentication.getName());
-        request.setDepartmentApprovedAt(now);
+        request.setStatus(RequestStatus.SUBMITTED);
         request.setUpdatedAt(now);
 
         for (Map.Entry<Long, Integer> requested : requestedByMaterial.entrySet()) {
@@ -170,11 +168,12 @@ public class RequestController {
 
         RequestApprovalLog log = new RequestApprovalLog();
         log.setMaterialRequest(request);
-        log.setAction("NURSE_SUBMITTED");
+        log.setAction("SUBMITTED");
         log.setActor(authentication.getName());
-        log.setNote("Điều dưỡng gửi yêu cầu, bỏ qua bước duyệt trưởng phòng.");
+        log.setNote("Người yêu cầu gửi phiếu chờ trưởng khoa/phòng duyệt.");
         approvalLogRepository.save(log);
-        auditService.log(authentication.getName(), "CREATE_REQUEST", "MATERIAL_REQUEST", request.getCode(), "Tạo yêu cầu cấp vật tư");
+        auditService.log(authentication.getName(), "CREATE_REQUEST", "MATERIAL_REQUEST", request.getCode(),
+                "Tạo và gửi yêu cầu cấp vật tư chờ duyệt khoa/phòng");
         return "redirect:/requests/" + request.getId();
     }
 

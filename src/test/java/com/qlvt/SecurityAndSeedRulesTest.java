@@ -72,6 +72,16 @@ class SecurityAndSeedRulesTest {
     }
 
     @Test
+    void newMaterialRequestDoesNotBypassDepartmentApproval() throws Exception {
+        String controller = Files.readString(Path.of(
+                "src/main/java/com/qlvt/controller/RequestController.java"));
+
+        assertThat(controller)
+                .contains("request.setStatus(RequestStatus.SUBMITTED)")
+                .doesNotContain("request.setStatus(RequestStatus.DEPARTMENT_APPROVED)");
+    }
+
+    @Test
     void userFacingVietnameseFilesDoNotContainMojibake() throws Exception {
         for (String file : new String[] {
                 "src/main/resources/templates/users/list.html",
