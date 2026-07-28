@@ -49,6 +49,15 @@ public class MaterialBatch {
         return status == BatchStatus.AVAILABLE && quantity > 0 && (expiryDate == null || expiryDate.isAfter(today));
     }
 
+    public boolean canQuarantine() {
+        return status == BatchStatus.AVAILABLE;
+    }
+
+    public boolean canReleaseFromQuarantine(LocalDate today) {
+        return status == BatchStatus.QUARANTINED
+                && (expiryDate == null || expiryDate.isAfter(today));
+    }
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public Long getVersion() { return version; }

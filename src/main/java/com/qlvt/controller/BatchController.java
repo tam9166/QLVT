@@ -3,6 +3,9 @@ package com.qlvt.controller;
 import com.qlvt.repository.MaterialBatchRepository;
 import com.qlvt.repository.StockBalanceRepository;
 import com.qlvt.service.InventoryAlertService;
+import com.qlvt.service.BatchWorkflowService;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -14,11 +17,14 @@ public class BatchController {
     private final MaterialBatchRepository batchRepository;
     private final StockBalanceRepository balanceRepository;
     private final InventoryAlertService alertService;
+    private final BatchWorkflowService workflowService;
 
-    public BatchController(MaterialBatchRepository batchRepository, StockBalanceRepository balanceRepository, InventoryAlertService alertService) {
+    public BatchController(MaterialBatchRepository batchRepository, StockBalanceRepository balanceRepository,
+                           InventoryAlertService alertService, BatchWorkflowService workflowService) {
         this.batchRepository = batchRepository;
         this.balanceRepository = balanceRepository;
         this.alertService = alertService;
+        this.workflowService = workflowService;
     }
 
     @GetMapping
@@ -37,5 +43,19 @@ public class BatchController {
         model.addAttribute("balances", balanceRepository.findAll().stream()
                 .filter(balance -> balance.getBatch().getId().equals(id)).toList());
         return "batches/detail";
+    }
+
+    @PostMapping("/{id}/quarantine")
+    @PreAuthorize("hasAnyRole('ADMIN','WAREHOUSE_STAFF')")
+    public String quarantine(@PathVariable Long id, @RequestParam String reason, Authentication authentication) {
+        workflowService.quarantine(id, reason, authentication.getName());
+        return "redirect:/batches/" + id;
+    }
+
+    @PostMapping("/{id}/release")
+    @PreAuthorize("hasAnyRole('ADMIN','WAREHOUSE_STAFF')")
+    public String release(@PathVariable Long id, @RequestParam String reason, Authentication authentication) {
+        workflowService.release(id, reason, authentication.getName());
+        return "redirect:/batches/" + id;
     }
 }

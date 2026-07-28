@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <head th:replace="~{fragments/layout :: head('Chi tiết lô')}"></head>
 <body>
 <div th:replace="~{fragments/layout :: navbar}"></div>
@@ -39,6 +39,36 @@
                 </div>
             </div>
         </div>
+    </section>
+
+    <section class="data-panel mb-3" sec:authorize="hasAnyRole('ADMIN','WAREHOUSE_STAFF')"
+             th:if="${batch.canQuarantine() or batch.canReleaseFromQuarantine(T(java.time.LocalDate).now())}">
+        <div class="panel-heading">
+            <h2>Kiểm soát lô</h2>
+        </div>
+        <form th:if="${batch.canQuarantine()}" th:action="@{/batches/{id}/quarantine(id=${batch.id})}"
+              method="post" class="row g-2 align-items-end">
+            <div class="col-md-9">
+                <label class="form-label">Lý do cách ly</label>
+                <input class="form-control" name="reason" required maxlength="500"
+                       placeholder="Ví dụ: chờ xác minh chất lượng">
+            </div>
+            <div class="col-md-3">
+                <button class="btn btn-warning w-100" type="submit">Cách ly lô</button>
+            </div>
+        </form>
+        <form th:if="${batch.canReleaseFromQuarantine(T(java.time.LocalDate).now())}"
+              th:action="@{/batches/{id}/release(id=${batch.id})}" method="post"
+              class="row g-2 align-items-end">
+            <div class="col-md-9">
+                <label class="form-label">Lý do gỡ cách ly</label>
+                <input class="form-control" name="reason" required maxlength="500"
+                       placeholder="Ví dụ: kết quả kiểm định đạt yêu cầu">
+            </div>
+            <div class="col-md-3">
+                <button class="btn btn-success w-100" type="submit">Gỡ cách ly</button>
+            </div>
+        </form>
     </section>
 
     <section class="data-panel">
