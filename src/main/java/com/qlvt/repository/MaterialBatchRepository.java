@@ -1,6 +1,7 @@
 package com.qlvt.repository;
 
 import com.qlvt.entity.MaterialBatch;
+import com.qlvt.enums.BatchStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -32,5 +33,8 @@ public interface MaterialBatchRepository extends JpaRepository<MaterialBatch, Lo
     int sumIssuableQuantityByMaterialId(@Param("materialId") Long materialId, @Param("today") LocalDate today);
 
     List<MaterialBatch> findTop10ByExpiryDateBetweenOrderByExpiryDateAsc(LocalDate from, LocalDate to);
+
+    List<MaterialBatch> findByExpiryDateLessThanEqualAndStatusIn(
+            LocalDate expiryDate, List<BatchStatus> statuses);
 }
 
