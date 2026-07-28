@@ -193,7 +193,7 @@ public class RequestController {
     }
 
     @PostMapping("/{id}/cancel")
-    public String cancel(@PathVariable Long id, @RequestParam(required = false) String reason,
+    public String cancel(@PathVariable Long id, @RequestParam String reason,
                          Authentication authentication) {
         dataPermissionService.checkCanCancelMaterialRequest(id);
         warehouseWorkflowService.cancelRequest(id, authentication.getName(), reason);

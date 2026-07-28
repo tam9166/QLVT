@@ -22,7 +22,8 @@
             </form>
             <form th:if="${request.canCancel()}"
                   th:action="@{/requests/{id}/cancel(id=${request.id})}" method="post" class="d-flex gap-1">
-                <input class="form-control form-control-sm" name="reason" placeholder="Lý do hủy (tùy chọn)">
+                <input class="form-control form-control-sm" name="reason" required maxlength="1000"
+                       placeholder="Lý do hủy yêu cầu">
                 <button class="btn btn-outline-danger" onclick="return confirm('Hủy yêu cầu và giải phóng tồn đã giữ?')">Hủy yêu cầu</button>
             </form>
         </div>

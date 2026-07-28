@@ -305,6 +305,10 @@ public class WarehouseWorkflowService {
         if (!request.canCancel()) {
             throw new IllegalStateException("Ch\u1ec9 c\u00f3 th\u1ec3 h\u1ee7y y\u00eau c\u1ea7u tr\u01b0\u1edbc khi t\u1ea1o phi\u1ebfu xu\u1ea5t kho");
         }
+        String cancellationReason = reason == null ? "" : reason.trim();
+        if (cancellationReason.isEmpty()) {
+            throw new IllegalArgumentException("Vui l\u00f2ng nh\u1eadp l\u00fd do h\u1ee7y y\u00eau c\u1ea7u");
+        }
         LocalDateTime now = LocalDateTime.now();
         for (StockReservation reservation : reservationRepository.findByMaterialRequest_IdAndStatus(requestId, ReservationStatus.ACTIVE)) {
             StockBalance balance = reservation.getStockBalance();
@@ -324,11 +328,12 @@ public class WarehouseWorkflowService {
             line.setStatus("CANCELLED");
         }
         request.setStatus(RequestStatus.CANCELLED);
-        request.setRejectedReason(reason == null || reason.isBlank() ? "Ng\u01b0\u1eddi d\u00f9ng h\u1ee7y y\u00eau c\u1ea7u" : reason.trim());
+        request.setRejectedReason(cancellationReason);
         request.setUpdatedAt(now);
         requestRepository.save(request);
         logApproval(request, "CANCELLED", username, request.getRejectedReason());
-        auditService.log(username, "CANCEL_REQUEST", "MATERIAL_REQUEST", request.getCode(), "H\u1ee7y y\u00eau c\u1ea7u v\u00e0 gi\u1ea3i ph\u00f3ng t\u1ed3n \u0111\u00e3 gi\u1eef");
+        auditService.log(username, "CANCEL_REQUEST", "MATERIAL_REQUEST", request.getCode(),
+                "H\u1ee7y y\u00eau c\u1ea7u v\u00e0 gi\u1ea3i ph\u00f3ng t\u1ed3n \u0111\u00e3 gi\u1eef. L\u00fd do: " + cancellationReason);
     }
 
     @Transactional
