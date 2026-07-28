@@ -88,8 +88,17 @@ public class MaterialRequest {
         return status == RequestStatus.DRAFT || status == RequestStatus.SUBMITTED;
     }
 
+    public boolean canRejectDepartment() {
+        return canApproveDepartment();
+    }
+
     public boolean canReserveStock() {
         return status == RequestStatus.DEPARTMENT_APPROVED || status == RequestStatus.WAREHOUSE_APPROVED;
+    }
+
+    public boolean canRejectWarehouse() {
+        return status == RequestStatus.DEPARTMENT_APPROVED
+                || status == RequestStatus.WAREHOUSE_APPROVED;
     }
 
     public boolean canCreateIssueSlip() {

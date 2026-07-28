@@ -240,6 +240,41 @@ public class WarehouseWorkflowService {
     }
 
     @Transactional
+    public void rejectDepartment(Long requestId, String username, String reason) {
+        MaterialRequest request = requestRepository.findById(requestId).orElseThrow();
+        if (!request.canRejectDepartment()) {
+            throw new IllegalStateException("Yêu cầu không ở trạng thái chờ trưởng khoa xử lý");
+        }
+        rejectRequest(request, RequestStatus.DEPARTMENT_REJECTED, username, reason,
+                "DEPARTMENT_REJECT", "Trưởng khoa từ chối yêu cầu");
+    }
+
+    @Transactional
+    public void rejectWarehouse(Long requestId, String username, String reason) {
+        MaterialRequest request = requestRepository.findById(requestId).orElseThrow();
+        if (!request.canRejectWarehouse()) {
+            throw new IllegalStateException("Yêu cầu không ở trạng thái chờ kho xử lý");
+        }
+        rejectRequest(request, RequestStatus.WAREHOUSE_REJECTED, username, reason,
+                "WAREHOUSE_REJECT", "Kho từ chối yêu cầu");
+    }
+
+    private void rejectRequest(MaterialRequest request, RequestStatus status, String username,
+                               String reason, String auditAction, String description) {
+        String rejectionReason = reason == null ? "" : reason.trim();
+        if (rejectionReason.isEmpty()) {
+            throw new IllegalArgumentException("Vui lòng nhập lý do từ chối yêu cầu");
+        }
+        request.setStatus(status);
+        request.setRejectedReason(rejectionReason);
+        request.setUpdatedAt(LocalDateTime.now());
+        requestRepository.save(request);
+        logApproval(request, status.name(), username, rejectionReason);
+        auditService.log(username, auditAction, "MATERIAL_REQUEST", request.getCode(),
+                description + ". Lý do: " + rejectionReason);
+    }
+
+    @Transactional
     public void reserveForRequest(Long requestId, String username) {
         MaterialRequest request = requestRepository.findById(requestId).orElseThrow();
         if (!request.canReserveStock()) {

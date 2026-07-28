@@ -31,17 +31,22 @@ class Prompt3BusinessRuleTest {
     void materialRequestActionsFollowWorkflowState() {
         MaterialRequest request = new MaterialRequest();
         assertTrue(request.canApproveDepartment());
+        assertTrue(request.canRejectDepartment());
+        assertFalse(request.canRejectWarehouse());
         assertFalse(request.canReserveStock());
         assertFalse(request.canCreateIssueSlip());
         assertTrue(request.canCancel());
 
         request.setStatus(RequestStatus.DEPARTMENT_APPROVED);
         assertFalse(request.canApproveDepartment());
+        assertFalse(request.canRejectDepartment());
+        assertTrue(request.canRejectWarehouse());
         assertTrue(request.canReserveStock());
         assertFalse(request.canCreateIssueSlip());
         assertTrue(request.canCancel());
 
         request.setStatus(RequestStatus.PARTIALLY_APPROVED);
+        assertFalse(request.canRejectWarehouse());
         assertFalse(request.canReserveStock());
         assertTrue(request.canCreateIssueSlip());
         assertTrue(request.canCancel());

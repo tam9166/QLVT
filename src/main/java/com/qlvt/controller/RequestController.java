@@ -185,10 +185,26 @@ public class RequestController {
         return "redirect:/requests/" + id;
     }
 
+    @PostMapping("/{id}/reject-department")
+    public String rejectDepartment(@PathVariable Long id, @RequestParam String reason,
+                                   Authentication authentication) {
+        dataPermissionService.checkCanApproveDepartmentRequest(id);
+        warehouseWorkflowService.rejectDepartment(id, authentication.getName(), reason);
+        return "redirect:/requests/" + id;
+    }
+
     @PostMapping("/{id}/approve-warehouse")
     public String approveWarehouse(@PathVariable Long id, Authentication authentication) {
         dataPermissionService.checkCanProcessWarehouseRequest(id);
         warehouseWorkflowService.reserveForRequest(id, authentication.getName());
+        return "redirect:/requests/" + id;
+    }
+
+    @PostMapping("/{id}/reject-warehouse")
+    public String rejectWarehouse(@PathVariable Long id, @RequestParam String reason,
+                                  Authentication authentication) {
+        dataPermissionService.checkCanProcessWarehouseRequest(id);
+        warehouseWorkflowService.rejectWarehouse(id, authentication.getName(), reason);
         return "redirect:/requests/" + id;
     }
 

@@ -12,9 +12,29 @@
         </div>
         <div class="d-flex gap-2 flex-wrap justify-content-end">
             <a class="btn btn-outline-light" th:href="@{/requests}">Quay lại</a>
+            <form th:if="${request.canApproveDepartment()}"
+                  th:action="@{/requests/{id}/approve-department(id=${request.id})}" method="post">
+                <button class="btn btn-primary">Trưởng khoa duyệt</button>
+            </form>
+            <form th:if="${request.canRejectDepartment()}"
+                  th:action="@{/requests/{id}/reject-department(id=${request.id})}" method="post"
+                  class="d-flex gap-1">
+                <input class="form-control form-control-sm" name="reason" required maxlength="1000"
+                       placeholder="Lý do trưởng khoa từ chối">
+                <button class="btn btn-outline-danger"
+                        onclick="return confirm('Từ chối yêu cầu này?')">Từ chối</button>
+            </form>
             <form th:if="${request.canReserveStock()}"
                   th:action="@{/requests/{id}/approve-warehouse(id=${request.id})}" method="post">
                 <button class="btn btn-primary">Kho xử lý và giữ hàng</button>
+            </form>
+            <form th:if="${request.canRejectWarehouse()}"
+                  th:action="@{/requests/{id}/reject-warehouse(id=${request.id})}" method="post"
+                  class="d-flex gap-1">
+                <input class="form-control form-control-sm" name="reason" required maxlength="1000"
+                       placeholder="Lý do kho từ chối">
+                <button class="btn btn-outline-danger"
+                        onclick="return confirm('Kho từ chối yêu cầu này?')">Kho từ chối</button>
             </form>
             <form th:if="${request.canCreateIssueSlip()}"
                   th:action="@{/issues/from-request/{id}(id=${request.id})}" method="post">
