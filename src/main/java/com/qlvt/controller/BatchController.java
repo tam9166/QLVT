@@ -46,6 +46,7 @@ public class BatchController {
         model.addAttribute("batch", batch);
         model.addAttribute("balances", balanceRepository.findAll().stream()
                 .filter(balance -> balance.getBatch().getId().equals(id)).toList());
+        model.addAttribute("hasCommittedQuantity", balanceRepository.hasCommittedQuantityForBatch(id));
         model.addAttribute("history", auditLogRepository
                 .findByEntityNameAndEntityIdOrderByCreatedAtDesc("MATERIAL_BATCH", batch.getBatchNumber()));
         return "batches/detail";

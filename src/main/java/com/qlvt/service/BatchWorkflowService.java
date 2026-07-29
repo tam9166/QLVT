@@ -4,6 +4,7 @@ import com.qlvt.entity.MaterialBatch;
 import com.qlvt.enums.BatchStatus;
 import com.qlvt.exception.ResourceNotFoundException;
 import com.qlvt.repository.MaterialBatchRepository;
+import com.qlvt.repository.StockBalanceRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -13,10 +14,14 @@ import java.time.LocalDateTime;
 @Service
 public class BatchWorkflowService {
     private final MaterialBatchRepository batchRepository;
+    private final StockBalanceRepository stockBalanceRepository;
     private final AuditService auditService;
 
-    public BatchWorkflowService(MaterialBatchRepository batchRepository, AuditService auditService) {
+    public BatchWorkflowService(MaterialBatchRepository batchRepository,
+                                StockBalanceRepository stockBalanceRepository,
+                                AuditService auditService) {
         this.batchRepository = batchRepository;
+        this.stockBalanceRepository = stockBalanceRepository;
         this.auditService = auditService;
     }
 
@@ -26,6 +31,10 @@ public class BatchWorkflowService {
         String normalizedReason = requireReason(reason);
         if (!batch.canQuarantine()) {
             throw new IllegalStateException("Chỉ có thể cách ly lô đang ở trạng thái khả dụng.");
+        }
+        if (stockBalanceRepository.hasCommittedQuantityForBatch(id)) {
+            throw new IllegalStateException(
+                    "Không thể cách ly lô đang có số lượng đã giữ hoặc chờ xuất.");
         }
         BatchStatus oldStatus = batch.getStatus();
         batch.setStatus(BatchStatus.QUARANTINED);

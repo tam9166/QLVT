@@ -15,6 +15,14 @@ public interface StockBalanceRepository extends JpaRepository<StockBalance, Long
     List<StockBalance> findTop20ByBatch_ExpiryDateBetweenOrderByBatch_ExpiryDateAsc(LocalDate from, LocalDate to);
 
     @Query("""
+            select case when count(b) > 0 then true else false end
+            from StockBalance b
+            where b.batch.id = :batchId
+              and (b.reservedQuantity > 0 or b.pendingIssueQuantity > 0)
+            """)
+    boolean hasCommittedQuantityForBatch(@Param("batchId") Long batchId);
+
+    @Query("""
             select coalesce(sum(b.actualQuantity - b.reservedQuantity - b.pendingIssueQuantity), 0)
             from StockBalance b
             where b.material.id = :materialId

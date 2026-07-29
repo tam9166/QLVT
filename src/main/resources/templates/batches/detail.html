@@ -46,7 +46,11 @@
         <div class="panel-heading">
             <h2>Kiểm soát lô</h2>
         </div>
-        <form th:if="${batch.canQuarantine()}" th:action="@{/batches/{id}/quarantine(id=${batch.id})}"
+        <div class="alert alert-warning" th:if="${batch.canQuarantine() and hasCommittedQuantity}">
+            Lô đang có số lượng đã giữ hoặc chờ xuất. Hãy xử lý các phiếu liên quan trước khi cách ly.
+        </div>
+        <form th:if="${batch.canQuarantine() and !hasCommittedQuantity}"
+              th:action="@{/batches/{id}/quarantine(id=${batch.id})}"
               method="post" class="row g-2 align-items-end">
             <div class="col-md-9">
                 <label class="form-label">Lý do cách ly</label>
