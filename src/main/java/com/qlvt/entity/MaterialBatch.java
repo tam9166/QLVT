@@ -49,8 +49,9 @@ public class MaterialBatch {
         return status == BatchStatus.AVAILABLE && quantity > 0 && (expiryDate == null || expiryDate.isAfter(today));
     }
 
-    public boolean canQuarantine() {
-        return status == BatchStatus.AVAILABLE;
+    public boolean canQuarantine(LocalDate today) {
+        return status == BatchStatus.AVAILABLE
+                && (expiryDate == null || expiryDate.isAfter(today));
     }
 
     public boolean canReleaseFromQuarantine(LocalDate today) {

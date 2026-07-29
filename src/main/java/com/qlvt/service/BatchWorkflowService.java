@@ -29,7 +29,7 @@ public class BatchWorkflowService {
     public MaterialBatch quarantine(Long id, String reason, String username) {
         MaterialBatch batch = find(id);
         String normalizedReason = requireReason(reason);
-        if (!batch.canQuarantine()) {
+        if (!batch.canQuarantine(LocalDate.now())) {
             throw new IllegalStateException("Chỉ có thể cách ly lô đang ở trạng thái khả dụng.");
         }
         if (stockBalanceRepository.hasCommittedQuantityForBatch(id)) {

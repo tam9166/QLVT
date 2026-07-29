@@ -52,13 +52,17 @@ class BatchIssueRuleTest {
     void quarantineTransitionsAreStateAndExpiryGuarded() {
         MaterialBatch available = new MaterialBatch();
         available.setStatus(BatchStatus.AVAILABLE);
-        assertThat(available.canQuarantine()).isTrue();
+        available.setExpiryDate(LocalDate.now().plusDays(1));
+        assertThat(available.canQuarantine(LocalDate.now())).isTrue();
         assertThat(available.canReleaseFromQuarantine(LocalDate.now())).isFalse();
+
+        available.setExpiryDate(LocalDate.now());
+        assertThat(available.canQuarantine(LocalDate.now())).isFalse();
 
         MaterialBatch quarantined = new MaterialBatch();
         quarantined.setStatus(BatchStatus.QUARANTINED);
         quarantined.setExpiryDate(LocalDate.now().plusDays(1));
-        assertThat(quarantined.canQuarantine()).isFalse();
+        assertThat(quarantined.canQuarantine(LocalDate.now())).isFalse();
         assertThat(quarantined.canReleaseFromQuarantine(LocalDate.now())).isTrue();
 
         quarantined.setExpiryDate(LocalDate.now());

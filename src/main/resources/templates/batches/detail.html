@@ -42,14 +42,14 @@
     </section>
 
     <section class="data-panel mb-3" sec:authorize="hasAnyRole('ADMIN','WAREHOUSE_STAFF')"
-             th:if="${batch.canQuarantine() or batch.canReleaseFromQuarantine(T(java.time.LocalDate).now())}">
+             th:if="${batch.canQuarantine(T(java.time.LocalDate).now()) or batch.canReleaseFromQuarantine(T(java.time.LocalDate).now())}">
         <div class="panel-heading">
             <h2>Kiểm soát lô</h2>
         </div>
-        <div class="alert alert-warning" th:if="${batch.canQuarantine() and hasCommittedQuantity}">
+        <div class="alert alert-warning" th:if="${batch.canQuarantine(T(java.time.LocalDate).now()) and hasCommittedQuantity}">
             Lô đang có số lượng đã giữ hoặc chờ xuất. Hãy xử lý các phiếu liên quan trước khi cách ly.
         </div>
-        <form th:if="${batch.canQuarantine() and !hasCommittedQuantity}"
+        <form th:if="${batch.canQuarantine(T(java.time.LocalDate).now()) and !hasCommittedQuantity}"
               th:action="@{/batches/{id}/quarantine(id=${batch.id})}"
               method="post" class="row g-2 align-items-end">
             <div class="col-md-9">
