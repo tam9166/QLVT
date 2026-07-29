@@ -10,6 +10,7 @@ import java.util.Optional;
 
 public interface StockBalanceRepository extends JpaRepository<StockBalance, Long> {
     Optional<StockBalance> findByMaterial_IdAndBatch_IdAndWarehouse_IdAndLocation_Id(Long materialId, Long batchId, Long warehouseId, Long locationId);
+    List<StockBalance> findByBatch_IdOrderByWarehouse_CodeAscLocation_CodeAsc(Long batchId);
     List<StockBalance> findByWarehouse_IdOrderByMaterial_CodeAscBatch_ExpiryDateAsc(Long warehouseId);
     List<StockBalance> findByMaterial_IdOrderByWarehouse_CodeAscLocation_CodeAsc(Long materialId);
     List<StockBalance> findTop20ByBatch_ExpiryDateBetweenOrderByBatch_ExpiryDateAsc(LocalDate from, LocalDate to);

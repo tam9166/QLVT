@@ -5,6 +5,7 @@ import com.qlvt.repository.StockBalanceRepository;
 import com.qlvt.repository.AuditLogRepository;
 import com.qlvt.service.InventoryAlertService;
 import com.qlvt.service.BatchWorkflowService;
+import com.qlvt.exception.ResourceNotFoundException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
@@ -42,10 +43,11 @@ public class BatchController {
 
     @GetMapping("/{id}")
     public String detail(@PathVariable Long id, Model model) {
-        var batch = batchRepository.findById(id).orElseThrow();
+        var batch = batchRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy lô vật tư."));
         model.addAttribute("batch", batch);
-        model.addAttribute("balances", balanceRepository.findAll().stream()
-                .filter(balance -> balance.getBatch().getId().equals(id)).toList());
+        model.addAttribute("balances", balanceRepository
+                .findByBatch_IdOrderByWarehouse_CodeAscLocation_CodeAsc(id));
         model.addAttribute("hasCommittedQuantity", balanceRepository.hasCommittedQuantityForBatch(id));
         model.addAttribute("history", auditLogRepository
                 .findByEntityNameAndEntityIdOrderByCreatedAtDesc("MATERIAL_BATCH", batch.getBatchNumber()));
