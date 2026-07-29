@@ -25,12 +25,87 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class InventoryServiceTest {
+
+    @Test
+    void receiveRejectsLocationFromAnotherWarehouseBeforeChangingStock() {
+        Material material = material();
+        Warehouse selectedWarehouse = warehouse();
+        Warehouse otherWarehouse = warehouse();
+        otherWarehouse.setId(2L);
+        StorageLocation wrongLocation = location(otherWarehouse, "B1");
+
+        MaterialRepository materialRepository = mock(MaterialRepository.class);
+        MaterialBatchRepository batchRepository = mock(MaterialBatchRepository.class);
+        WarehouseRepository warehouseRepository = mock(WarehouseRepository.class);
+        StorageLocationRepository locationRepository = mock(StorageLocationRepository.class);
+
+        when(materialRepository.findById(1L)).thenReturn(Optional.of(material));
+        when(warehouseRepository.findById(1L)).thenReturn(Optional.of(selectedWarehouse));
+        when(locationRepository.findById(2L)).thenReturn(Optional.of(wrongLocation));
+
+        InventoryService service = new InventoryService(
+                materialRepository,
+                batchRepository,
+                warehouseRepository,
+                locationRepository,
+                mock(SupplierRepository.class),
+                mock(StockBalanceRepository.class),
+                mock(StockMovementRepository.class),
+                mock(AuditService.class),
+                mock(InventorySyncService.class)
+        );
+
+        assertThatThrownBy(() -> service.receive(
+                1L, 1L, 2L, null, "B003", LocalDate.now().plusMonths(6), 10, "tester"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("không thuộc kho");
+
+        verify(batchRepository, never()).save(org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    void receiveRejectsInactiveLocationBeforeChangingStock() {
+        Material material = material();
+        Warehouse warehouse = warehouse();
+        StorageLocation inactiveLocation = location(warehouse, "A1");
+        inactiveLocation.setActive(false);
+
+        MaterialRepository materialRepository = mock(MaterialRepository.class);
+        MaterialBatchRepository batchRepository = mock(MaterialBatchRepository.class);
+        WarehouseRepository warehouseRepository = mock(WarehouseRepository.class);
+        StorageLocationRepository locationRepository = mock(StorageLocationRepository.class);
+
+        when(materialRepository.findById(1L)).thenReturn(Optional.of(material));
+        when(warehouseRepository.findById(1L)).thenReturn(Optional.of(warehouse));
+        when(locationRepository.findById(1L)).thenReturn(Optional.of(inactiveLocation));
+
+        InventoryService service = new InventoryService(
+                materialRepository,
+                batchRepository,
+                warehouseRepository,
+                locationRepository,
+                mock(SupplierRepository.class),
+                mock(StockBalanceRepository.class),
+                mock(StockMovementRepository.class),
+                mock(AuditService.class),
+                mock(InventorySyncService.class)
+        );
+
+        assertThatThrownBy(() -> service.receive(
+                1L, 1L, 1L, null, "B003", LocalDate.now().plusMonths(6), 10, "tester"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("ngừng hoạt động");
+
+        verify(batchRepository, never()).save(org.mockito.ArgumentMatchers.any());
+    }
 
     @Test
     void issueFefoUpdatesBalancesBatchesAndMovementDetailsPerAllocation() {

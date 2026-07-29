@@ -49,7 +49,7 @@ public class InventoryService {
         }
         Material material = materialRepository.findById(materialId).orElseThrow();
         Warehouse warehouse = warehouseRepository.findById(warehouseId).orElseThrow();
-        StorageLocation location = resolveReceiveLocation(warehouseId, locationId);
+        StorageLocation location = resolveReceiveLocation(warehouse, locationId);
         Supplier supplier = supplierId == null ? null : supplierRepository.findById(supplierId).orElse(null);
 
         int before = inventorySyncService.syncMaterialActualQuantity(material);
@@ -137,11 +137,19 @@ public class InventoryService {
         return allocations;
     }
 
-    private StorageLocation resolveReceiveLocation(Long warehouseId, Long locationId) {
+    private StorageLocation resolveReceiveLocation(Warehouse warehouse, Long locationId) {
         if (locationId != null) {
-            return locationRepository.findById(locationId).orElseThrow();
+            StorageLocation location = locationRepository.findById(locationId).orElseThrow();
+            if (location.getWarehouse() == null || !warehouse.getId().equals(location.getWarehouse().getId())) {
+                throw new IllegalArgumentException("Vị trí lưu trữ không thuộc kho đã chọn");
+            }
+            if (!location.isActive() || location.isDeleted()) {
+                throw new IllegalArgumentException("Vị trí lưu trữ đã ngừng hoạt động");
+            }
+            return location;
         }
-        return locationRepository.findByWarehouse_IdAndDeletedFalseOrderByCodeAsc(warehouseId).stream()
+        return locationRepository.findByWarehouse_IdAndDeletedFalseOrderByCodeAsc(warehouse.getId()).stream()
+                .filter(StorageLocation::isActive)
                 .findFirst()
                 .orElseThrow(() -> new IllegalStateException("Kho chua co vi tri luu tru. Hay tao/chon vi tri truoc khi nhap kho."));
     }
