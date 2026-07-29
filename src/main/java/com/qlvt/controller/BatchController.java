@@ -2,6 +2,7 @@ package com.qlvt.controller;
 
 import com.qlvt.repository.MaterialBatchRepository;
 import com.qlvt.repository.StockBalanceRepository;
+import com.qlvt.repository.AuditLogRepository;
 import com.qlvt.service.InventoryAlertService;
 import com.qlvt.service.BatchWorkflowService;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -18,13 +19,16 @@ public class BatchController {
     private final StockBalanceRepository balanceRepository;
     private final InventoryAlertService alertService;
     private final BatchWorkflowService workflowService;
+    private final AuditLogRepository auditLogRepository;
 
     public BatchController(MaterialBatchRepository batchRepository, StockBalanceRepository balanceRepository,
-                           InventoryAlertService alertService, BatchWorkflowService workflowService) {
+                           InventoryAlertService alertService, BatchWorkflowService workflowService,
+                           AuditLogRepository auditLogRepository) {
         this.batchRepository = batchRepository;
         this.balanceRepository = balanceRepository;
         this.alertService = alertService;
         this.workflowService = workflowService;
+        this.auditLogRepository = auditLogRepository;
     }
 
     @GetMapping
@@ -42,6 +46,8 @@ public class BatchController {
         model.addAttribute("batch", batch);
         model.addAttribute("balances", balanceRepository.findAll().stream()
                 .filter(balance -> balance.getBatch().getId().equals(id)).toList());
+        model.addAttribute("history", auditLogRepository
+                .findByEntityNameAndEntityIdOrderByCreatedAtDesc("MATERIAL_BATCH", batch.getBatchNumber()));
         return "batches/detail";
     }
 

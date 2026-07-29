@@ -9,6 +9,8 @@ import java.util.List;
 public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
     List<AuditLog> findTop30ByOrderByCreatedAtDesc();
 
+    List<AuditLog> findByEntityNameAndEntityIdOrderByCreatedAtDesc(String entityName, String entityId);
+
     @Query("""
             select a from AuditLog a
             where (:actor = '' or lower(a.actorUsername) like lower(concat('%', :actor, '%')))

@@ -103,6 +103,41 @@
             </table>
         </div>
     </section>
+
+    <section class="data-panel mt-3">
+        <div class="panel-heading">
+            <h2>Lịch sử trạng thái lô</h2>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-modern align-middle">
+                <thead>
+                <tr>
+                    <th>Thời gian</th>
+                    <th>Thao tác</th>
+                    <th>Người thực hiện</th>
+                    <th>Thay đổi</th>
+                    <th>Lý do / chi tiết</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="event : ${history}">
+                    <td th:text="${event.createdAt != null ? #temporals.format(event.createdAt, 'dd/MM/yyyy HH:mm') : '-'}"></td>
+                    <td th:text="${event.action}"></td>
+                    <td th:text="${event.actorUsername}"></td>
+                    <td>
+                        <span th:text="${event.oldValue != null ? event.oldValue : '-'}"></span>
+                        <span class="text-secondary mx-1">→</span>
+                        <span th:text="${event.newValue != null ? event.newValue : '-'}"></span>
+                    </td>
+                    <td th:text="${event.detail != null and !event.detail.isBlank() ? event.detail : '-'}"></td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(history)}">
+                    <td colspan="5" class="text-center text-muted py-4">Chưa có lịch sử thay đổi trạng thái.</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
 </main>
 </body>
 </html>
