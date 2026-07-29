@@ -295,10 +295,18 @@ public class Prompt3WorkflowService {
         ensure(balance.getWarehouse().getId().equals(fromWarehouseId), "Tồn chọn không thuộc kho đi");
         ensure(balance.getAvailableQuantity() >= quantity, "Không đủ tồn khả dụng để chuyển");
         ensure(balance.getBatch().canIssue(LocalDate.now()), "Không cho chuyển lô hết hạn hoặc bị khóa");
+        Warehouse fromWarehouse = warehouseRepository.findById(fromWarehouseId).orElseThrow();
+        Warehouse toWarehouse = warehouseRepository.findById(toWarehouseId).orElseThrow();
+        StorageLocation toLocation = locationRepository.findById(toLocationId).orElseThrow();
+        ensure(toLocation.getWarehouse() != null
+                        && Objects.equals(toLocation.getWarehouse().getId(), toWarehouse.getId()),
+                "Vị trí nhận không thuộc kho đến");
+        ensure(toLocation.isActive() && !toLocation.isDeleted(),
+                "Vị trí nhận đã ngừng hoạt động");
         StockTransfer transfer = new StockTransfer();
         transfer.setTransferCode(nextCode("CK", code -> stockTransferRepository.existsByTransferCode(code)));
-        transfer.setFromWarehouse(warehouseRepository.findById(fromWarehouseId).orElseThrow());
-        transfer.setToWarehouse(warehouseRepository.findById(toWarehouseId).orElseThrow());
+        transfer.setFromWarehouse(fromWarehouse);
+        transfer.setToWarehouse(toWarehouse);
         transfer.setReason(reason);
         transfer.setCreatedBy(username);
         StockTransferLine line = new StockTransferLine();
@@ -306,7 +314,7 @@ public class Prompt3WorkflowService {
         line.setMaterial(balance.getMaterial());
         line.setBatch(balance.getBatch());
         line.setFromLocation(balance.getLocation());
-        line.setToLocation(locationRepository.findById(toLocationId).orElseThrow());
+        line.setToLocation(toLocation);
         line.setQuantity(quantity);
         transfer.getLines().add(line);
         stockTransferRepository.save(transfer);
