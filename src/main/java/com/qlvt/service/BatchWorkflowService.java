@@ -15,13 +15,16 @@ import java.time.LocalDateTime;
 public class BatchWorkflowService {
     private final MaterialBatchRepository batchRepository;
     private final StockBalanceRepository stockBalanceRepository;
+    private final InventorySyncService inventorySyncService;
     private final AuditService auditService;
 
     public BatchWorkflowService(MaterialBatchRepository batchRepository,
                                 StockBalanceRepository stockBalanceRepository,
+                                InventorySyncService inventorySyncService,
                                 AuditService auditService) {
         this.batchRepository = batchRepository;
         this.stockBalanceRepository = stockBalanceRepository;
+        this.inventorySyncService = inventorySyncService;
         this.auditService = auditService;
     }
 
@@ -41,7 +44,9 @@ public class BatchWorkflowService {
         batch.setUpdatedAt(LocalDateTime.now());
         auditService.logChange(username, "QUARANTINE_BATCH", "MATERIAL_BATCH", batch.getBatchNumber(),
                 oldStatus.name(), BatchStatus.QUARANTINED.name(), normalizedReason);
-        return batchRepository.save(batch);
+        MaterialBatch savedBatch = batchRepository.save(batch);
+        inventorySyncService.syncMaterialActualQuantity(batch.getMaterial());
+        return savedBatch;
     }
 
     @Transactional
@@ -55,7 +60,9 @@ public class BatchWorkflowService {
         batch.setUpdatedAt(LocalDateTime.now());
         auditService.logChange(username, "RELEASE_BATCH", "MATERIAL_BATCH", batch.getBatchNumber(),
                 BatchStatus.QUARANTINED.name(), BatchStatus.AVAILABLE.name(), normalizedReason);
-        return batchRepository.save(batch);
+        MaterialBatch savedBatch = batchRepository.save(batch);
+        inventorySyncService.syncMaterialActualQuantity(batch.getMaterial());
+        return savedBatch;
     }
 
     private MaterialBatch find(Long id) {
