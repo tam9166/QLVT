@@ -827,6 +827,16 @@ public class Prompt3WorkflowService {
 
     private void applyAdjustment(StockAdjustment adjustment, String username) {
         for (StockAdjustmentLine line : adjustment.getLines()) {
+            StockBalance currentBalance = balanceRepository
+                    .findByMaterial_IdAndBatch_IdAndWarehouse_IdAndLocation_Id(
+                            line.getMaterial().getId(), line.getBatch().getId(),
+                            adjustment.getWarehouse().getId(), line.getLocation().getId())
+                    .orElseThrow(() -> new IllegalStateException(
+                            "Tồn kho đã thay đổi sau khi lập phiếu. Vui lòng hủy và lập lại phiếu điều chỉnh."));
+            ensure(line.isBasedOnCurrentQuantity(currentBalance.getActualQuantity()),
+                    "Tồn kho đã thay đổi sau khi lập phiếu. Vui lòng hủy và lập lại phiếu điều chỉnh.");
+        }
+        for (StockAdjustmentLine line : adjustment.getLines()) {
             applyQuantityDelta(line.getMaterial(), line.getBatch(), adjustment.getWarehouse(), line.getLocation(), line.getAdjustmentQuantity(), username,
                     line.getAdjustmentQuantity() >= 0 ? MovementType.ADJUSTMENT_IN : MovementType.ADJUSTMENT_OUT, "ADJUSTMENT", adjustment.getAdjustmentCode());
         }

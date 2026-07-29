@@ -39,4 +39,8 @@ public class StockAdjustmentLine {
     public void setAdjustmentQuantity(int adjustmentQuantity) { this.adjustmentQuantity = adjustmentQuantity; }
     public String getNote() { return note; }
     public void setNote(String note) { this.note = note; }
+
+    public boolean isBasedOnCurrentQuantity(int currentQuantity) {
+        return systemQuantity == currentQuantity;
+    }
 }

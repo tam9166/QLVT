@@ -7,6 +7,7 @@ import com.qlvt.entity.IssueSlip;
 import com.qlvt.entity.Receipt;
 import com.qlvt.entity.StockBalance;
 import com.qlvt.entity.StockAdjustment;
+import com.qlvt.entity.StockAdjustmentLine;
 import com.qlvt.entity.StockTransfer;
 import com.qlvt.entity.PurchaseOrder;
 import com.qlvt.entity.PurchaseRequest;
@@ -253,6 +254,16 @@ class Prompt3BusinessRuleTest {
         assertFalse(adjustment.canSubmit());
         assertFalse(adjustment.canApproveManager());
         assertFalse(adjustment.canApproveAccountant());
+    }
+
+    @Test
+    void stockAdjustmentLineDetectsStaleInventorySnapshot() {
+        StockAdjustmentLine line = new StockAdjustmentLine();
+        line.setSystemQuantity(20);
+
+        assertTrue(line.isBasedOnCurrentQuantity(20));
+        assertFalse(line.isBasedOnCurrentQuantity(19));
+        assertFalse(line.isBasedOnCurrentQuantity(21));
     }
 
     @Test
