@@ -90,6 +90,7 @@ public class WarehouseWorkflowService {
         Material material = materialRepository.findById(materialId).orElseThrow();
         Warehouse warehouse = warehouseRepository.findById(warehouseId).orElseThrow();
         StorageLocation location = locationRepository.findById(locationId).orElseThrow();
+        validateLocationBelongsToWarehouse(location, warehouse);
         Supplier supplier = supplierId == null ? null : supplierRepository.findById(supplierId).orElse(null);
 
         Receipt receipt = new Receipt();
@@ -130,6 +131,7 @@ public class WarehouseWorkflowService {
         Material material = materialRepository.findById(materialId).orElseThrow();
         Warehouse warehouse = warehouseRepository.findById(warehouseId).orElseThrow();
         StorageLocation location = locationRepository.findById(locationId).orElseThrow();
+        validateLocationBelongsToWarehouse(location, warehouse);
         Supplier supplier = supplierId == null ? null : supplierRepository.findById(supplierId).orElse(null);
         String batchNumber = receipt.getLines().isEmpty()
                 ? nextBatchNumber(receipt.getReceiptCode())
@@ -892,6 +894,16 @@ public class WarehouseWorkflowService {
             balance.setLocation(location);
             return balance;
         });
+    }
+
+    private void validateLocationBelongsToWarehouse(StorageLocation location, Warehouse warehouse) {
+        if (location.getWarehouse() == null || location.getWarehouse().getId() == null
+                || !location.getWarehouse().getId().equals(warehouse.getId())) {
+            throw new IllegalArgumentException("Vị trí lưu trữ không thuộc kho đã chọn");
+        }
+        if (!location.isActive() || location.isDeleted()) {
+            throw new IllegalArgumentException("Vị trí lưu trữ đã ngừng hoạt động");
+        }
     }
 
     private void logApproval(MaterialRequest request, String action, String actor, String note) {
