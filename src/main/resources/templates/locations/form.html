@@ -23,6 +23,7 @@
                     <option value="">Không có</option>
                     <option th:each="p:${parents}" th:value="${p.id}" th:text="${p.code + ' - ' + p.name}"></option>
                 </select>
+                <div class="text-danger small" th:errors="*{parentId}"></div>
             </div>
             <div class="col-md-4">
                 <label class="form-label">Mã vị trí</label>

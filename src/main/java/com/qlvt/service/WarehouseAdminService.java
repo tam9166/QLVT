@@ -12,7 +12,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.BindingResult;
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Service
 public class WarehouseAdminService {
@@ -95,13 +97,14 @@ public class WarehouseAdminService {
                 || (form.getId() != null && locationRepository.existsByWarehouse_IdAndCodeAndIdNot(form.getWarehouseId(), form.getCode(), id)))) {
             bindingResult.rejectValue("code", "duplicate", "Mã vị trí đã tồn tại trong kho này");
         }
+        StorageLocation parent = validateParent(form, bindingResult);
         if (bindingResult.hasErrors()) {
             return false;
         }
         StorageLocation location = form.getId() == null ? new StorageLocation() : locationRepository.findById(form.getId()).orElseThrow();
         Warehouse warehouse = warehouseRepository.findById(form.getWarehouseId()).orElseThrow();
         location.setWarehouse(warehouse);
-        location.setParent(form.getParentId() == null ? null : locationRepository.findById(form.getParentId()).orElse(null));
+        location.setParent(parent);
         location.setCode(form.getCode());
         location.setName(form.getName());
         location.setLocationType(form.getLocationType().name());
@@ -111,6 +114,33 @@ public class WarehouseAdminService {
         locationRepository.save(location);
         auditService.log(actor, form.getId() == null ? "CREATE_LOCATION" : "UPDATE_LOCATION", "StorageLocation", location.getCode(), "Lưu vị trí " + location.getName());
         return true;
+    }
+
+    private StorageLocation validateParent(StorageLocationForm form, BindingResult bindingResult) {
+        if (form.getParentId() == null) {
+            return null;
+        }
+        StorageLocation parent = locationRepository.findById(form.getParentId()).orElse(null);
+        if (parent == null || parent.isDeleted()) {
+            bindingResult.rejectValue("parentId", "invalid", "Vị trí cha không tồn tại hoặc đã bị xóa");
+            return null;
+        }
+        if (parent.getWarehouse() == null || !parent.getWarehouse().getId().equals(form.getWarehouseId())) {
+            bindingResult.rejectValue("parentId", "warehouseMismatch", "Vị trí cha phải thuộc cùng kho");
+        }
+        Long locationId = form.getId();
+        Set<Long> visited = new HashSet<>();
+        for (StorageLocation current = parent; current != null; current = current.getParent()) {
+            if (locationId != null && locationId.equals(current.getId())) {
+                bindingResult.rejectValue("parentId", "cycle", "Vị trí cha tạo thành vòng lặp phân cấp");
+                break;
+            }
+            if (current.getId() != null && !visited.add(current.getId())) {
+                bindingResult.rejectValue("parentId", "cycle", "Cây vị trí cha đang có vòng lặp không hợp lệ");
+                break;
+            }
+        }
+        return parent;
     }
 
     @Transactional
