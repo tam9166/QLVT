@@ -14,6 +14,8 @@ public interface StockBalanceRepository extends JpaRepository<StockBalance, Long
     List<StockBalance> findByWarehouse_IdOrderByMaterial_CodeAscBatch_ExpiryDateAsc(Long warehouseId);
     List<StockBalance> findByMaterial_IdOrderByWarehouse_CodeAscLocation_CodeAsc(Long materialId);
     List<StockBalance> findTop20ByBatch_ExpiryDateBetweenOrderByBatch_ExpiryDateAsc(LocalDate from, LocalDate to);
+    boolean existsByWarehouse_IdAndActualQuantityGreaterThan(Long warehouseId, int quantity);
+    boolean existsByLocation_IdAndActualQuantityGreaterThan(Long locationId, int quantity);
 
     @Query("""
             select case when count(b) > 0 then true else false end

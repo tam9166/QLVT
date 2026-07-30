@@ -7,6 +7,7 @@ import com.qlvt.enums.WarehouseType;
 import com.qlvt.form.StorageLocationForm;
 import com.qlvt.form.WarehouseForm;
 import com.qlvt.repository.StorageLocationRepository;
+import com.qlvt.repository.StockBalanceRepository;
 import com.qlvt.repository.WarehouseRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,11 +21,16 @@ import java.util.Set;
 public class WarehouseAdminService {
     private final WarehouseRepository warehouseRepository;
     private final StorageLocationRepository locationRepository;
+    private final StockBalanceRepository stockBalanceRepository;
     private final AuditService auditService;
 
-    public WarehouseAdminService(WarehouseRepository warehouseRepository, StorageLocationRepository locationRepository, AuditService auditService) {
+    public WarehouseAdminService(WarehouseRepository warehouseRepository,
+                                 StorageLocationRepository locationRepository,
+                                 StockBalanceRepository stockBalanceRepository,
+                                 AuditService auditService) {
         this.warehouseRepository = warehouseRepository;
         this.locationRepository = locationRepository;
+        this.stockBalanceRepository = stockBalanceRepository;
         this.auditService = auditService;
     }
 
@@ -146,16 +152,30 @@ public class WarehouseAdminService {
     @Transactional
     public void deleteWarehouse(Long id, String actor) {
         Warehouse warehouse = warehouseRepository.findById(id).orElseThrow();
+        if (stockBalanceRepository.existsByWarehouse_IdAndActualQuantityGreaterThan(id, 0)) {
+            throw new IllegalStateException("Không thể xóa kho đang còn tồn kho");
+        }
+        if (locationRepository.existsByWarehouse_IdAndDeletedFalse(id)) {
+            throw new IllegalStateException("Phải xóa các vị trí trong kho trước khi xóa kho");
+        }
         warehouse.setDeleted(true);
         warehouse.setActive(false);
+        warehouse.setUpdatedAt(LocalDateTime.now());
         auditService.log(actor, "DELETE_WAREHOUSE", "Warehouse", warehouse.getCode(), "Xóa mềm kho");
     }
 
     @Transactional
     public void deleteLocation(Long id, String actor) {
         StorageLocation location = locationRepository.findById(id).orElseThrow();
+        if (stockBalanceRepository.existsByLocation_IdAndActualQuantityGreaterThan(id, 0)) {
+            throw new IllegalStateException("Không thể xóa vị trí đang còn tồn kho");
+        }
+        if (locationRepository.existsByParent_IdAndDeletedFalse(id)) {
+            throw new IllegalStateException("Phải xóa các vị trí con trước khi xóa vị trí cha");
+        }
         location.setDeleted(true);
         location.setActive(false);
+        location.setUpdatedAt(LocalDateTime.now());
         auditService.log(actor, "DELETE_LOCATION", "StorageLocation", location.getCode(), "Xóa mềm vị trí");
     }
 

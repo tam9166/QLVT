@@ -5,6 +5,7 @@ import com.qlvt.entity.Warehouse;
 import com.qlvt.enums.LocationType;
 import com.qlvt.form.StorageLocationForm;
 import com.qlvt.repository.StorageLocationRepository;
+import com.qlvt.repository.StockBalanceRepository;
 import com.qlvt.repository.WarehouseRepository;
 import com.qlvt.service.AuditService;
 import com.qlvt.service.WarehouseAdminService;
@@ -15,6 +16,7 @@ import org.springframework.validation.BindingResult;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.*;
 
@@ -51,6 +53,43 @@ class WarehouseAdminServiceTest {
         verify(fixture.locationRepository, never()).save(any());
     }
 
+    @Test
+    void deleteLocationRejectsLocationWithStock() {
+        Fixture fixture = new Fixture();
+        StorageLocation location = location(7L, warehouse(1L));
+        when(fixture.locationRepository.findById(7L)).thenReturn(Optional.of(location));
+        when(fixture.stockBalanceRepository.existsByLocation_IdAndActualQuantityGreaterThan(7L, 0)).thenReturn(true);
+
+        assertThrows(IllegalStateException.class, () -> fixture.service.deleteLocation(7L, "tester"));
+
+        assertFalse(location.isDeleted());
+        verify(fixture.auditService, never()).log(any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void deleteLocationRejectsParentWithActiveChildren() {
+        Fixture fixture = new Fixture();
+        StorageLocation location = location(7L, warehouse(1L));
+        when(fixture.locationRepository.findById(7L)).thenReturn(Optional.of(location));
+        when(fixture.locationRepository.existsByParent_IdAndDeletedFalse(7L)).thenReturn(true);
+
+        assertThrows(IllegalStateException.class, () -> fixture.service.deleteLocation(7L, "tester"));
+
+        assertFalse(location.isDeleted());
+    }
+
+    @Test
+    void deleteWarehouseRejectsWarehouseWithLocations() {
+        Fixture fixture = new Fixture();
+        Warehouse warehouse = warehouse(1L);
+        when(fixture.warehouseRepository.findById(1L)).thenReturn(Optional.of(warehouse));
+        when(fixture.locationRepository.existsByWarehouse_IdAndDeletedFalse(1L)).thenReturn(true);
+
+        assertThrows(IllegalStateException.class, () -> fixture.service.deleteWarehouse(1L, "tester"));
+
+        assertFalse(warehouse.isDeleted());
+    }
+
     private static BindingResult errors(StorageLocationForm form) {
         return new BeanPropertyBindingResult(form, "locationForm");
     }
@@ -82,8 +121,9 @@ class WarehouseAdminServiceTest {
     private static class Fixture {
         private final WarehouseRepository warehouseRepository = mock(WarehouseRepository.class);
         private final StorageLocationRepository locationRepository = mock(StorageLocationRepository.class);
+        private final StockBalanceRepository stockBalanceRepository = mock(StockBalanceRepository.class);
         private final AuditService auditService = mock(AuditService.class);
         private final WarehouseAdminService service =
-                new WarehouseAdminService(warehouseRepository, locationRepository, auditService);
+                new WarehouseAdminService(warehouseRepository, locationRepository, stockBalanceRepository, auditService);
     }
 }
