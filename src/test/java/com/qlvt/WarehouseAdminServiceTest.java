@@ -122,6 +122,21 @@ class WarehouseAdminServiceTest {
     }
 
     @Test
+    void saveWarehouseRejectsEditingDeletedWarehouse() {
+        Fixture fixture = new Fixture();
+        Warehouse deleted = warehouse(1L);
+        deleted.setDeleted(true);
+        when(fixture.warehouseRepository.findById(1L)).thenReturn(Optional.of(deleted));
+        WarehouseForm form = warehouseForm(1L, true);
+        BindingResult errors = new BeanPropertyBindingResult(form, "warehouseForm");
+
+        assertFalse(fixture.service.saveWarehouse(form, errors, "tester"));
+
+        assertTrue(errors.hasGlobalErrors());
+        verify(fixture.warehouseRepository, never()).save(any());
+    }
+
+    @Test
     void saveWarehouseRejectsDeactivationWhileLocationsRemain() {
         Fixture fixture = new Fixture();
         WarehouseForm form = warehouseForm(1L, false);
@@ -147,6 +162,23 @@ class WarehouseAdminServiceTest {
         assertFalse(fixture.service.saveLocation(form, errors, "tester"));
 
         assertTrue(errors.hasFieldErrors("active"));
+        verify(fixture.locationRepository, never()).save(any());
+    }
+
+    @Test
+    void saveLocationRejectsEditingDeletedLocation() {
+        Fixture fixture = new Fixture();
+        Warehouse warehouse = warehouse(1L);
+        StorageLocation deleted = location(7L, warehouse);
+        deleted.setDeleted(true);
+        when(fixture.warehouseRepository.findById(1L)).thenReturn(Optional.of(warehouse));
+        when(fixture.locationRepository.findById(7L)).thenReturn(Optional.of(deleted));
+        StorageLocationForm form = form(7L, 1L, null);
+        BindingResult errors = errors(form);
+
+        assertFalse(fixture.service.saveLocation(form, errors, "tester"));
+
+        assertTrue(errors.hasGlobalErrors());
         verify(fixture.locationRepository, never()).save(any());
     }
 
