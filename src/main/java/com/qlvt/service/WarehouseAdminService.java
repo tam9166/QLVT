@@ -48,6 +48,31 @@ public class WarehouseAdminService {
         return locationRepository.findByWarehouse_IdAndDeletedFalseOrderByCodeAsc(warehouseId);
     }
 
+    public List<StorageLocation> parentLocationChoices(StorageLocationForm form) {
+        return locationRepository.findByDeletedFalseAndActiveTrueOrderByCodeAsc().stream()
+                .filter(candidate -> form.getWarehouseId() == null
+                        || (candidate.getWarehouse() != null
+                        && form.getWarehouseId().equals(candidate.getWarehouse().getId())))
+                .filter(candidate -> !isSelfOrDescendant(candidate, form.getId()))
+                .toList();
+    }
+
+    private boolean isSelfOrDescendant(StorageLocation candidate, Long editedLocationId) {
+        if (editedLocationId == null) {
+            return false;
+        }
+        Set<Long> visited = new HashSet<>();
+        for (StorageLocation current = candidate; current != null; current = current.getParent()) {
+            if (editedLocationId.equals(current.getId())) {
+                return true;
+            }
+            if (current.getId() != null && !visited.add(current.getId())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public WarehouseForm toForm(Warehouse warehouse) {
         WarehouseForm form = new WarehouseForm();
         form.setId(warehouse.getId());

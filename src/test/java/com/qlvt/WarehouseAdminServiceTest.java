@@ -15,13 +15,33 @@ import org.springframework.validation.BeanPropertyBindingResult;
 import org.springframework.validation.BindingResult;
 
 import java.util.Optional;
+import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.*;
 
 class WarehouseAdminServiceTest {
+
+    @Test
+    void parentLocationChoicesExcludeOtherWarehousesSelfAndDescendants() {
+        Fixture fixture = new Fixture();
+        Warehouse selectedWarehouse = warehouse(1L);
+        StorageLocation edited = location(7L, selectedWarehouse);
+        StorageLocation validParent = location(8L, selectedWarehouse);
+        StorageLocation child = location(9L, selectedWarehouse);
+        child.setParent(edited);
+        StorageLocation otherWarehouse = location(10L, warehouse(2L));
+        when(fixture.locationRepository.findByDeletedFalseAndActiveTrueOrderByCodeAsc())
+                .thenReturn(List.of(edited, validParent, child, otherWarehouse));
+        StorageLocationForm form = form(7L, 1L, null);
+
+        List<StorageLocation> choices = fixture.service.parentLocationChoices(form);
+
+        assertEquals(List.of(validParent), choices);
+    }
 
     @Test
     void saveLocationRejectsParentFromAnotherWarehouse() {

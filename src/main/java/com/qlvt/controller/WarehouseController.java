@@ -110,7 +110,8 @@ public class WarehouseController {
 
     private void locationFormData(Model model) {
         model.addAttribute("warehouses", warehouseRepository.findByDeletedFalseAndActiveTrueOrderByCodeAsc());
-        model.addAttribute("parents", locationRepository.findByDeletedFalseAndActiveTrueOrderByCodeAsc());
+        StorageLocationForm form = (StorageLocationForm) model.getAttribute("locationForm");
+        model.addAttribute("parents", warehouseAdminService.parentLocationChoices(form));
         model.addAttribute("types", warehouseAdminService.locationTypes());
     }
 }
