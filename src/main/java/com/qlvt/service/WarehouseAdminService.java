@@ -117,6 +117,7 @@ public class WarehouseAdminService {
             bindingResult.rejectValue("code", "duplicate", "Mã vị trí đã tồn tại trong kho này");
         }
         StorageLocation parent = validateParent(form, bindingResult);
+        validateWarehouseChange(form, bindingResult);
         if (form.getId() != null && !form.isActive()) {
             if (stockBalanceRepository.existsByLocation_IdAndActualQuantityGreaterThan(form.getId(), 0)) {
                 bindingResult.rejectValue("active", "inUse", "Không thể ngừng hoạt động vị trí đang còn tồn kho");
@@ -139,6 +140,24 @@ public class WarehouseAdminService {
         locationRepository.save(location);
         auditService.log(actor, form.getId() == null ? "CREATE_LOCATION" : "UPDATE_LOCATION", "StorageLocation", location.getCode(), "Lưu vị trí " + location.getName());
         return true;
+    }
+
+    private void validateWarehouseChange(StorageLocationForm form, BindingResult bindingResult) {
+        if (form.getId() == null || form.getWarehouseId() == null || bindingResult.hasFieldErrors("warehouseId")) {
+            return;
+        }
+        StorageLocation existing = locationRepository.findById(form.getId()).orElse(null);
+        if (existing == null || existing.getWarehouse() == null
+                || existing.getWarehouse().getId().equals(form.getWarehouseId())) {
+            return;
+        }
+        if (stockBalanceRepository.existsByLocation_IdAndActualQuantityGreaterThan(form.getId(), 0)) {
+            bindingResult.rejectValue("warehouseId", "inUse",
+                    "Không thể chuyển vị trí sang kho khác khi vẫn còn tồn kho");
+        } else if (locationRepository.existsByParent_IdAndDeletedFalse(form.getId())) {
+            bindingResult.rejectValue("warehouseId", "hasChildren",
+                    "Không thể chuyển vị trí cha sang kho khác khi vẫn còn vị trí con");
+        }
     }
 
     private StorageLocation validateParent(StorageLocationForm form, BindingResult bindingResult) {

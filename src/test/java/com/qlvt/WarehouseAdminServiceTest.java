@@ -147,6 +147,42 @@ class WarehouseAdminServiceTest {
     }
 
     @Test
+    void saveLocationRejectsWarehouseChangeWhileStockRemains() {
+        Fixture fixture = new Fixture();
+        Warehouse source = warehouse(1L);
+        Warehouse destination = warehouse(2L);
+        StorageLocation existing = location(7L, source);
+        when(fixture.warehouseRepository.findById(2L)).thenReturn(Optional.of(destination));
+        when(fixture.locationRepository.findById(7L)).thenReturn(Optional.of(existing));
+        when(fixture.stockBalanceRepository.existsByLocation_IdAndActualQuantityGreaterThan(7L, 0)).thenReturn(true);
+        StorageLocationForm form = form(7L, 2L, null);
+        BindingResult errors = errors(form);
+
+        assertFalse(fixture.service.saveLocation(form, errors, "tester"));
+
+        assertTrue(errors.hasFieldErrors("warehouseId"));
+        verify(fixture.locationRepository, never()).save(any());
+    }
+
+    @Test
+    void saveLocationRejectsWarehouseChangeWhileChildrenRemain() {
+        Fixture fixture = new Fixture();
+        Warehouse source = warehouse(1L);
+        Warehouse destination = warehouse(2L);
+        StorageLocation existing = location(7L, source);
+        when(fixture.warehouseRepository.findById(2L)).thenReturn(Optional.of(destination));
+        when(fixture.locationRepository.findById(7L)).thenReturn(Optional.of(existing));
+        when(fixture.locationRepository.existsByParent_IdAndDeletedFalse(7L)).thenReturn(true);
+        StorageLocationForm form = form(7L, 2L, null);
+        BindingResult errors = errors(form);
+
+        assertFalse(fixture.service.saveLocation(form, errors, "tester"));
+
+        assertTrue(errors.hasFieldErrors("warehouseId"));
+        verify(fixture.locationRepository, never()).save(any());
+    }
+
+    @Test
     void deleteLocationRejectsLocationWithStock() {
         Fixture fixture = new Fixture();
         StorageLocation location = location(7L, warehouse(1L));
