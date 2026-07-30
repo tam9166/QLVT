@@ -99,6 +99,12 @@ public class WarehouseAdminService {
     @Transactional
     public boolean saveLocation(StorageLocationForm form, BindingResult bindingResult, String actor) {
         Long id = form.getId() == null ? -1L : form.getId();
+        Warehouse warehouse = form.getWarehouseId() == null
+                ? null
+                : warehouseRepository.findById(form.getWarehouseId()).orElse(null);
+        if (warehouse == null || warehouse.isDeleted() || !warehouse.isActive()) {
+            bindingResult.rejectValue("warehouseId", "invalid", "Kho không tồn tại hoặc không hoạt động");
+        }
         if (form.getWarehouseId() != null && ((form.getId() == null && locationRepository.existsByWarehouse_IdAndCode(form.getWarehouseId(), form.getCode()))
                 || (form.getId() != null && locationRepository.existsByWarehouse_IdAndCodeAndIdNot(form.getWarehouseId(), form.getCode(), id)))) {
             bindingResult.rejectValue("code", "duplicate", "Mã vị trí đã tồn tại trong kho này");
@@ -108,7 +114,6 @@ public class WarehouseAdminService {
             return false;
         }
         StorageLocation location = form.getId() == null ? new StorageLocation() : locationRepository.findById(form.getId()).orElseThrow();
-        Warehouse warehouse = warehouseRepository.findById(form.getWarehouseId()).orElseThrow();
         location.setWarehouse(warehouse);
         location.setParent(parent);
         location.setCode(form.getCode());
@@ -127,7 +132,7 @@ public class WarehouseAdminService {
             return null;
         }
         StorageLocation parent = locationRepository.findById(form.getParentId()).orElse(null);
-        if (parent == null || parent.isDeleted()) {
+        if (parent == null || parent.isDeleted() || !parent.isActive()) {
             bindingResult.rejectValue("parentId", "invalid", "Vị trí cha không tồn tại hoặc đã bị xóa");
             return null;
         }
