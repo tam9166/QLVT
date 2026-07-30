@@ -4,6 +4,7 @@ import com.qlvt.entity.StorageLocation;
 import com.qlvt.entity.Warehouse;
 import com.qlvt.enums.LocationType;
 import com.qlvt.form.StorageLocationForm;
+import com.qlvt.form.WarehouseForm;
 import com.qlvt.repository.StorageLocationRepository;
 import com.qlvt.repository.StockBalanceRepository;
 import com.qlvt.repository.WarehouseRepository;
@@ -88,6 +89,64 @@ class WarehouseAdminServiceTest {
     }
 
     @Test
+    void saveWarehouseRejectsDeactivationWhileStockRemains() {
+        Fixture fixture = new Fixture();
+        WarehouseForm form = warehouseForm(1L, false);
+        when(fixture.stockBalanceRepository.existsByWarehouse_IdAndActualQuantityGreaterThan(1L, 0)).thenReturn(true);
+        BindingResult errors = new BeanPropertyBindingResult(form, "warehouseForm");
+
+        assertFalse(fixture.service.saveWarehouse(form, errors, "tester"));
+
+        assertTrue(errors.hasFieldErrors("active"));
+        verify(fixture.warehouseRepository, never()).save(any());
+    }
+
+    @Test
+    void saveWarehouseRejectsDeactivationWhileLocationsRemain() {
+        Fixture fixture = new Fixture();
+        WarehouseForm form = warehouseForm(1L, false);
+        when(fixture.locationRepository.existsByWarehouse_IdAndDeletedFalse(1L)).thenReturn(true);
+        BindingResult errors = new BeanPropertyBindingResult(form, "warehouseForm");
+
+        assertFalse(fixture.service.saveWarehouse(form, errors, "tester"));
+
+        assertTrue(errors.hasFieldErrors("active"));
+        verify(fixture.warehouseRepository, never()).save(any());
+    }
+
+    @Test
+    void saveLocationRejectsDeactivationWhileStockRemains() {
+        Fixture fixture = new Fixture();
+        Warehouse warehouse = warehouse(1L);
+        when(fixture.warehouseRepository.findById(1L)).thenReturn(Optional.of(warehouse));
+        StorageLocationForm form = form(7L, 1L, null);
+        form.setActive(false);
+        when(fixture.stockBalanceRepository.existsByLocation_IdAndActualQuantityGreaterThan(7L, 0)).thenReturn(true);
+        BindingResult errors = errors(form);
+
+        assertFalse(fixture.service.saveLocation(form, errors, "tester"));
+
+        assertTrue(errors.hasFieldErrors("active"));
+        verify(fixture.locationRepository, never()).save(any());
+    }
+
+    @Test
+    void saveLocationRejectsDeactivationWhileChildrenRemain() {
+        Fixture fixture = new Fixture();
+        Warehouse warehouse = warehouse(1L);
+        when(fixture.warehouseRepository.findById(1L)).thenReturn(Optional.of(warehouse));
+        StorageLocationForm form = form(7L, 1L, null);
+        form.setActive(false);
+        when(fixture.locationRepository.existsByParent_IdAndDeletedFalse(7L)).thenReturn(true);
+        BindingResult errors = errors(form);
+
+        assertFalse(fixture.service.saveLocation(form, errors, "tester"));
+
+        assertTrue(errors.hasFieldErrors("active"));
+        verify(fixture.locationRepository, never()).save(any());
+    }
+
+    @Test
     void deleteLocationRejectsLocationWithStock() {
         Fixture fixture = new Fixture();
         StorageLocation location = location(7L, warehouse(1L));
@@ -136,6 +195,16 @@ class WarehouseAdminServiceTest {
         form.setCode("A-01");
         form.setName("Kệ A");
         form.setLocationType(LocationType.SHELF);
+        return form;
+    }
+
+    private static WarehouseForm warehouseForm(Long id, boolean active) {
+        WarehouseForm form = new WarehouseForm();
+        form.setId(id);
+        form.setCode("KHO-01");
+        form.setName("Kho chính");
+        form.setActive(active);
+        form.setType(com.qlvt.enums.WarehouseType.MAIN);
         return form;
     }
 

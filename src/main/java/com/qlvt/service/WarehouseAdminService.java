@@ -80,6 +80,13 @@ public class WarehouseAdminService {
                 || (form.getId() != null && warehouseRepository.existsByCodeAndIdNot(form.getCode(), id))) {
             bindingResult.rejectValue("code", "duplicate", "Mã kho đã tồn tại");
         }
+        if (form.getId() != null && !form.isActive()) {
+            if (stockBalanceRepository.existsByWarehouse_IdAndActualQuantityGreaterThan(form.getId(), 0)) {
+                bindingResult.rejectValue("active", "inUse", "Không thể ngừng hoạt động kho đang còn tồn kho");
+            } else if (locationRepository.existsByWarehouse_IdAndDeletedFalse(form.getId())) {
+                bindingResult.rejectValue("active", "hasLocations", "Phải ngừng hoạt động hoặc xóa các vị trí trong kho trước");
+            }
+        }
         if (bindingResult.hasErrors()) {
             return false;
         }
@@ -110,6 +117,13 @@ public class WarehouseAdminService {
             bindingResult.rejectValue("code", "duplicate", "Mã vị trí đã tồn tại trong kho này");
         }
         StorageLocation parent = validateParent(form, bindingResult);
+        if (form.getId() != null && !form.isActive()) {
+            if (stockBalanceRepository.existsByLocation_IdAndActualQuantityGreaterThan(form.getId(), 0)) {
+                bindingResult.rejectValue("active", "inUse", "Không thể ngừng hoạt động vị trí đang còn tồn kho");
+            } else if (locationRepository.existsByParent_IdAndDeletedFalse(form.getId())) {
+                bindingResult.rejectValue("active", "hasChildren", "Phải ngừng hoạt động hoặc xóa các vị trí con trước");
+            }
+        }
         if (bindingResult.hasErrors()) {
             return false;
         }
