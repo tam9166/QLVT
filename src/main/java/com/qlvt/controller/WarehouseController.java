@@ -109,8 +109,8 @@ public class WarehouseController {
     }
 
     private void locationFormData(Model model) {
-        model.addAttribute("warehouses", warehouseRepository.findByDeletedFalseOrderByCodeAsc());
-        model.addAttribute("parents", locationRepository.findByDeletedFalseOrderByCodeAsc());
+        model.addAttribute("warehouses", warehouseRepository.findByDeletedFalseAndActiveTrueOrderByCodeAsc());
+        model.addAttribute("parents", locationRepository.findByDeletedFalseAndActiveTrueOrderByCodeAsc());
         model.addAttribute("types", warehouseAdminService.locationTypes());
     }
 }

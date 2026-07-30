@@ -10,5 +10,6 @@ public interface WarehouseRepository extends JpaRepository<Warehouse, Long> {
     boolean existsByCode(String code);
     boolean existsByCodeAndIdNot(String code, Long id);
     List<Warehouse> findByDeletedFalseOrderByCodeAsc();
+    List<Warehouse> findByDeletedFalseAndActiveTrueOrderByCodeAsc();
     List<Warehouse> findByDeletedFalseAndCodeContainingIgnoreCaseOrDeletedFalseAndNameContainingIgnoreCase(String code, String name);
 }
