@@ -110,8 +110,8 @@ public class WarehouseAdminService {
         if (form.getId() != null && (existing == null || existing.isDeleted())) {
             bindingResult.reject("invalidWarehouse", "Kho không tồn tại hoặc đã bị xóa");
         }
-        if ((form.getId() == null && warehouseRepository.existsByCode(form.getCode()))
-                || (form.getId() != null && warehouseRepository.existsByCodeAndIdNot(form.getCode(), id))) {
+        if ((form.getId() == null && warehouseRepository.existsByCodeIgnoreCase(form.getCode()))
+                || (form.getId() != null && warehouseRepository.existsByCodeIgnoreCaseAndIdNot(form.getCode(), id))) {
             bindingResult.rejectValue("code", "duplicate", "Mã kho đã tồn tại");
         }
         if (existing != null && existing.isActive() && !form.isActive()) {
@@ -153,8 +153,8 @@ public class WarehouseAdminService {
         if (warehouse == null || warehouse.isDeleted() || !warehouse.isActive()) {
             bindingResult.rejectValue("warehouseId", "invalid", "Kho không tồn tại hoặc không hoạt động");
         }
-        if (form.getWarehouseId() != null && ((form.getId() == null && locationRepository.existsByWarehouse_IdAndCode(form.getWarehouseId(), form.getCode()))
-                || (form.getId() != null && locationRepository.existsByWarehouse_IdAndCodeAndIdNot(form.getWarehouseId(), form.getCode(), id)))) {
+        if (form.getWarehouseId() != null && ((form.getId() == null && locationRepository.existsByWarehouse_IdAndCodeIgnoreCase(form.getWarehouseId(), form.getCode()))
+                || (form.getId() != null && locationRepository.existsByWarehouse_IdAndCodeIgnoreCaseAndIdNot(form.getWarehouseId(), form.getCode(), id)))) {
             bindingResult.rejectValue("code", "duplicate", "Mã vị trí đã tồn tại trong kho này");
         }
         StorageLocation parent = validateParent(form, bindingResult);

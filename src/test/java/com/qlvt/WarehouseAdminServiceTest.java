@@ -79,7 +79,7 @@ class WarehouseAdminServiceTest {
 
         assertTrue(fixture.service.saveWarehouse(form, errors, "tester"));
 
-        verify(fixture.warehouseRepository).existsByCode("KHO-A");
+        verify(fixture.warehouseRepository).existsByCodeIgnoreCase("KHO-A");
         verify(fixture.warehouseRepository).save(argThat(warehouse ->
                 "KHO-A".equals(warehouse.getCode())
                         && "Kho A".equals(warehouse.getName())
@@ -100,7 +100,7 @@ class WarehouseAdminServiceTest {
 
         assertTrue(fixture.service.saveLocation(form, errors, "tester"));
 
-        verify(fixture.locationRepository).existsByWarehouse_IdAndCode(1L, "A-01");
+        verify(fixture.locationRepository).existsByWarehouse_IdAndCodeIgnoreCase(1L, "A-01");
         verify(fixture.locationRepository).save(argThat(location ->
                 "A-01".equals(location.getCode())
                         && "Kệ A".equals(location.getName())

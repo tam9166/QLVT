@@ -8,8 +8,8 @@ import java.util.Optional;
 public interface StorageLocationRepository extends JpaRepository<StorageLocation, Long> {
     Optional<StorageLocation> findByCode(String code);
     boolean existsByCode(String code);
-    boolean existsByWarehouse_IdAndCodeAndIdNot(Long warehouseId, String code, Long id);
-    boolean existsByWarehouse_IdAndCode(Long warehouseId, String code);
+    boolean existsByWarehouse_IdAndCodeIgnoreCaseAndIdNot(Long warehouseId, String code, Long id);
+    boolean existsByWarehouse_IdAndCodeIgnoreCase(Long warehouseId, String code);
     boolean existsByWarehouse_IdAndDeletedFalse(Long warehouseId);
     boolean existsByParent_IdAndDeletedFalse(Long parentId);
     List<StorageLocation> findByDeletedFalseOrderByCodeAsc();
