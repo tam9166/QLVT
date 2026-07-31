@@ -112,6 +112,7 @@ class WarehouseAdminServiceTest {
     void saveWarehouseRejectsDeactivationWhileStockRemains() {
         Fixture fixture = new Fixture();
         WarehouseForm form = warehouseForm(1L, false);
+        when(fixture.warehouseRepository.findById(1L)).thenReturn(Optional.of(warehouse(1L)));
         when(fixture.stockBalanceRepository.existsByWarehouse_IdAndActualQuantityGreaterThan(1L, 0)).thenReturn(true);
         BindingResult errors = new BeanPropertyBindingResult(form, "warehouseForm");
 
@@ -140,6 +141,7 @@ class WarehouseAdminServiceTest {
     void saveWarehouseRejectsDeactivationWhileLocationsRemain() {
         Fixture fixture = new Fixture();
         WarehouseForm form = warehouseForm(1L, false);
+        when(fixture.warehouseRepository.findById(1L)).thenReturn(Optional.of(warehouse(1L)));
         when(fixture.locationRepository.existsByWarehouse_IdAndDeletedFalse(1L)).thenReturn(true);
         BindingResult errors = new BeanPropertyBindingResult(form, "warehouseForm");
 
@@ -150,10 +152,30 @@ class WarehouseAdminServiceTest {
     }
 
     @Test
+    void saveWarehouseAllowsEditingAlreadyInactiveWarehouse() {
+        Fixture fixture = new Fixture();
+        Warehouse inactive = warehouse(1L);
+        inactive.setActive(false);
+        when(fixture.warehouseRepository.findById(1L)).thenReturn(Optional.of(inactive));
+        when(fixture.locationRepository.existsByWarehouse_IdAndDeletedFalse(1L)).thenReturn(true);
+        WarehouseForm form = warehouseForm(1L, false);
+        form.setDescription("Cập nhật mô tả");
+        BindingResult errors = new BeanPropertyBindingResult(form, "warehouseForm");
+
+        assertTrue(fixture.service.saveWarehouse(form, errors, "tester"));
+
+        assertFalse(errors.hasErrors());
+        verify(fixture.warehouseRepository).save(inactive);
+        verify(fixture.locationRepository, never()).existsByWarehouse_IdAndDeletedFalse(1L);
+    }
+
+    @Test
     void saveLocationRejectsDeactivationWhileStockRemains() {
         Fixture fixture = new Fixture();
         Warehouse warehouse = warehouse(1L);
+        StorageLocation existing = location(7L, warehouse);
         when(fixture.warehouseRepository.findById(1L)).thenReturn(Optional.of(warehouse));
+        when(fixture.locationRepository.findById(7L)).thenReturn(Optional.of(existing));
         StorageLocationForm form = form(7L, 1L, null);
         form.setActive(false);
         when(fixture.stockBalanceRepository.existsByLocation_IdAndActualQuantityGreaterThan(7L, 0)).thenReturn(true);
@@ -186,7 +208,9 @@ class WarehouseAdminServiceTest {
     void saveLocationRejectsDeactivationWhileChildrenRemain() {
         Fixture fixture = new Fixture();
         Warehouse warehouse = warehouse(1L);
+        StorageLocation existing = location(7L, warehouse);
         when(fixture.warehouseRepository.findById(1L)).thenReturn(Optional.of(warehouse));
+        when(fixture.locationRepository.findById(7L)).thenReturn(Optional.of(existing));
         StorageLocationForm form = form(7L, 1L, null);
         form.setActive(false);
         when(fixture.locationRepository.existsByParent_IdAndDeletedFalse(7L)).thenReturn(true);
@@ -196,6 +220,27 @@ class WarehouseAdminServiceTest {
 
         assertTrue(errors.hasFieldErrors("active"));
         verify(fixture.locationRepository, never()).save(any());
+    }
+
+    @Test
+    void saveLocationAllowsEditingAlreadyInactiveLocation() {
+        Fixture fixture = new Fixture();
+        Warehouse warehouse = warehouse(1L);
+        StorageLocation inactive = location(7L, warehouse);
+        inactive.setActive(false);
+        when(fixture.warehouseRepository.findById(1L)).thenReturn(Optional.of(warehouse));
+        when(fixture.locationRepository.findById(7L)).thenReturn(Optional.of(inactive));
+        when(fixture.locationRepository.existsByParent_IdAndDeletedFalse(7L)).thenReturn(true);
+        StorageLocationForm form = form(7L, 1L, null);
+        form.setActive(false);
+        form.setDescription("Cập nhật mô tả");
+        BindingResult errors = errors(form);
+
+        assertTrue(fixture.service.saveLocation(form, errors, "tester"));
+
+        assertFalse(errors.hasErrors());
+        verify(fixture.locationRepository).save(inactive);
+        verify(fixture.locationRepository, never()).existsByParent_IdAndDeletedFalse(7L);
     }
 
     @Test

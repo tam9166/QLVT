@@ -111,7 +111,7 @@ public class WarehouseAdminService {
                 || (form.getId() != null && warehouseRepository.existsByCodeAndIdNot(form.getCode(), id))) {
             bindingResult.rejectValue("code", "duplicate", "Mã kho đã tồn tại");
         }
-        if (form.getId() != null && !form.isActive()) {
+        if (existing != null && existing.isActive() && !form.isActive()) {
             if (stockBalanceRepository.existsByWarehouse_IdAndActualQuantityGreaterThan(form.getId(), 0)) {
                 bindingResult.rejectValue("active", "inUse", "Không thể ngừng hoạt động kho đang còn tồn kho");
             } else if (locationRepository.existsByWarehouse_IdAndDeletedFalse(form.getId())) {
@@ -155,7 +155,7 @@ public class WarehouseAdminService {
         }
         StorageLocation parent = validateParent(form, bindingResult);
         validateWarehouseChange(form, existing, bindingResult);
-        if (form.getId() != null && !form.isActive()) {
+        if (existing != null && existing.isActive() && !form.isActive()) {
             if (stockBalanceRepository.existsByLocation_IdAndActualQuantityGreaterThan(form.getId(), 0)) {
                 bindingResult.rejectValue("active", "inUse", "Không thể ngừng hoạt động vị trí đang còn tồn kho");
             } else if (locationRepository.existsByParent_IdAndDeletedFalse(form.getId())) {
