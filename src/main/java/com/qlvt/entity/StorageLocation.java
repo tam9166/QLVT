@@ -18,7 +18,7 @@ public class StorageLocation {
     private StorageLocation parent;
 
     @NotBlank
-    @Column(nullable = false, unique = true, length = 50)
+    @Column(nullable = false, length = 50)
     private String code;
 
     @NotBlank

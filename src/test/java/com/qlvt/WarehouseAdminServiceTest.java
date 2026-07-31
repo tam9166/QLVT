@@ -10,6 +10,8 @@ import com.qlvt.repository.StockBalanceRepository;
 import com.qlvt.repository.WarehouseRepository;
 import com.qlvt.service.AuditService;
 import com.qlvt.service.WarehouseAdminService;
+import jakarta.persistence.Column;
+import jakarta.persistence.Table;
 import org.junit.jupiter.api.Test;
 import org.springframework.validation.BeanPropertyBindingResult;
 import org.springframework.validation.BindingResult;
@@ -24,6 +26,17 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.*;
 
 class WarehouseAdminServiceTest {
+    @Test
+    void storageLocationCodeIsUniqueWithinWarehouseOnly() throws NoSuchFieldException {
+        Column codeColumn = StorageLocation.class.getDeclaredField("code").getAnnotation(Column.class);
+        Table table = StorageLocation.class.getAnnotation(Table.class);
+
+        assertFalse(codeColumn.unique());
+        assertTrue(java.util.Arrays.stream(table.indexes())
+                .anyMatch(index -> index.unique()
+                        && "warehouse_id,code".equals(index.columnList())));
+    }
+
 
     @Test
     void parentLocationChoicesExcludeOtherWarehousesSelfAndDescendants() {
