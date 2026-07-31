@@ -9,6 +9,9 @@
         <h1 class="h3 mb-3">Thông tin vị trí lưu kho</h1>
         <form th:action="@{/locations}" th:object="${locationForm}" method="post" class="row g-3">
             <input type="hidden" th:field="*{id}">
+            <div class="col-12 alert alert-danger" th:if="${#fields.hasGlobalErrors()}">
+                <div th:each="error : ${#fields.globalErrors()}" th:text="${error}"></div>
+            </div>
             <div class="col-md-6">
                 <label class="form-label">Kho</label>
                 <select class="form-select" th:field="*{warehouseId}">

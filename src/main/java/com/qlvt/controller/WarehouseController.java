@@ -56,11 +56,16 @@ public class WarehouseController {
 
     @PostMapping("/warehouses")
     @PreAuthorize("hasAnyRole('ADMIN','WAREHOUSE_STAFF')")
-    public String saveWarehouse(@Valid @ModelAttribute WarehouseForm warehouseForm, BindingResult bindingResult, Model model, Authentication authentication) {
+    public String saveWarehouse(@Valid @ModelAttribute WarehouseForm warehouseForm, BindingResult bindingResult,
+                                Model model, Authentication authentication,
+                                RedirectAttributes redirectAttributes) {
+        boolean creating = warehouseForm.getId() == null;
         if (!warehouseAdminService.saveWarehouse(warehouseForm, bindingResult, authentication.getName())) {
             model.addAttribute("types", warehouseAdminService.warehouseTypes());
             return "warehouses/form";
         }
+        redirectAttributes.addFlashAttribute("successMessage",
+                creating ? "Đã thêm kho" : "Đã cập nhật kho");
         return "redirect:/warehouses";
     }
 
@@ -107,11 +112,16 @@ public class WarehouseController {
 
     @PostMapping("/locations")
     @PreAuthorize("hasAnyRole('ADMIN','WAREHOUSE_STAFF')")
-    public String saveLocation(@Valid @ModelAttribute StorageLocationForm locationForm, BindingResult bindingResult, Model model, Authentication authentication) {
+    public String saveLocation(@Valid @ModelAttribute StorageLocationForm locationForm, BindingResult bindingResult,
+                               Model model, Authentication authentication,
+                               RedirectAttributes redirectAttributes) {
+        boolean creating = locationForm.getId() == null;
         if (!warehouseAdminService.saveLocation(locationForm, bindingResult, authentication.getName())) {
             locationFormData(model);
             return "locations/form";
         }
+        redirectAttributes.addFlashAttribute("successMessage",
+                creating ? "Đã thêm vị trí" : "Đã cập nhật vị trí");
         return "redirect:/locations";
     }
 

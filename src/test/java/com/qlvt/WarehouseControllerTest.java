@@ -4,12 +4,15 @@ import com.qlvt.controller.WarehouseController;
 import com.qlvt.entity.StorageLocation;
 import com.qlvt.entity.Warehouse;
 import com.qlvt.exception.ResourceNotFoundException;
+import com.qlvt.form.StorageLocationForm;
+import com.qlvt.form.WarehouseForm;
 import com.qlvt.repository.StorageLocationRepository;
 import com.qlvt.repository.WarehouseRepository;
 import com.qlvt.service.WarehouseAdminService;
 import org.junit.jupiter.api.Test;
 import org.springframework.ui.ExtendedModelMap;
 import org.springframework.security.core.Authentication;
+import org.springframework.validation.BeanPropertyBindingResult;
 import org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap;
 
 import java.util.List;
@@ -24,6 +27,42 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 
 class WarehouseControllerTest {
+
+    @Test
+    void saveWarehouseRedirectsWithCreateSuccessMessage() {
+        WarehouseAdminService service = mock(WarehouseAdminService.class);
+        WarehouseController controller = new WarehouseController(
+                service, mock(WarehouseRepository.class), mock(StorageLocationRepository.class));
+        WarehouseForm form = new WarehouseForm();
+        BeanPropertyBindingResult bindingResult = new BeanPropertyBindingResult(form, "warehouseForm");
+        Authentication authentication = mock(Authentication.class);
+        when(authentication.getName()).thenReturn("admin");
+        when(service.saveWarehouse(form, bindingResult, "admin")).thenReturn(true);
+        RedirectAttributesModelMap redirectAttributes = new RedirectAttributesModelMap();
+
+        assertEquals("redirect:/warehouses", controller.saveWarehouse(
+                form, bindingResult, new ExtendedModelMap(), authentication, redirectAttributes));
+        assertEquals("Đã thêm kho", redirectAttributes.getFlashAttributes().get("successMessage"));
+    }
+
+    @Test
+    void saveLocationRedirectsWithUpdateSuccessMessage() {
+        WarehouseAdminService service = mock(WarehouseAdminService.class);
+        WarehouseController controller = new WarehouseController(
+                service, mock(WarehouseRepository.class), mock(StorageLocationRepository.class));
+        StorageLocationForm form = new StorageLocationForm();
+        form.setId(2L);
+        BeanPropertyBindingResult bindingResult = new BeanPropertyBindingResult(form, "locationForm");
+        Authentication authentication = mock(Authentication.class);
+        when(authentication.getName()).thenReturn("admin");
+        when(service.saveLocation(form, bindingResult, "admin")).thenReturn(true);
+        RedirectAttributesModelMap redirectAttributes = new RedirectAttributesModelMap();
+
+        assertEquals("redirect:/locations", controller.saveLocation(
+                form, bindingResult, new ExtendedModelMap(), authentication, redirectAttributes));
+        assertEquals("Đã cập nhật vị trí",
+                redirectAttributes.getFlashAttributes().get("successMessage"));
+    }
 
     @Test
     void editWarehouseRejectsSoftDeletedRecord() {
