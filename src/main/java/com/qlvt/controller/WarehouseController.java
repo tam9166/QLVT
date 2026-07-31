@@ -71,7 +71,7 @@ public class WarehouseController {
         try {
             warehouseAdminService.deleteWarehouse(id, authentication.getName());
             redirectAttributes.addFlashAttribute("successMessage", "Đã xóa kho");
-        } catch (IllegalStateException exception) {
+        } catch (IllegalStateException | ResourceNotFoundException exception) {
             redirectAttributes.addFlashAttribute("errorMessage", exception.getMessage());
         }
         return "redirect:/warehouses";
@@ -122,7 +122,7 @@ public class WarehouseController {
         try {
             warehouseAdminService.deleteLocation(id, authentication.getName());
             redirectAttributes.addFlashAttribute("successMessage", "Đã xóa vị trí");
-        } catch (IllegalStateException exception) {
+        } catch (IllegalStateException | ResourceNotFoundException exception) {
             redirectAttributes.addFlashAttribute("errorMessage", exception.getMessage());
         }
         return "redirect:/locations";

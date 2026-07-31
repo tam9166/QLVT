@@ -103,4 +103,38 @@ class WarehouseControllerTest {
         assertEquals("Đã xóa vị trí",
                 redirectAttributes.getFlashAttributes().get("successMessage"));
     }
+
+    @Test
+    void deleteWarehouseRedirectsWhenRecordDoesNotExist() {
+        WarehouseAdminService service = mock(WarehouseAdminService.class);
+        WarehouseController controller = new WarehouseController(
+                service, mock(WarehouseRepository.class), mock(StorageLocationRepository.class));
+        Authentication authentication = mock(Authentication.class);
+        when(authentication.getName()).thenReturn("admin");
+        doThrow(new ResourceNotFoundException("Kho không tồn tại"))
+                .when(service).deleteWarehouse(99L, "admin");
+        RedirectAttributesModelMap redirectAttributes = new RedirectAttributesModelMap();
+
+        assertEquals("redirect:/warehouses",
+                controller.deleteWarehouse(99L, authentication, redirectAttributes));
+        assertEquals("Kho không tồn tại",
+                redirectAttributes.getFlashAttributes().get("errorMessage"));
+    }
+
+    @Test
+    void deleteLocationRedirectsWhenRecordDoesNotExist() {
+        WarehouseAdminService service = mock(WarehouseAdminService.class);
+        WarehouseController controller = new WarehouseController(
+                service, mock(WarehouseRepository.class), mock(StorageLocationRepository.class));
+        Authentication authentication = mock(Authentication.class);
+        when(authentication.getName()).thenReturn("admin");
+        doThrow(new ResourceNotFoundException("Vị trí không tồn tại"))
+                .when(service).deleteLocation(99L, "admin");
+        RedirectAttributesModelMap redirectAttributes = new RedirectAttributesModelMap();
+
+        assertEquals("redirect:/locations",
+                controller.deleteLocation(99L, authentication, redirectAttributes));
+        assertEquals("Vị trí không tồn tại",
+                redirectAttributes.getFlashAttributes().get("errorMessage"));
+    }
 }

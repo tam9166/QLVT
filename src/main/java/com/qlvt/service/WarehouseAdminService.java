@@ -2,6 +2,7 @@ package com.qlvt.service;
 
 import com.qlvt.entity.StorageLocation;
 import com.qlvt.entity.Warehouse;
+import com.qlvt.exception.ResourceNotFoundException;
 import com.qlvt.enums.LocationType;
 import com.qlvt.enums.WarehouseType;
 import com.qlvt.form.StorageLocationForm;
@@ -229,7 +230,8 @@ public class WarehouseAdminService {
 
     @Transactional
     public void deleteWarehouse(Long id, String actor) {
-        Warehouse warehouse = warehouseRepository.findById(id).orElseThrow();
+        Warehouse warehouse = warehouseRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Kho không tồn tại"));
         if (warehouse.isDeleted()) {
             throw new IllegalStateException("Kho đã bị xóa");
         }
@@ -247,7 +249,8 @@ public class WarehouseAdminService {
 
     @Transactional
     public void deleteLocation(Long id, String actor) {
-        StorageLocation location = locationRepository.findById(id).orElseThrow();
+        StorageLocation location = locationRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Vị trí không tồn tại"));
         if (location.isDeleted()) {
             throw new IllegalStateException("Vị trí đã bị xóa");
         }
