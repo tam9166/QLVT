@@ -2,6 +2,7 @@ package com.qlvt.controller;
 
 import com.qlvt.form.StorageLocationForm;
 import com.qlvt.form.WarehouseForm;
+import com.qlvt.exception.ResourceNotFoundException;
 import com.qlvt.repository.StorageLocationRepository;
 import com.qlvt.repository.WarehouseRepository;
 import com.qlvt.service.WarehouseAdminService;
@@ -44,7 +45,10 @@ public class WarehouseController {
     @GetMapping("/warehouses/{id}/edit")
     @PreAuthorize("hasAnyRole('ADMIN','WAREHOUSE_STAFF')")
     public String editWarehouse(@PathVariable Long id, Model model) {
-        model.addAttribute("warehouseForm", warehouseAdminService.toForm(warehouseRepository.findById(id).orElseThrow()));
+        var warehouse = warehouseRepository.findById(id)
+                .filter(candidate -> !candidate.isDeleted())
+                .orElseThrow(() -> new ResourceNotFoundException("Kho không tồn tại hoặc đã bị xóa"));
+        model.addAttribute("warehouseForm", warehouseAdminService.toForm(warehouse));
         model.addAttribute("types", warehouseAdminService.warehouseTypes());
         return "warehouses/form";
     }
@@ -86,7 +90,10 @@ public class WarehouseController {
     @GetMapping("/locations/{id}/edit")
     @PreAuthorize("hasAnyRole('ADMIN','WAREHOUSE_STAFF')")
     public String editLocation(@PathVariable Long id, Model model) {
-        model.addAttribute("locationForm", warehouseAdminService.toForm(locationRepository.findById(id).orElseThrow()));
+        var location = locationRepository.findById(id)
+                .filter(candidate -> !candidate.isDeleted())
+                .orElseThrow(() -> new ResourceNotFoundException("Vị trí không tồn tại hoặc đã bị xóa"));
+        model.addAttribute("locationForm", warehouseAdminService.toForm(location));
         locationFormData(model);
         return "locations/form";
     }
