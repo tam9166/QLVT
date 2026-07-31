@@ -17,10 +17,12 @@ public class StorageLocationForm {
     private String code;
 
     @NotBlank(message = "Tên vị trí không được để trống")
+    @Size(max = 150, message = "Tên vị trí tối đa 150 ký tự")
     private String name;
 
     @NotNull(message = "Loại vị trí là bắt buộc")
     private LocationType locationType;
+    @Size(max = 500, message = "Mô tả tối đa 500 ký tự")
     private String description;
     private boolean active = true;
 

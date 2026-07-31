@@ -12,6 +12,8 @@ import com.qlvt.service.AuditService;
 import com.qlvt.service.WarehouseAdminService;
 import jakarta.persistence.Column;
 import jakarta.persistence.Table;
+import jakarta.validation.Validation;
+import jakarta.validation.Validator;
 import org.junit.jupiter.api.Test;
 import org.springframework.validation.BeanPropertyBindingResult;
 import org.springframework.validation.BindingResult;
@@ -26,6 +28,34 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.*;
 
 class WarehouseAdminServiceTest {
+    private final Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
+
+    @Test
+    void warehouseFormRejectsValuesLongerThanDatabaseColumns() {
+        WarehouseForm form = warehouseForm(null, true);
+        form.setName("N".repeat(151));
+        form.setAddress("A".repeat(301));
+        form.setDescription("D".repeat(501));
+
+        var violations = validator.validate(form);
+
+        assertTrue(violations.stream().anyMatch(v -> "name".equals(v.getPropertyPath().toString())));
+        assertTrue(violations.stream().anyMatch(v -> "address".equals(v.getPropertyPath().toString())));
+        assertTrue(violations.stream().anyMatch(v -> "description".equals(v.getPropertyPath().toString())));
+    }
+
+    @Test
+    void storageLocationFormRejectsValuesLongerThanDatabaseColumns() {
+        StorageLocationForm form = form(null, 1L, null);
+        form.setName("N".repeat(151));
+        form.setDescription("D".repeat(501));
+
+        var violations = validator.validate(form);
+
+        assertTrue(violations.stream().anyMatch(v -> "name".equals(v.getPropertyPath().toString())));
+        assertTrue(violations.stream().anyMatch(v -> "description".equals(v.getPropertyPath().toString())));
+    }
+
     @Test
     void storageLocationCodeIsUniqueWithinWarehouseOnly() throws NoSuchFieldException {
         Column codeColumn = StorageLocation.class.getDeclaredField("code").getAnnotation(Column.class);

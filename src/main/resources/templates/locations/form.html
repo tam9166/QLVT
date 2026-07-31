@@ -46,6 +46,7 @@
             <div class="col-12">
                 <label class="form-label">Mô tả</label>
                 <textarea class="form-control" th:field="*{description}"></textarea>
+                <div class="text-danger small" th:errors="*{description}"></div>
             </div>
             <div class="col-12 form-check ms-2">
                 <input class="form-check-input" type="checkbox" th:field="*{active}">
