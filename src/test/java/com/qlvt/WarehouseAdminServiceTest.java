@@ -67,6 +67,46 @@ class WarehouseAdminServiceTest {
                         && "warehouse_id,code".equals(index.columnList())));
     }
 
+    @Test
+    void saveWarehouseNormalizesTextBeforeDuplicateCheckAndPersistence() {
+        Fixture fixture = new Fixture();
+        WarehouseForm form = warehouseForm(null, true);
+        form.setCode("  kho-a  ");
+        form.setName("  Kho A  ");
+        form.setAddress("   ");
+        form.setDescription("  Kho tổng  ");
+        BindingResult errors = new BeanPropertyBindingResult(form, "warehouseForm");
+
+        assertTrue(fixture.service.saveWarehouse(form, errors, "tester"));
+
+        verify(fixture.warehouseRepository).existsByCode("KHO-A");
+        verify(fixture.warehouseRepository).save(argThat(warehouse ->
+                "KHO-A".equals(warehouse.getCode())
+                        && "Kho A".equals(warehouse.getName())
+                        && warehouse.getAddress() == null
+                        && "Kho tổng".equals(warehouse.getDescription())));
+    }
+
+    @Test
+    void saveLocationNormalizesTextBeforeDuplicateCheckAndPersistence() {
+        Fixture fixture = new Fixture();
+        Warehouse warehouse = warehouse(1L);
+        when(fixture.warehouseRepository.findById(1L)).thenReturn(Optional.of(warehouse));
+        StorageLocationForm form = form(null, 1L, null);
+        form.setCode("  a-01  ");
+        form.setName("  Kệ A  ");
+        form.setDescription("   ");
+        BindingResult errors = errors(form);
+
+        assertTrue(fixture.service.saveLocation(form, errors, "tester"));
+
+        verify(fixture.locationRepository).existsByWarehouse_IdAndCode(1L, "A-01");
+        verify(fixture.locationRepository).save(argThat(location ->
+                "A-01".equals(location.getCode())
+                        && "Kệ A".equals(location.getName())
+                        && location.getDescription() == null));
+    }
+
 
     @Test
     void parentLocationChoicesExcludeOtherWarehousesSelfAndDescendants() {

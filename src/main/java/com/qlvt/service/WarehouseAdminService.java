@@ -15,6 +15,7 @@ import org.springframework.validation.BindingResult;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 
 @Service
@@ -100,6 +101,7 @@ public class WarehouseAdminService {
 
     @Transactional
     public boolean saveWarehouse(WarehouseForm form, BindingResult bindingResult, String actor) {
+        normalize(form);
         Long id = form.getId() == null ? -1L : form.getId();
         Warehouse existing = form.getId() == null
                 ? null
@@ -136,6 +138,7 @@ public class WarehouseAdminService {
 
     @Transactional
     public boolean saveLocation(StorageLocationForm form, BindingResult bindingResult, String actor) {
+        normalize(form);
         Long id = form.getId() == null ? -1L : form.getId();
         StorageLocation existing = form.getId() == null
                 ? null
@@ -262,4 +265,31 @@ public class WarehouseAdminService {
 
     public WarehouseType[] warehouseTypes() { return WarehouseType.values(); }
     public LocationType[] locationTypes() { return LocationType.values(); }
+
+    private void normalize(WarehouseForm form) {
+        form.setCode(normalizeCode(form.getCode()));
+        form.setName(trim(form.getName()));
+        form.setAddress(trimToNull(form.getAddress()));
+        form.setDescription(trimToNull(form.getDescription()));
+    }
+
+    private void normalize(StorageLocationForm form) {
+        form.setCode(normalizeCode(form.getCode()));
+        form.setName(trim(form.getName()));
+        form.setDescription(trimToNull(form.getDescription()));
+    }
+
+    private String normalizeCode(String value) {
+        String trimmed = trim(value);
+        return trimmed == null ? null : trimmed.toUpperCase(Locale.ROOT);
+    }
+
+    private String trimToNull(String value) {
+        String trimmed = trim(value);
+        return trimmed == null || trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private String trim(String value) {
+        return value == null ? null : value.trim();
+    }
 }
