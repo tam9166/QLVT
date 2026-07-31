@@ -13,6 +13,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
 public class WarehouseController {
@@ -65,8 +66,14 @@ public class WarehouseController {
 
     @PostMapping("/warehouses/{id}/delete")
     @PreAuthorize("hasAnyRole('ADMIN','WAREHOUSE_STAFF')")
-    public String deleteWarehouse(@PathVariable Long id, Authentication authentication) {
-        warehouseAdminService.deleteWarehouse(id, authentication.getName());
+    public String deleteWarehouse(@PathVariable Long id, Authentication authentication,
+                                  RedirectAttributes redirectAttributes) {
+        try {
+            warehouseAdminService.deleteWarehouse(id, authentication.getName());
+            redirectAttributes.addFlashAttribute("successMessage", "Đã xóa kho");
+        } catch (IllegalStateException exception) {
+            redirectAttributes.addFlashAttribute("errorMessage", exception.getMessage());
+        }
         return "redirect:/warehouses";
     }
 
@@ -110,8 +117,14 @@ public class WarehouseController {
 
     @PostMapping("/locations/{id}/delete")
     @PreAuthorize("hasAnyRole('ADMIN','WAREHOUSE_STAFF')")
-    public String deleteLocation(@PathVariable Long id, Authentication authentication) {
-        warehouseAdminService.deleteLocation(id, authentication.getName());
+    public String deleteLocation(@PathVariable Long id, Authentication authentication,
+                                 RedirectAttributes redirectAttributes) {
+        try {
+            warehouseAdminService.deleteLocation(id, authentication.getName());
+            redirectAttributes.addFlashAttribute("successMessage", "Đã xóa vị trí");
+        } catch (IllegalStateException exception) {
+            redirectAttributes.addFlashAttribute("errorMessage", exception.getMessage());
+        }
         return "redirect:/locations";
     }
 
