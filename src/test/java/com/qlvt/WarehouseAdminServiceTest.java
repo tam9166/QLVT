@@ -271,6 +271,34 @@ class WarehouseAdminServiceTest {
         assertFalse(warehouse.isDeleted());
     }
 
+    @Test
+    void deleteWarehouseRejectsAlreadyDeletedWarehouse() {
+        Fixture fixture = new Fixture();
+        Warehouse warehouse = warehouse(1L);
+        warehouse.setDeleted(true);
+        when(fixture.warehouseRepository.findById(1L)).thenReturn(Optional.of(warehouse));
+
+        assertThrows(IllegalStateException.class, () -> fixture.service.deleteWarehouse(1L, "tester"));
+
+        verify(fixture.stockBalanceRepository, never())
+                .existsByWarehouse_IdAndActualQuantityGreaterThan(anyLong(), anyInt());
+        verify(fixture.auditService, never()).log(any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void deleteLocationRejectsAlreadyDeletedLocation() {
+        Fixture fixture = new Fixture();
+        StorageLocation location = location(7L, warehouse(1L));
+        location.setDeleted(true);
+        when(fixture.locationRepository.findById(7L)).thenReturn(Optional.of(location));
+
+        assertThrows(IllegalStateException.class, () -> fixture.service.deleteLocation(7L, "tester"));
+
+        verify(fixture.stockBalanceRepository, never())
+                .existsByLocation_IdAndActualQuantityGreaterThan(anyLong(), anyInt());
+        verify(fixture.auditService, never()).log(any(), any(), any(), any(), any());
+    }
+
     private static BindingResult errors(StorageLocationForm form) {
         return new BeanPropertyBindingResult(form, "locationForm");
     }

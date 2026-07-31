@@ -227,6 +227,9 @@ public class WarehouseAdminService {
     @Transactional
     public void deleteWarehouse(Long id, String actor) {
         Warehouse warehouse = warehouseRepository.findById(id).orElseThrow();
+        if (warehouse.isDeleted()) {
+            throw new IllegalStateException("Kho đã bị xóa");
+        }
         if (stockBalanceRepository.existsByWarehouse_IdAndActualQuantityGreaterThan(id, 0)) {
             throw new IllegalStateException("Không thể xóa kho đang còn tồn kho");
         }
@@ -242,6 +245,9 @@ public class WarehouseAdminService {
     @Transactional
     public void deleteLocation(Long id, String actor) {
         StorageLocation location = locationRepository.findById(id).orElseThrow();
+        if (location.isDeleted()) {
+            throw new IllegalStateException("Vị trí đã bị xóa");
+        }
         if (stockBalanceRepository.existsByLocation_IdAndActualQuantityGreaterThan(id, 0)) {
             throw new IllegalStateException("Không thể xóa vị trí đang còn tồn kho");
         }
