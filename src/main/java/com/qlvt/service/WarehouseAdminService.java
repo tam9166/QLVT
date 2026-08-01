@@ -45,11 +45,22 @@ public class WarehouseAdminService {
                 keyword, keyword);
     }
 
-    public List<StorageLocation> locations(Long warehouseId) {
-        if (warehouseId == null) {
-            return locationRepository.findByDeletedFalseOrderByCodeAsc();
+    public List<StorageLocation> locations(Long warehouseId, String q) {
+        List<StorageLocation> locations = warehouseId == null
+                ? locationRepository.findByDeletedFalseOrderByCodeAsc()
+                : locationRepository.findByWarehouse_IdAndDeletedFalseOrderByCodeAsc(warehouseId);
+        if (q == null || q.isBlank()) {
+            return locations;
         }
-        return locationRepository.findByWarehouse_IdAndDeletedFalseOrderByCodeAsc(warehouseId);
+        String keyword = q.trim().toLowerCase(Locale.ROOT);
+        return locations.stream()
+                .filter(location -> containsIgnoreCase(location.getCode(), keyword)
+                        || containsIgnoreCase(location.getName(), keyword))
+                .toList();
+    }
+
+    private boolean containsIgnoreCase(String value, String normalizedKeyword) {
+        return value != null && value.toLowerCase(Locale.ROOT).contains(normalizedKeyword);
     }
 
     public List<StorageLocation> parentLocationChoices(StorageLocationForm form) {

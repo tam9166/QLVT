@@ -84,10 +84,12 @@ public class WarehouseController {
 
     @GetMapping("/locations")
     @PreAuthorize("hasAnyRole('ADMIN','WAREHOUSE_STAFF')")
-    public String locations(@RequestParam(required = false) Long warehouseId, Model model) {
-        model.addAttribute("locations", warehouseAdminService.locations(warehouseId));
+    public String locations(@RequestParam(required = false) Long warehouseId,
+                            @RequestParam(defaultValue = "") String q, Model model) {
+        model.addAttribute("locations", warehouseAdminService.locations(warehouseId, q));
         model.addAttribute("warehouses", warehouseRepository.findByDeletedFalseOrderByCodeAsc());
         model.addAttribute("warehouseId", warehouseId);
+        model.addAttribute("q", q);
         return "locations/list";
     }
 
