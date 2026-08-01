@@ -40,7 +40,9 @@ public class WarehouseAdminService {
         if (q == null || q.isBlank()) {
             return warehouseRepository.findByDeletedFalseOrderByCodeAsc();
         }
-        return warehouseRepository.findByDeletedFalseAndCodeContainingIgnoreCaseOrDeletedFalseAndNameContainingIgnoreCase(q, q);
+        String keyword = q.trim();
+        return warehouseRepository.findByDeletedFalseAndCodeContainingIgnoreCaseOrDeletedFalseAndNameContainingIgnoreCase(
+                keyword, keyword);
     }
 
     public List<StorageLocation> locations(Long warehouseId) {

@@ -31,6 +31,28 @@ class WarehouseAdminServiceTest {
     private final Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
 
     @Test
+    void searchWarehousesTrimsKeywordBeforeQuerying() {
+        Fixture fixture = new Fixture();
+
+        fixture.service.searchWarehouses("  kho chinh  ");
+
+        verify(fixture.warehouseRepository)
+                .findByDeletedFalseAndCodeContainingIgnoreCaseOrDeletedFalseAndNameContainingIgnoreCase(
+                        "kho chinh", "kho chinh");
+    }
+
+    @Test
+    void searchWarehousesTreatsWhitespaceAsNoFilter() {
+        Fixture fixture = new Fixture();
+
+        fixture.service.searchWarehouses("   ");
+
+        verify(fixture.warehouseRepository).findByDeletedFalseOrderByCodeAsc();
+        verify(fixture.warehouseRepository, never())
+                .findByDeletedFalseAndCodeContainingIgnoreCaseOrDeletedFalseAndNameContainingIgnoreCase(anyString(), anyString());
+    }
+
+    @Test
     void warehouseFormRejectsValuesLongerThanDatabaseColumns() {
         WarehouseForm form = warehouseForm(null, true);
         form.setName("N".repeat(151));
