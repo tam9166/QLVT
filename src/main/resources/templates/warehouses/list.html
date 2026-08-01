@@ -14,6 +14,9 @@
         <form class="row g-2 mb-3">
             <div class="col-md-5"><input class="form-control" name="q" th:value="${q}" placeholder="Tìm mã hoặc tên kho"></div>
             <div class="col-auto"><button class="btn btn-outline-light">Tìm</button></div>
+            <div class="col-auto" th:if="${q != null and !#strings.isEmpty(#strings.trim(q))}">
+                <a class="btn btn-link" th:href="@{/warehouses}">Xóa bộ lọc</a>
+            </div>
         </form>
         <div class="table-responsive">
             <table class="table table-modern align-middle">
@@ -29,6 +32,9 @@
                         <a class="btn btn-sm btn-outline-light" th:href="@{/warehouses/{id}/edit(id=${w.id})}">Sửa</a>
                         <form class="d-inline" method="post" th:action="@{/warehouses/{id}/delete(id=${w.id})}" onsubmit="return confirm('Xóa mềm kho này?')"><button class="btn btn-sm btn-outline-light">Xóa</button></form>
                     </td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(warehouses)}">
+                    <td colspan="6" class="text-center text-muted py-4">Không tìm thấy kho phù hợp.</td>
                 </tr>
                 </tbody>
             </table>

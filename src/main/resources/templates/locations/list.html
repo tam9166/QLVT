@@ -22,6 +22,9 @@
                 </select>
             </div>
             <div class="col-auto"><button class="btn btn-outline-light">Lọc</button></div>
+            <div class="col-auto" th:if="${warehouseId != null or (q != null and !#strings.isEmpty(#strings.trim(q)))}">
+                <a class="btn btn-link" th:href="@{/locations}">Xóa bộ lọc</a>
+            </div>
         </form>
         <div class="table-responsive">
             <table class="table table-modern align-middle">
@@ -38,6 +41,9 @@
                         <a class="btn btn-sm btn-outline-light" th:href="@{/locations/{id}/edit(id=${l.id})}">Sửa</a>
                         <form class="d-inline" method="post" th:action="@{/locations/{id}/delete(id=${l.id})}" onsubmit="return confirm('Xóa mềm vị trí này?')"><button class="btn btn-sm btn-outline-light">Xóa</button></form>
                     </td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(locations)}">
+                    <td colspan="7" class="text-center text-muted py-4">Không tìm thấy vị trí phù hợp.</td>
                 </tr>
                 </tbody>
             </table>
