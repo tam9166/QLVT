@@ -25,7 +25,7 @@
         </form>
         <div class="table-responsive">
             <table class="table table-modern align-middle">
-                <thead><tr><th>Mã</th><th>Tên vị trí</th><th>Kho</th><th>Vị trí cha</th><th>Loại</th><th></th></tr></thead>
+                <thead><tr><th>Mã</th><th>Tên vị trí</th><th>Kho</th><th>Vị trí cha</th><th>Loại</th><th>Trạng thái</th><th></th></tr></thead>
                 <tbody>
                 <tr th:each="l:${locations}">
                     <td><span class="code-pill" th:text="${l.code}"></span></td>
@@ -33,6 +33,7 @@
                     <td th:text="${l.warehouse.name}"></td>
                     <td th:text="${l.parent == null ? '-' : l.parent.name}"></td>
                     <td th:text="${l.locationType == null ? '-' : l.locationType}"></td>
+                    <td th:text="${l.active ? 'Đang dùng' : 'Tạm ngưng'}"></td>
                     <td class="text-end">
                         <a class="btn btn-sm btn-outline-light" th:href="@{/locations/{id}/edit(id=${l.id})}">Sửa</a>
                         <form class="d-inline" method="post" th:action="@{/locations/{id}/delete(id=${l.id})}" onsubmit="return confirm('Xóa mềm vị trí này?')"><button class="btn btn-sm btn-outline-light">Xóa</button></form>
