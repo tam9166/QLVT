@@ -196,7 +196,7 @@ class WarehouseAdminServiceTest {
         StorageLocation child = location(9L, selectedWarehouse);
         child.setParent(edited);
         StorageLocation otherWarehouse = location(10L, warehouse(2L));
-        when(fixture.locationRepository.findByDeletedFalseAndActiveTrueOrderByCodeAsc())
+        when(fixture.locationRepository.findByDeletedFalseOrderByCodeAsc())
                 .thenReturn(List.of(edited, validParent, child, otherWarehouse));
         StorageLocationForm form = form(7L, 1L, null);
 
@@ -287,6 +287,22 @@ class WarehouseAdminServiceTest {
     }
 
     @Test
+    void parentChoicesKeepSelectedInactiveParentOnly() {
+        Fixture fixture = new Fixture();
+        Warehouse warehouse = warehouse(1L);
+        StorageLocation active = location(8L, warehouse);
+        StorageLocation selectedInactive = location(9L, warehouse);
+        selectedInactive.setActive(false);
+        StorageLocation otherInactive = location(10L, warehouse);
+        otherInactive.setActive(false);
+        when(fixture.locationRepository.findByDeletedFalseOrderByCodeAsc())
+                .thenReturn(List.of(active, selectedInactive, otherInactive));
+        StorageLocationForm form = form(7L, 1L, 9L);
+
+        assertEquals(List.of(active, selectedInactive), fixture.service.parentLocationChoices(form));
+    }
+
+    @Test
     void saveLocationRejectsInactiveParent() {
         Fixture fixture = new Fixture();
         Warehouse warehouse = warehouse(1L);
@@ -301,6 +317,28 @@ class WarehouseAdminServiceTest {
 
         assertTrue(errors.hasFieldErrors("parentId"));
         verify(fixture.locationRepository, never()).save(any());
+    }
+
+    @Test
+    void saveLocationAllowsKeepingExistingInactiveParent() {
+        Fixture fixture = new Fixture();
+        Warehouse warehouse = warehouse(1L);
+        StorageLocation parent = location(9L, warehouse);
+        parent.setActive(false);
+        StorageLocation existing = location(7L, warehouse);
+        existing.setParent(parent);
+        when(fixture.warehouseRepository.findById(1L)).thenReturn(Optional.of(warehouse));
+        when(fixture.locationRepository.findById(7L)).thenReturn(Optional.of(existing));
+        when(fixture.locationRepository.findById(9L)).thenReturn(Optional.of(parent));
+        StorageLocationForm form = form(7L, 1L, 9L);
+        form.setDescription("Cập nhật mô tả");
+        BindingResult errors = errors(form);
+
+        assertTrue(fixture.service.saveLocation(form, errors, "tester"));
+
+        assertFalse(errors.hasErrors());
+        assertEquals(parent, existing.getParent());
+        verify(fixture.locationRepository).save(existing);
     }
 
     @Test

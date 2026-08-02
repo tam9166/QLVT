@@ -82,10 +82,12 @@ public class WarehouseAdminService {
     }
 
     public List<StorageLocation> parentLocationChoices(StorageLocationForm form) {
-        return locationRepository.findByDeletedFalseAndActiveTrueOrderByCodeAsc().stream()
+        return locationRepository.findByDeletedFalseOrderByCodeAsc().stream()
                 .filter(candidate -> form.getWarehouseId() == null
                         || (candidate.getWarehouse() != null
                         && form.getWarehouseId().equals(candidate.getWarehouse().getId())))
+                .filter(candidate -> candidate.isActive()
+                        || (form.getParentId() != null && form.getParentId().equals(candidate.getId())))
                 .filter(candidate -> !isSelfOrDescendant(candidate, form.getId()))
                 .toList();
     }
@@ -198,7 +200,7 @@ public class WarehouseAdminService {
                 || (form.getId() != null && locationRepository.existsByWarehouse_IdAndCodeIgnoreCaseAndIdNot(form.getWarehouseId(), form.getCode(), id)))) {
             bindingResult.rejectValue("code", "duplicate", "Mã vị trí đã tồn tại trong kho này");
         }
-        StorageLocation parent = validateParent(form, bindingResult);
+        StorageLocation parent = validateParent(form, existing, bindingResult);
         validateWarehouseChange(form, existing, bindingResult);
         if (existing != null && existing.isActive() && !form.isActive()) {
             if (stockBalanceRepository.existsByLocation_IdAndActualQuantityGreaterThan(form.getId(), 0)) {
@@ -242,12 +244,16 @@ public class WarehouseAdminService {
         }
     }
 
-    private StorageLocation validateParent(StorageLocationForm form, BindingResult bindingResult) {
+    private StorageLocation validateParent(StorageLocationForm form, StorageLocation existing,
+                                           BindingResult bindingResult) {
         if (form.getParentId() == null) {
             return null;
         }
         StorageLocation parent = locationRepository.findById(form.getParentId()).orElse(null);
-        if (parent == null || parent.isDeleted() || !parent.isActive()) {
+        boolean keepsExistingParent = existing != null
+                && existing.getParent() != null
+                && existing.getParent().getId().equals(form.getParentId());
+        if (parent == null || parent.isDeleted() || (!parent.isActive() && !keepsExistingParent)) {
             bindingResult.rejectValue("parentId", "invalid", "Vị trí cha không tồn tại hoặc đã bị xóa");
             return null;
         }
