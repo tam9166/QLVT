@@ -90,6 +90,13 @@ public class WarehouseAdminService {
                 .toList();
     }
 
+    public List<Warehouse> warehouseChoices(StorageLocationForm form) {
+        return warehouseRepository.findByDeletedFalseOrderByCodeAsc().stream()
+                .filter(warehouse -> warehouse.isActive()
+                        || (form != null && warehouse.getId().equals(form.getWarehouseId())))
+                .toList();
+    }
+
     private boolean isSelfOrDescendant(StorageLocation candidate, Long editedLocationId) {
         if (editedLocationId == null) {
             return false;
@@ -181,7 +188,10 @@ public class WarehouseAdminService {
         Warehouse warehouse = form.getWarehouseId() == null
                 ? null
                 : warehouseRepository.findById(form.getWarehouseId()).orElse(null);
-        if (warehouse == null || warehouse.isDeleted() || !warehouse.isActive()) {
+        boolean keepsExistingWarehouse = existing != null
+                && existing.getWarehouse() != null
+                && existing.getWarehouse().getId().equals(form.getWarehouseId());
+        if (warehouse == null || warehouse.isDeleted() || (!warehouse.isActive() && !keepsExistingWarehouse)) {
             bindingResult.rejectValue("warehouseId", "invalid", "Kho không tồn tại hoặc không hoạt động");
         }
         if (form.getWarehouseId() != null && ((form.getId() == null && locationRepository.existsByWarehouse_IdAndCodeIgnoreCase(form.getWarehouseId(), form.getCode()))

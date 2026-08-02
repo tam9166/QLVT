@@ -254,6 +254,39 @@ class WarehouseAdminServiceTest {
     }
 
     @Test
+    void saveLocationAllowsEditingInItsExistingInactiveWarehouse() {
+        Fixture fixture = new Fixture();
+        Warehouse warehouse = warehouse(1L);
+        warehouse.setActive(false);
+        StorageLocation existing = location(7L, warehouse);
+        when(fixture.warehouseRepository.findById(1L)).thenReturn(Optional.of(warehouse));
+        when(fixture.locationRepository.findById(7L)).thenReturn(Optional.of(existing));
+        StorageLocationForm form = form(7L, 1L, null);
+        form.setDescription("Cập nhật mô tả");
+        BindingResult errors = errors(form);
+
+        assertTrue(fixture.service.saveLocation(form, errors, "tester"));
+
+        assertFalse(errors.hasErrors());
+        verify(fixture.locationRepository).save(existing);
+    }
+
+    @Test
+    void warehouseChoicesKeepSelectedInactiveWarehouseOnly() {
+        Fixture fixture = new Fixture();
+        Warehouse active = warehouse(1L);
+        Warehouse selectedInactive = warehouse(2L);
+        selectedInactive.setActive(false);
+        Warehouse otherInactive = warehouse(3L);
+        otherInactive.setActive(false);
+        when(fixture.warehouseRepository.findByDeletedFalseOrderByCodeAsc())
+                .thenReturn(List.of(active, selectedInactive, otherInactive));
+        StorageLocationForm form = form(7L, 2L, null);
+
+        assertEquals(List.of(active, selectedInactive), fixture.service.warehouseChoices(form));
+    }
+
+    @Test
     void saveLocationRejectsInactiveParent() {
         Fixture fixture = new Fixture();
         Warehouse warehouse = warehouse(1L);
