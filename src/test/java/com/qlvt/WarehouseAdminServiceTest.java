@@ -81,6 +81,35 @@ class WarehouseAdminServiceTest {
     }
 
     @Test
+    void searchWarehousesCombinesKeywordAndActiveStatus() {
+        Fixture fixture = new Fixture();
+        Warehouse active = warehouse(1L);
+        Warehouse inactive = warehouse(2L);
+        inactive.setActive(false);
+        when(fixture.warehouseRepository
+                .findByDeletedFalseAndCodeContainingIgnoreCaseOrDeletedFalseAndNameContainingIgnoreCase("kho", "kho"))
+                .thenReturn(List.of(active, inactive));
+
+        assertEquals(List.of(inactive), fixture.service.searchWarehouses(" kho ", false));
+    }
+
+    @Test
+    void searchLocationsCombinesWarehouseKeywordAndActiveStatus() {
+        Fixture fixture = new Fixture();
+        StorageLocation active = new StorageLocation();
+        active.setCode("KE-A01");
+        active.setName("Kệ lạnh");
+        StorageLocation inactive = new StorageLocation();
+        inactive.setCode("KE-A02");
+        inactive.setName("Kệ lạnh dự phòng");
+        inactive.setActive(false);
+        when(fixture.locationRepository.findByWarehouse_IdAndDeletedFalseOrderByCodeAsc(7L))
+                .thenReturn(List.of(active, inactive));
+
+        assertEquals(List.of(inactive), fixture.service.locations(7L, " kệ ", false));
+    }
+
+    @Test
     void warehouseFormRejectsValuesLongerThanDatabaseColumns() {
         WarehouseForm form = warehouseForm(null, true);
         form.setName("N".repeat(151));

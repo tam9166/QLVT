@@ -29,9 +29,11 @@ public class WarehouseController {
 
     @GetMapping("/warehouses")
     @PreAuthorize("hasAnyRole('ADMIN','WAREHOUSE_STAFF')")
-    public String warehouses(@RequestParam(defaultValue = "") String q, Model model) {
-        model.addAttribute("warehouses", warehouseAdminService.searchWarehouses(q));
+    public String warehouses(@RequestParam(defaultValue = "") String q,
+                             @RequestParam(required = false) Boolean active, Model model) {
+        model.addAttribute("warehouses", warehouseAdminService.searchWarehouses(q, active));
         model.addAttribute("q", q);
+        model.addAttribute("active", active);
         return "warehouses/list";
     }
 
@@ -85,11 +87,13 @@ public class WarehouseController {
     @GetMapping("/locations")
     @PreAuthorize("hasAnyRole('ADMIN','WAREHOUSE_STAFF')")
     public String locations(@RequestParam(required = false) Long warehouseId,
-                            @RequestParam(defaultValue = "") String q, Model model) {
-        model.addAttribute("locations", warehouseAdminService.locations(warehouseId, q));
+                            @RequestParam(defaultValue = "") String q,
+                            @RequestParam(required = false) Boolean active, Model model) {
+        model.addAttribute("locations", warehouseAdminService.locations(warehouseId, q, active));
         model.addAttribute("warehouses", warehouseRepository.findByDeletedFalseOrderByCodeAsc());
         model.addAttribute("warehouseId", warehouseId);
         model.addAttribute("q", q);
+        model.addAttribute("active", active);
         return "locations/list";
     }
 

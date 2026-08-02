@@ -37,26 +37,44 @@ public class WarehouseAdminService {
     }
 
     public List<Warehouse> searchWarehouses(String q) {
+        return searchWarehouses(q, null);
+    }
+
+    public List<Warehouse> searchWarehouses(String q, Boolean active) {
+        List<Warehouse> warehouses;
         if (q == null || q.isBlank()) {
-            return warehouseRepository.findByDeletedFalseOrderByCodeAsc();
+            warehouses = warehouseRepository.findByDeletedFalseOrderByCodeAsc();
+        } else {
+            String keyword = q.trim();
+            warehouses = warehouseRepository.findByDeletedFalseAndCodeContainingIgnoreCaseOrDeletedFalseAndNameContainingIgnoreCase(
+                    keyword, keyword);
         }
-        String keyword = q.trim();
-        return warehouseRepository.findByDeletedFalseAndCodeContainingIgnoreCaseOrDeletedFalseAndNameContainingIgnoreCase(
-                keyword, keyword);
+        return active == null ? warehouses : warehouses.stream()
+                .filter(warehouse -> warehouse.isActive() == active)
+                .toList();
     }
 
     public List<StorageLocation> locations(Long warehouseId, String q) {
+        return locations(warehouseId, q, null);
+    }
+
+    public List<StorageLocation> locations(Long warehouseId, String q, Boolean active) {
         List<StorageLocation> locations = warehouseId == null
                 ? locationRepository.findByDeletedFalseOrderByCodeAsc()
                 : locationRepository.findByWarehouse_IdAndDeletedFalseOrderByCodeAsc(warehouseId);
+        return locations.stream()
+                .filter(location -> active == null || location.isActive() == active)
+                .filter(location -> matchesKeyword(location, q))
+                .toList();
+    }
+
+    private boolean matchesKeyword(StorageLocation location, String q) {
         if (q == null || q.isBlank()) {
-            return locations;
+            return true;
         }
         String keyword = q.trim().toLowerCase(Locale.ROOT);
-        return locations.stream()
-                .filter(location -> containsIgnoreCase(location.getCode(), keyword)
-                        || containsIgnoreCase(location.getName(), keyword))
-                .toList();
+        return containsIgnoreCase(location.getCode(), keyword)
+                || containsIgnoreCase(location.getName(), keyword);
     }
 
     private boolean containsIgnoreCase(String value, String normalizedKeyword) {

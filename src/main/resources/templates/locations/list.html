@@ -12,17 +12,24 @@
             <a class="btn btn-primary" th:href="@{/locations/new}"><i class="bi bi-plus-lg"></i> Thêm vị trí</a>
         </div>
         <form class="row g-2 mb-3">
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <input class="form-control" name="q" th:value="${q}" placeholder="Tìm mã hoặc tên vị trí">
             </div>
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <select class="form-select" name="warehouseId">
                     <option value="">Tất cả kho</option>
                     <option th:each="w:${warehouses}" th:value="${w.id}" th:selected="${warehouseId == w.id}" th:text="${w.code + ' - ' + w.name}"></option>
                 </select>
             </div>
+            <div class="col-md-3">
+                <select class="form-select" name="active">
+                    <option value="">Tất cả trạng thái</option>
+                    <option value="true" th:selected="${active == true}">Đang dùng</option>
+                    <option value="false" th:selected="${active == false}">Tạm ngưng</option>
+                </select>
+            </div>
             <div class="col-auto"><button class="btn btn-outline-light">Lọc</button></div>
-            <div class="col-auto" th:if="${warehouseId != null or (q != null and !#strings.isEmpty(#strings.trim(q)))}">
+            <div class="col-auto" th:if="${active != null or warehouseId != null or (q != null and !#strings.isEmpty(#strings.trim(q)))}">
                 <a class="btn btn-link" th:href="@{/locations}">Xóa bộ lọc</a>
             </div>
         </form>
