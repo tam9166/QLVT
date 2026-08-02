@@ -32,7 +32,7 @@
                 <tr th:each="w : ${warehouses}">
                     <td><span class="code-pill" th:text="${w.code}"></span></td>
                     <td th:text="${w.name}"></td>
-                    <td th:text="${w.type}"></td>
+                    <td th:text="${w.type == null ? '-' : T(com.qlvt.enums.WarehouseType).valueOf(w.type).label}"></td>
                     <td th:text="${w.address}"></td>
                     <td th:text="${w.active ? 'Đang dùng' : 'Tạm ngưng'}"></td>
                     <td class="text-end">
