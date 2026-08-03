@@ -28,6 +28,17 @@ public enum LocationType {
         }
     }
 
+    public static LocationType fromPersistedName(String persistedName) {
+        if (persistedName == null || persistedName.isBlank()) {
+            return null;
+        }
+        try {
+            return valueOf(persistedName);
+        } catch (IllegalArgumentException exception) {
+            return null;
+        }
+    }
+
     @Override
     public String toString() {
         return label;

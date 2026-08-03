@@ -128,7 +128,7 @@ public class WarehouseAdminService {
         form.setAddress(warehouse.getAddress());
         form.setDescription(warehouse.getDescription());
         form.setActive(warehouse.isActive());
-        form.setType(warehouse.getType() == null ? null : WarehouseType.valueOf(warehouse.getType()));
+        form.setType(WarehouseType.fromPersistedName(warehouse.getType()));
         return form;
     }
 
@@ -141,7 +141,7 @@ public class WarehouseAdminService {
         form.setName(location.getName());
         form.setDescription(location.getDescription());
         form.setActive(location.isActive());
-        form.setLocationType(location.getLocationType() == null ? null : LocationType.valueOf(location.getLocationType()));
+        form.setLocationType(LocationType.fromPersistedName(location.getLocationType()));
         return form;
     }
 

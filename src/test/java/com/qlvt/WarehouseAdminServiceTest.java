@@ -23,12 +23,35 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.*;
 
 class WarehouseAdminServiceTest {
     private final Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
+
+    @Test
+    void warehouseFormHandlesUnknownLegacyType() {
+        Fixture fixture = new Fixture();
+        Warehouse warehouse = warehouse(1L);
+        warehouse.setType("LEGACY_WAREHOUSE");
+
+        WarehouseForm form = fixture.service.toForm(warehouse);
+
+        assertNull(form.getType());
+    }
+
+    @Test
+    void locationFormHandlesUnknownLegacyType() {
+        Fixture fixture = new Fixture();
+        StorageLocation location = location(7L, warehouse(1L));
+        location.setLocationType("LEGACY_LOCATION");
+
+        StorageLocationForm form = fixture.service.toForm(location);
+
+        assertNull(form.getLocationType());
+    }
 
     @Test
     void searchWarehousesTrimsKeywordBeforeQuerying() {
