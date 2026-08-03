@@ -17,6 +17,17 @@ public enum LocationType {
         return label;
     }
 
+    public static String labelOf(String persistedName) {
+        if (persistedName == null || persistedName.isBlank()) {
+            return "-";
+        }
+        try {
+            return valueOf(persistedName).getLabel();
+        } catch (IllegalArgumentException exception) {
+            return persistedName;
+        }
+    }
+
     @Override
     public String toString() {
         return label;

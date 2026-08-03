@@ -42,7 +42,7 @@
                     <td th:text="${l.name}"></td>
                     <td th:text="${l.warehouse.name}"></td>
                     <td th:text="${l.parent == null ? '-' : l.parent.name}"></td>
-                    <td th:text="${l.locationType == null ? '-' : l.locationType}"></td>
+                    <td th:text="${T(com.qlvt.enums.LocationType).labelOf(l.locationType)}"></td>
                     <td th:text="${l.active ? 'Đang dùng' : 'Tạm ngưng'}"></td>
                     <td class="text-end">
                         <a class="btn btn-sm btn-outline-light" th:href="@{/locations/{id}/edit(id=${l.id})}">Sửa</a>
