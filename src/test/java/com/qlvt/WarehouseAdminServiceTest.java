@@ -110,6 +110,24 @@ class WarehouseAdminServiceTest {
     }
 
     @Test
+    void searchLocationsCombinesTypeWithExistingFilters() {
+        Fixture fixture = new Fixture();
+        StorageLocation shelf = new StorageLocation();
+        shelf.setCode("KE-A01");
+        shelf.setName("Kệ lạnh");
+        shelf.setLocationType(LocationType.SHELF.name());
+        StorageLocation cabinet = new StorageLocation();
+        cabinet.setCode("TU-A01");
+        cabinet.setName("Tủ lạnh");
+        cabinet.setLocationType(LocationType.CABINET.name());
+        when(fixture.locationRepository.findByWarehouse_IdAndDeletedFalseOrderByCodeAsc(7L))
+                .thenReturn(List.of(shelf, cabinet));
+
+        assertEquals(List.of(shelf),
+                fixture.service.locations(7L, " lạnh ", true, LocationType.SHELF));
+    }
+
+    @Test
     void warehouseFormRejectsValuesLongerThanDatabaseColumns() {
         WarehouseForm form = warehouseForm(null, true);
         form.setName("N".repeat(151));

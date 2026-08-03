@@ -21,15 +21,21 @@
                     <option th:each="w:${warehouses}" th:value="${w.id}" th:selected="${warehouseId == w.id}" th:text="${w.code + ' - ' + w.name}"></option>
                 </select>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <select class="form-select" name="active">
                     <option value="">Tất cả trạng thái</option>
                     <option value="true" th:selected="${active == true}">Đang dùng</option>
                     <option value="false" th:selected="${active == false}">Tạm ngưng</option>
                 </select>
             </div>
+            <div class="col-md-2">
+                <select class="form-select" name="type">
+                    <option value="">Tất cả loại</option>
+                    <option th:each="t:${types}" th:value="${t.name()}" th:selected="${type == t}" th:text="${t.label}"></option>
+                </select>
+            </div>
             <div class="col-auto"><button class="btn btn-outline-light">Lọc</button></div>
-            <div class="col-auto" th:if="${active != null or warehouseId != null or (q != null and !#strings.isEmpty(#strings.trim(q)))}">
+            <div class="col-auto" th:if="${active != null or type != null or warehouseId != null or (q != null and !#strings.isEmpty(#strings.trim(q)))}">
                 <a class="btn btn-link" th:href="@{/locations}">Xóa bộ lọc</a>
             </div>
         </form>

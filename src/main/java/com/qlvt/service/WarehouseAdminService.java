@@ -55,15 +55,20 @@ public class WarehouseAdminService {
     }
 
     public List<StorageLocation> locations(Long warehouseId, String q) {
-        return locations(warehouseId, q, null);
+        return locations(warehouseId, q, null, null);
     }
 
     public List<StorageLocation> locations(Long warehouseId, String q, Boolean active) {
+        return locations(warehouseId, q, active, null);
+    }
+
+    public List<StorageLocation> locations(Long warehouseId, String q, Boolean active, LocationType type) {
         List<StorageLocation> locations = warehouseId == null
                 ? locationRepository.findByDeletedFalseOrderByCodeAsc()
                 : locationRepository.findByWarehouse_IdAndDeletedFalseOrderByCodeAsc(warehouseId);
         return locations.stream()
                 .filter(location -> active == null || location.isActive() == active)
+                .filter(location -> type == null || type.name().equals(location.getLocationType()))
                 .filter(location -> matchesKeyword(location, q))
                 .toList();
     }
