@@ -14,7 +14,7 @@
             </div>
             <div class="col-md-6">
                 <label class="form-label">Kho</label>
-                <select class="form-select" th:field="*{warehouseId}">
+                <select class="form-select" th:field="*{warehouseId}" id="warehouseId">
                     <option value="">Chọn kho</option>
                     <option th:each="w:${warehouses}" th:value="${w.id}" th:text="${w.code + ' - ' + w.name}"></option>
                 </select>
@@ -22,9 +22,12 @@
             </div>
             <div class="col-md-6">
                 <label class="form-label">Vị trí cha</label>
-                <select class="form-select" th:field="*{parentId}">
+                <select class="form-select" th:field="*{parentId}" id="parentId">
                     <option value="">Không có</option>
-                    <option th:each="p:${parents}" th:value="${p.id}" th:text="${p.code + ' - ' + p.name}"></option>
+                    <option th:each="p:${parents}"
+                            th:value="${p.id}"
+                            th:attr="data-warehouse-id=${p.warehouse.id}"
+                            th:text="${p.code + ' - ' + p.name}"></option>
                 </select>
                 <div class="text-danger small" th:errors="*{parentId}"></div>
             </div>
@@ -62,5 +65,28 @@
         </form>
     </section>
 </main>
+<script>
+    (() => {
+        const warehouse = document.getElementById('warehouseId');
+        const parent = document.getElementById('parentId');
+        if (!warehouse || !parent) return;
+
+        const filterParents = () => {
+            const warehouseId = warehouse.value;
+            let selectedParentIsVisible = !parent.value;
+            Array.from(parent.options).forEach((option) => {
+                if (!option.value) return;
+                const visible = Boolean(warehouseId) && option.dataset.warehouseId === warehouseId;
+                option.hidden = !visible;
+                option.disabled = !visible;
+                if (visible && option.selected) selectedParentIsVisible = true;
+            });
+            if (!selectedParentIsVisible) parent.value = '';
+        };
+
+        warehouse.addEventListener('change', filterParents);
+        filterParents();
+    })();
+</script>
 </body>
 </html>
