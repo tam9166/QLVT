@@ -220,7 +220,7 @@ public class WarehouseAdminService {
         if (existing != null && existing.isActive() && !form.isActive()) {
             if (stockBalanceRepository.existsByLocation_IdAndActualQuantityGreaterThan(form.getId(), 0)) {
                 bindingResult.rejectValue("active", "inUse", "Không thể ngừng hoạt động vị trí đang còn tồn kho");
-            } else if (locationRepository.existsByParent_IdAndDeletedFalseAndActiveTrue(form.getId())) {
+            } else if (hasActiveDescendant(form.getId())) {
                 bindingResult.rejectValue("active", "hasChildren", "Phải ngừng hoạt động hoặc xóa các vị trí con trước");
             }
         }
@@ -239,6 +239,24 @@ public class WarehouseAdminService {
         locationRepository.save(location);
         auditService.log(actor, form.getId() == null ? "CREATE_LOCATION" : "UPDATE_LOCATION", "StorageLocation", location.getCode(), "Lưu vị trí " + location.getName());
         return true;
+    }
+
+    private boolean hasActiveDescendant(Long locationId) {
+        if (locationRepository.existsByParent_IdAndDeletedFalseAndActiveTrue(locationId)) {
+            return true;
+        }
+        for (StorageLocation candidate : locationRepository.findByDeletedFalseAndActiveTrueOrderByCodeAsc()) {
+            Set<Long> visited = new HashSet<>();
+            for (StorageLocation current = candidate.getParent(); current != null; current = current.getParent()) {
+                if (locationId.equals(current.getId())) {
+                    return true;
+                }
+                if (current.getId() != null && !visited.add(current.getId())) {
+                    break;
+                }
+            }
+        }
+        return false;
     }
 
     private void validateWarehouseChange(StorageLocationForm form, StorageLocation existing,

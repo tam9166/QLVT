@@ -570,6 +570,30 @@ class WarehouseAdminServiceTest {
     }
 
     @Test
+    void saveLocationRejectsDeactivationWhileActiveGrandchildRemains() {
+        Fixture fixture = new Fixture();
+        Warehouse warehouse = warehouse(1L);
+        StorageLocation existing = location(7L, warehouse);
+        StorageLocation inactiveChild = location(8L, warehouse);
+        inactiveChild.setActive(false);
+        inactiveChild.setParent(existing);
+        StorageLocation activeGrandchild = location(9L, warehouse);
+        activeGrandchild.setParent(inactiveChild);
+        when(fixture.warehouseRepository.findById(1L)).thenReturn(Optional.of(warehouse));
+        when(fixture.locationRepository.findById(7L)).thenReturn(Optional.of(existing));
+        when(fixture.locationRepository.findByDeletedFalseAndActiveTrueOrderByCodeAsc())
+                .thenReturn(List.of(activeGrandchild));
+        StorageLocationForm form = form(7L, 1L, null);
+        form.setActive(false);
+        BindingResult errors = errors(form);
+
+        assertFalse(fixture.service.saveLocation(form, errors, "tester"));
+
+        assertTrue(errors.hasFieldErrors("active"));
+        verify(fixture.locationRepository, never()).save(any());
+    }
+
+    @Test
     void saveLocationAllowsDeactivationWhenAllChildrenAreInactive() {
         Fixture fixture = new Fixture();
         Warehouse warehouse = warehouse(1L);
