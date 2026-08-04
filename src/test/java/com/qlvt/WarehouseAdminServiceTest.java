@@ -674,6 +674,29 @@ class WarehouseAdminServiceTest {
     }
 
     @Test
+    void saveLocationRejectsWarehouseChangeWithGrandchildBehindDeletedChild() {
+        Fixture fixture = new Fixture();
+        Warehouse source = warehouse(1L);
+        Warehouse destination = warehouse(2L);
+        StorageLocation existing = location(7L, source);
+        StorageLocation deletedChild = location(8L, source);
+        deletedChild.setParent(existing);
+        deletedChild.setDeleted(true);
+        StorageLocation grandchild = location(9L, source);
+        grandchild.setParent(deletedChild);
+        when(fixture.warehouseRepository.findById(2L)).thenReturn(Optional.of(destination));
+        when(fixture.locationRepository.findById(7L)).thenReturn(Optional.of(existing));
+        when(fixture.locationRepository.findByDeletedFalseOrderByCodeAsc()).thenReturn(List.of(grandchild));
+        StorageLocationForm form = form(7L, 2L, null);
+        BindingResult errors = errors(form);
+
+        assertFalse(fixture.service.saveLocation(form, errors, "tester"));
+
+        assertTrue(errors.hasFieldErrors("warehouseId"));
+        verify(fixture.locationRepository, never()).save(any());
+    }
+
+    @Test
     void deleteLocationRejectsLocationWithStock() {
         Fixture fixture = new Fixture();
         StorageLocation location = location(7L, warehouse(1L));

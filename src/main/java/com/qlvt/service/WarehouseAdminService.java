@@ -289,7 +289,7 @@ public class WarehouseAdminService {
         if (stockBalanceRepository.existsByLocation_IdAndActualQuantityGreaterThan(form.getId(), 0)) {
             bindingResult.rejectValue("warehouseId", "inUse",
                     "Không thể chuyển vị trí sang kho khác khi vẫn còn tồn kho");
-        } else if (locationRepository.existsByParent_IdAndDeletedFalse(form.getId())) {
+        } else if (hasNonDeletedDescendant(form.getId())) {
             bindingResult.rejectValue("warehouseId", "hasChildren",
                     "Không thể chuyển vị trí cha sang kho khác khi vẫn còn vị trí con");
         }
