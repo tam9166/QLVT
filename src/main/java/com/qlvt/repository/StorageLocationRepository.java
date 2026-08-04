@@ -11,7 +11,9 @@ public interface StorageLocationRepository extends JpaRepository<StorageLocation
     boolean existsByWarehouse_IdAndCodeIgnoreCaseAndIdNot(Long warehouseId, String code, Long id);
     boolean existsByWarehouse_IdAndCodeIgnoreCase(Long warehouseId, String code);
     boolean existsByWarehouse_IdAndDeletedFalse(Long warehouseId);
+    boolean existsByWarehouse_IdAndDeletedFalseAndActiveTrue(Long warehouseId);
     boolean existsByParent_IdAndDeletedFalse(Long parentId);
+    boolean existsByParent_IdAndDeletedFalseAndActiveTrue(Long parentId);
     List<StorageLocation> findByDeletedFalseOrderByCodeAsc();
     List<StorageLocation> findByDeletedFalseAndActiveTrueOrderByCodeAsc();
     List<StorageLocation> findByWarehouse_IdAndDeletedFalseOrderByCodeAsc(Long warehouseId);

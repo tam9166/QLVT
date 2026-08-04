@@ -454,7 +454,7 @@ class WarehouseAdminServiceTest {
         Fixture fixture = new Fixture();
         WarehouseForm form = warehouseForm(1L, false);
         when(fixture.warehouseRepository.findById(1L)).thenReturn(Optional.of(warehouse(1L)));
-        when(fixture.locationRepository.existsByWarehouse_IdAndDeletedFalse(1L)).thenReturn(true);
+        when(fixture.locationRepository.existsByWarehouse_IdAndDeletedFalseAndActiveTrue(1L)).thenReturn(true);
         BindingResult errors = new BeanPropertyBindingResult(form, "warehouseForm");
 
         assertFalse(fixture.service.saveWarehouse(form, errors, "tester"));
@@ -479,6 +479,20 @@ class WarehouseAdminServiceTest {
         assertFalse(errors.hasErrors());
         verify(fixture.warehouseRepository).save(inactive);
         verify(fixture.locationRepository, never()).existsByWarehouse_IdAndDeletedFalse(1L);
+    }
+
+    @Test
+    void saveWarehouseAllowsDeactivationWhenAllLocationsAreInactive() {
+        Fixture fixture = new Fixture();
+        WarehouseForm form = warehouseForm(1L, false);
+        when(fixture.warehouseRepository.findById(1L)).thenReturn(Optional.of(warehouse(1L)));
+        when(fixture.locationRepository.existsByWarehouse_IdAndDeletedFalseAndActiveTrue(1L)).thenReturn(false);
+        BindingResult errors = new BeanPropertyBindingResult(form, "warehouseForm");
+
+        assertTrue(fixture.service.saveWarehouse(form, errors, "tester"));
+
+        assertFalse(errors.hasErrors());
+        verify(fixture.warehouseRepository).save(any(Warehouse.class));
     }
 
     @Test
@@ -525,7 +539,7 @@ class WarehouseAdminServiceTest {
         when(fixture.locationRepository.findById(7L)).thenReturn(Optional.of(existing));
         StorageLocationForm form = form(7L, 1L, null);
         form.setActive(false);
-        when(fixture.locationRepository.existsByParent_IdAndDeletedFalse(7L)).thenReturn(true);
+        when(fixture.locationRepository.existsByParent_IdAndDeletedFalseAndActiveTrue(7L)).thenReturn(true);
         BindingResult errors = errors(form);
 
         assertFalse(fixture.service.saveLocation(form, errors, "tester"));
@@ -553,6 +567,24 @@ class WarehouseAdminServiceTest {
         assertFalse(errors.hasErrors());
         verify(fixture.locationRepository).save(inactive);
         verify(fixture.locationRepository, never()).existsByParent_IdAndDeletedFalse(7L);
+    }
+
+    @Test
+    void saveLocationAllowsDeactivationWhenAllChildrenAreInactive() {
+        Fixture fixture = new Fixture();
+        Warehouse warehouse = warehouse(1L);
+        StorageLocation existing = location(7L, warehouse);
+        when(fixture.warehouseRepository.findById(1L)).thenReturn(Optional.of(warehouse));
+        when(fixture.locationRepository.findById(7L)).thenReturn(Optional.of(existing));
+        when(fixture.locationRepository.existsByParent_IdAndDeletedFalseAndActiveTrue(7L)).thenReturn(false);
+        StorageLocationForm form = form(7L, 1L, null);
+        form.setActive(false);
+        BindingResult errors = errors(form);
+
+        assertTrue(fixture.service.saveLocation(form, errors, "tester"));
+
+        assertFalse(errors.hasErrors());
+        verify(fixture.locationRepository).save(existing);
     }
 
     @Test
