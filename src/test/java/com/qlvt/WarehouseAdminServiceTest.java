@@ -121,7 +121,7 @@ class WarehouseAdminServiceTest {
     void searchWarehousesCombinesKeywordStatusAndType() {
         Fixture fixture = new Fixture();
         Warehouse matching = warehouse(1L);
-        matching.setType(WarehouseType.QUARANTINE.name());
+        matching.setType(WarehouseType.QUARANTINE.name().toLowerCase());
         Warehouse wrongType = warehouse(2L);
         wrongType.setType(WarehouseType.MAIN.name());
         Warehouse inactive = warehouse(3L);
@@ -157,7 +157,7 @@ class WarehouseAdminServiceTest {
         StorageLocation shelf = new StorageLocation();
         shelf.setCode("KE-A01");
         shelf.setName("Kệ lạnh");
-        shelf.setLocationType(LocationType.SHELF.name());
+        shelf.setLocationType(LocationType.SHELF.name().toLowerCase());
         StorageLocation cabinet = new StorageLocation();
         cabinet.setCode("TU-A01");
         cabinet.setName("Tủ lạnh");
