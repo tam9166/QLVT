@@ -42,7 +42,7 @@ class WarehouseControllerTest {
         ExtendedModelMap model = new ExtendedModelMap();
 
         assertEquals("warehouses/list",
-                controller.warehouses(" kho ", true, "QUARANTINE", model));
+                controller.warehouses(" kho ", "true", "QUARANTINE", model));
 
         assertEquals(List.of(warehouse), model.get("warehouses"));
         assertEquals(WarehouseType.QUARANTINE, model.get("type"));
@@ -70,10 +70,38 @@ class WarehouseControllerTest {
                 service, warehouseRepository, mock(StorageLocationRepository.class));
         ExtendedModelMap model = new ExtendedModelMap();
 
-        assertEquals("locations/list", controller.locations(1L, "", true, "OLD_TYPE", model));
+        assertEquals("locations/list", controller.locations("1", "", "true", "OLD_TYPE", model));
 
         verify(service).locations(1L, "", true, null);
         assertEquals(null, model.get("type"));
+    }
+
+    @Test
+    void warehousesIgnoreMalformedStatusFilter() {
+        WarehouseAdminService service = mock(WarehouseAdminService.class);
+        WarehouseController controller = new WarehouseController(
+                service, mock(WarehouseRepository.class), mock(StorageLocationRepository.class));
+        ExtendedModelMap model = new ExtendedModelMap();
+
+        assertEquals("warehouses/list", controller.warehouses("", "all", null, model));
+
+        verify(service).searchWarehouses("", null, null);
+        assertEquals(null, model.get("active"));
+    }
+
+    @Test
+    void locationsIgnoreMalformedWarehouseAndStatusFilters() {
+        WarehouseAdminService service = mock(WarehouseAdminService.class);
+        WarehouseRepository warehouseRepository = mock(WarehouseRepository.class);
+        WarehouseController controller = new WarehouseController(
+                service, warehouseRepository, mock(StorageLocationRepository.class));
+        ExtendedModelMap model = new ExtendedModelMap();
+
+        assertEquals("locations/list", controller.locations("not-a-number", "", "all", null, model));
+
+        verify(service).locations(null, "", null, null);
+        assertEquals(null, model.get("warehouseId"));
+        assertEquals(null, model.get("active"));
     }
 
     @Test

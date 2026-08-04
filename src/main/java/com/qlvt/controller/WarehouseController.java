@@ -32,12 +32,13 @@ public class WarehouseController {
     @GetMapping("/warehouses")
     @PreAuthorize("hasAnyRole('ADMIN','WAREHOUSE_STAFF')")
     public String warehouses(@RequestParam(defaultValue = "") String q,
-                             @RequestParam(required = false) Boolean active,
+                             @RequestParam(required = false) String active,
                              @RequestParam(required = false) String type, Model model) {
+        Boolean selectedActive = parseBoolean(active);
         WarehouseType selectedType = WarehouseType.fromPersistedName(type);
-        model.addAttribute("warehouses", warehouseAdminService.searchWarehouses(q, active, selectedType));
+        model.addAttribute("warehouses", warehouseAdminService.searchWarehouses(q, selectedActive, selectedType));
         model.addAttribute("q", q);
-        model.addAttribute("active", active);
+        model.addAttribute("active", selectedActive);
         model.addAttribute("type", selectedType);
         model.addAttribute("types", warehouseAdminService.warehouseTypes());
         return "warehouses/list";
@@ -92,16 +93,18 @@ public class WarehouseController {
 
     @GetMapping("/locations")
     @PreAuthorize("hasAnyRole('ADMIN','WAREHOUSE_STAFF')")
-    public String locations(@RequestParam(required = false) Long warehouseId,
+    public String locations(@RequestParam(required = false) String warehouseId,
                             @RequestParam(defaultValue = "") String q,
-                            @RequestParam(required = false) Boolean active,
+                            @RequestParam(required = false) String active,
                             @RequestParam(required = false) String type, Model model) {
+        Long selectedWarehouseId = parseLong(warehouseId);
+        Boolean selectedActive = parseBoolean(active);
         LocationType selectedType = LocationType.fromPersistedName(type);
-        model.addAttribute("locations", warehouseAdminService.locations(warehouseId, q, active, selectedType));
+        model.addAttribute("locations", warehouseAdminService.locations(selectedWarehouseId, q, selectedActive, selectedType));
         model.addAttribute("warehouses", warehouseRepository.findByDeletedFalseOrderByCodeAsc());
-        model.addAttribute("warehouseId", warehouseId);
+        model.addAttribute("warehouseId", selectedWarehouseId);
         model.addAttribute("q", q);
-        model.addAttribute("active", active);
+        model.addAttribute("active", selectedActive);
         model.addAttribute("type", selectedType);
         model.addAttribute("types", warehouseAdminService.locationTypes());
         return "locations/list";
@@ -159,5 +162,26 @@ public class WarehouseController {
         model.addAttribute("warehouses", warehouseAdminService.warehouseChoices(form));
         model.addAttribute("parents", warehouseAdminService.parentLocationChoices(form));
         model.addAttribute("types", warehouseAdminService.locationTypes());
+    }
+
+    private Boolean parseBoolean(String value) {
+        if ("true".equalsIgnoreCase(value)) {
+            return true;
+        }
+        if ("false".equalsIgnoreCase(value)) {
+            return false;
+        }
+        return null;
+    }
+
+    private Long parseLong(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return Long.valueOf(value);
+        } catch (NumberFormatException exception) {
+            return null;
+        }
     }
 }
