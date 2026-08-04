@@ -33,11 +33,12 @@ public class WarehouseController {
     @PreAuthorize("hasAnyRole('ADMIN','WAREHOUSE_STAFF')")
     public String warehouses(@RequestParam(defaultValue = "") String q,
                              @RequestParam(required = false) Boolean active,
-                             @RequestParam(required = false) WarehouseType type, Model model) {
-        model.addAttribute("warehouses", warehouseAdminService.searchWarehouses(q, active, type));
+                             @RequestParam(required = false) String type, Model model) {
+        WarehouseType selectedType = WarehouseType.fromPersistedName(type);
+        model.addAttribute("warehouses", warehouseAdminService.searchWarehouses(q, active, selectedType));
         model.addAttribute("q", q);
         model.addAttribute("active", active);
-        model.addAttribute("type", type);
+        model.addAttribute("type", selectedType);
         model.addAttribute("types", warehouseAdminService.warehouseTypes());
         return "warehouses/list";
     }
@@ -94,13 +95,14 @@ public class WarehouseController {
     public String locations(@RequestParam(required = false) Long warehouseId,
                             @RequestParam(defaultValue = "") String q,
                             @RequestParam(required = false) Boolean active,
-                            @RequestParam(required = false) LocationType type, Model model) {
-        model.addAttribute("locations", warehouseAdminService.locations(warehouseId, q, active, type));
+                            @RequestParam(required = false) String type, Model model) {
+        LocationType selectedType = LocationType.fromPersistedName(type);
+        model.addAttribute("locations", warehouseAdminService.locations(warehouseId, q, active, selectedType));
         model.addAttribute("warehouses", warehouseRepository.findByDeletedFalseOrderByCodeAsc());
         model.addAttribute("warehouseId", warehouseId);
         model.addAttribute("q", q);
         model.addAttribute("active", active);
-        model.addAttribute("type", type);
+        model.addAttribute("type", selectedType);
         model.addAttribute("types", warehouseAdminService.locationTypes());
         return "locations/list";
     }

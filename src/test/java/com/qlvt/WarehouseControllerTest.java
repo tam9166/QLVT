@@ -42,11 +42,38 @@ class WarehouseControllerTest {
         ExtendedModelMap model = new ExtendedModelMap();
 
         assertEquals("warehouses/list",
-                controller.warehouses(" kho ", true, WarehouseType.QUARANTINE, model));
+                controller.warehouses(" kho ", true, "QUARANTINE", model));
 
         assertEquals(List.of(warehouse), model.get("warehouses"));
         assertEquals(WarehouseType.QUARANTINE, model.get("type"));
         assertEquals(types, model.get("types"));
+    }
+
+    @Test
+    void warehousesIgnoreUnknownTypeFilter() {
+        WarehouseAdminService service = mock(WarehouseAdminService.class);
+        WarehouseController controller = new WarehouseController(
+                service, mock(WarehouseRepository.class), mock(StorageLocationRepository.class));
+        ExtendedModelMap model = new ExtendedModelMap();
+
+        assertEquals("warehouses/list", controller.warehouses("", null, "LEGACY", model));
+
+        verify(service).searchWarehouses("", null, null);
+        assertEquals(null, model.get("type"));
+    }
+
+    @Test
+    void locationsIgnoreUnknownTypeFilter() {
+        WarehouseAdminService service = mock(WarehouseAdminService.class);
+        WarehouseRepository warehouseRepository = mock(WarehouseRepository.class);
+        WarehouseController controller = new WarehouseController(
+                service, warehouseRepository, mock(StorageLocationRepository.class));
+        ExtendedModelMap model = new ExtendedModelMap();
+
+        assertEquals("locations/list", controller.locations(1L, "", true, "OLD_TYPE", model));
+
+        verify(service).locations(1L, "", true, null);
+        assertEquals(null, model.get("type"));
     }
 
     @Test
