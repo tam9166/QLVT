@@ -203,7 +203,12 @@ public class WarehouseAdminService {
         boolean keepsExistingWarehouse = existing != null
                 && existing.getWarehouse() != null
                 && existing.getWarehouse().getId().equals(form.getWarehouseId());
-        if (warehouse == null || warehouse.isDeleted() || (!warehouse.isActive() && !keepsExistingWarehouse)) {
+        boolean activatesLocationInInactiveWarehouse = warehouse != null
+                && !warehouse.isActive()
+                && form.isActive();
+        if (warehouse == null || warehouse.isDeleted()
+                || (!warehouse.isActive() && !keepsExistingWarehouse)
+                || activatesLocationInInactiveWarehouse) {
             bindingResult.rejectValue("warehouseId", "invalid", "Kho không tồn tại hoặc không hoạt động");
         }
         if (form.getWarehouseId() != null && ((form.getId() == null && locationRepository.existsByWarehouse_IdAndCodeIgnoreCase(form.getWarehouseId(), form.getCode()))

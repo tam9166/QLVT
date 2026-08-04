@@ -332,6 +332,25 @@ class WarehouseAdminServiceTest {
     }
 
     @Test
+    void saveLocationRejectsActivationInItsExistingInactiveWarehouse() {
+        Fixture fixture = new Fixture();
+        Warehouse warehouse = warehouse(1L);
+        warehouse.setActive(false);
+        StorageLocation existing = location(7L, warehouse);
+        existing.setActive(false);
+        when(fixture.warehouseRepository.findById(1L)).thenReturn(Optional.of(warehouse));
+        when(fixture.locationRepository.findById(7L)).thenReturn(Optional.of(existing));
+        StorageLocationForm form = form(7L, 1L, null);
+        form.setActive(true);
+        BindingResult errors = errors(form);
+
+        assertFalse(fixture.service.saveLocation(form, errors, "tester"));
+
+        assertTrue(errors.hasFieldErrors("warehouseId"));
+        verify(fixture.locationRepository, never()).save(any());
+    }
+
+    @Test
     void warehouseChoicesKeepSelectedInactiveWarehouseOnly() {
         Fixture fixture = new Fixture();
         Warehouse active = warehouse(1L);
