@@ -17,6 +17,14 @@ public enum WarehouseType {
         return label;
     }
 
+    public static String labelOf(String persistedName) {
+        if (persistedName == null || persistedName.isBlank()) {
+            return "-";
+        }
+        WarehouseType type = fromPersistedName(persistedName);
+        return type == null ? persistedName : type.getLabel();
+    }
+
     public static WarehouseType fromPersistedName(String persistedName) {
         if (persistedName == null || persistedName.isBlank()) {
             return null;
