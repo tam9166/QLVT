@@ -268,7 +268,12 @@ public class WarehouseAdminService {
         boolean keepsExistingParent = existing != null
                 && existing.getParent() != null
                 && existing.getParent().getId().equals(form.getParentId());
-        if (parent == null || parent.isDeleted() || (!parent.isActive() && !keepsExistingParent)) {
+        boolean activatesLocationUnderInactiveParent = parent != null
+                && !parent.isActive()
+                && form.isActive();
+        if (parent == null || parent.isDeleted()
+                || (!parent.isActive() && !keepsExistingParent)
+                || activatesLocationUnderInactiveParent) {
             bindingResult.rejectValue("parentId", "invalid", "Vị trí cha không tồn tại hoặc đã bị xóa");
             return null;
         }

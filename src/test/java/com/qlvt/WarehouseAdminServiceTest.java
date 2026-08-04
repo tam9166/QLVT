@@ -556,6 +556,28 @@ class WarehouseAdminServiceTest {
     }
 
     @Test
+    void saveLocationRejectsActivationUnderInactiveParent() {
+        Fixture fixture = new Fixture();
+        Warehouse warehouse = warehouse(1L);
+        StorageLocation parent = location(6L, warehouse);
+        parent.setActive(false);
+        StorageLocation inactive = location(7L, warehouse);
+        inactive.setActive(false);
+        inactive.setParent(parent);
+        when(fixture.warehouseRepository.findById(1L)).thenReturn(Optional.of(warehouse));
+        when(fixture.locationRepository.findById(7L)).thenReturn(Optional.of(inactive));
+        when(fixture.locationRepository.findById(6L)).thenReturn(Optional.of(parent));
+        StorageLocationForm form = form(7L, 1L, 6L);
+        form.setActive(true);
+        BindingResult errors = errors(form);
+
+        assertFalse(fixture.service.saveLocation(form, errors, "tester"));
+
+        assertTrue(errors.hasFieldErrors("parentId"));
+        verify(fixture.locationRepository, never()).save(any());
+    }
+
+    @Test
     void saveLocationRejectsWarehouseChangeWhileStockRemains() {
         Fixture fixture = new Fixture();
         Warehouse source = warehouse(1L);
