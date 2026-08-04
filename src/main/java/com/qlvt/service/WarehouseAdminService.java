@@ -259,6 +259,24 @@ public class WarehouseAdminService {
         return false;
     }
 
+    private boolean hasNonDeletedDescendant(Long locationId) {
+        if (locationRepository.existsByParent_IdAndDeletedFalse(locationId)) {
+            return true;
+        }
+        for (StorageLocation candidate : locationRepository.findByDeletedFalseOrderByCodeAsc()) {
+            Set<Long> visited = new HashSet<>();
+            for (StorageLocation current = candidate.getParent(); current != null; current = current.getParent()) {
+                if (locationId.equals(current.getId())) {
+                    return true;
+                }
+                if (current.getId() != null && !visited.add(current.getId())) {
+                    break;
+                }
+            }
+        }
+        return false;
+    }
+
     private void validateWarehouseChange(StorageLocationForm form, StorageLocation existing,
                                          BindingResult bindingResult) {
         if (form.getId() == null || form.getWarehouseId() == null || bindingResult.hasFieldErrors("warehouseId")) {
@@ -342,7 +360,7 @@ public class WarehouseAdminService {
         if (stockBalanceRepository.existsByLocation_IdAndActualQuantityGreaterThan(id, 0)) {
             throw new IllegalStateException("Không thể xóa vị trí đang còn tồn kho");
         }
-        if (locationRepository.existsByParent_IdAndDeletedFalse(id)) {
+        if (hasNonDeletedDescendant(id)) {
             throw new IllegalStateException("Phải xóa các vị trí con trước khi xóa vị trí cha");
         }
         location.setDeleted(true);

@@ -319,9 +319,11 @@ class WarehouseAdminServiceTest {
         Warehouse warehouse = warehouse(1L);
         warehouse.setActive(false);
         StorageLocation existing = location(7L, warehouse);
+        existing.setActive(false);
         when(fixture.warehouseRepository.findById(1L)).thenReturn(Optional.of(warehouse));
         when(fixture.locationRepository.findById(7L)).thenReturn(Optional.of(existing));
         StorageLocationForm form = form(7L, 1L, null);
+        form.setActive(false);
         form.setDescription("Cập nhật mô tả");
         BindingResult errors = errors(form);
 
@@ -406,10 +408,12 @@ class WarehouseAdminServiceTest {
         parent.setActive(false);
         StorageLocation existing = location(7L, warehouse);
         existing.setParent(parent);
+        existing.setActive(false);
         when(fixture.warehouseRepository.findById(1L)).thenReturn(Optional.of(warehouse));
         when(fixture.locationRepository.findById(7L)).thenReturn(Optional.of(existing));
         when(fixture.locationRepository.findById(9L)).thenReturn(Optional.of(parent));
         StorageLocationForm form = form(7L, 1L, 9L);
+        form.setActive(false);
         form.setDescription("Cập nhật mô tả");
         BindingResult errors = errors(form);
 
@@ -692,6 +696,25 @@ class WarehouseAdminServiceTest {
         assertThrows(IllegalStateException.class, () -> fixture.service.deleteLocation(7L, "tester"));
 
         assertFalse(location.isDeleted());
+    }
+
+    @Test
+    void deleteLocationRejectsParentWithNonDeletedGrandchildBehindDeletedChild() {
+        Fixture fixture = new Fixture();
+        Warehouse warehouse = warehouse(1L);
+        StorageLocation location = location(7L, warehouse);
+        StorageLocation deletedChild = location(8L, warehouse);
+        deletedChild.setParent(location);
+        deletedChild.setDeleted(true);
+        StorageLocation grandchild = location(9L, warehouse);
+        grandchild.setParent(deletedChild);
+        when(fixture.locationRepository.findById(7L)).thenReturn(Optional.of(location));
+        when(fixture.locationRepository.findByDeletedFalseOrderByCodeAsc()).thenReturn(List.of(grandchild));
+
+        assertThrows(IllegalStateException.class, () -> fixture.service.deleteLocation(7L, "tester"));
+
+        assertFalse(location.isDeleted());
+        verify(fixture.auditService, never()).log(any(), any(), any(), any(), any());
     }
 
     @Test
