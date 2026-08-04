@@ -3,6 +3,7 @@ package com.qlvt;
 import com.qlvt.controller.WarehouseController;
 import com.qlvt.entity.StorageLocation;
 import com.qlvt.entity.Warehouse;
+import com.qlvt.enums.WarehouseType;
 import com.qlvt.exception.ResourceNotFoundException;
 import com.qlvt.form.StorageLocationForm;
 import com.qlvt.form.WarehouseForm;
@@ -27,6 +28,26 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 
 class WarehouseControllerTest {
+
+    @Test
+    void warehousesPassesCombinedFiltersAndTypeChoicesToView() {
+        WarehouseAdminService service = mock(WarehouseAdminService.class);
+        WarehouseController controller = new WarehouseController(
+                service, mock(WarehouseRepository.class), mock(StorageLocationRepository.class));
+        Warehouse warehouse = new Warehouse();
+        WarehouseType[] types = WarehouseType.values();
+        when(service.searchWarehouses(" kho ", true, WarehouseType.QUARANTINE))
+                .thenReturn(List.of(warehouse));
+        when(service.warehouseTypes()).thenReturn(types);
+        ExtendedModelMap model = new ExtendedModelMap();
+
+        assertEquals("warehouses/list",
+                controller.warehouses(" kho ", true, WarehouseType.QUARANTINE, model));
+
+        assertEquals(List.of(warehouse), model.get("warehouses"));
+        assertEquals(WarehouseType.QUARANTINE, model.get("type"));
+        assertEquals(types, model.get("types"));
+    }
 
     @Test
     void saveWarehouseRedirectsWithCreateSuccessMessage() {

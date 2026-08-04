@@ -4,6 +4,7 @@ import com.qlvt.form.StorageLocationForm;
 import com.qlvt.form.WarehouseForm;
 import com.qlvt.exception.ResourceNotFoundException;
 import com.qlvt.enums.LocationType;
+import com.qlvt.enums.WarehouseType;
 import com.qlvt.repository.StorageLocationRepository;
 import com.qlvt.repository.WarehouseRepository;
 import com.qlvt.service.WarehouseAdminService;
@@ -31,10 +32,13 @@ public class WarehouseController {
     @GetMapping("/warehouses")
     @PreAuthorize("hasAnyRole('ADMIN','WAREHOUSE_STAFF')")
     public String warehouses(@RequestParam(defaultValue = "") String q,
-                             @RequestParam(required = false) Boolean active, Model model) {
-        model.addAttribute("warehouses", warehouseAdminService.searchWarehouses(q, active));
+                             @RequestParam(required = false) Boolean active,
+                             @RequestParam(required = false) WarehouseType type, Model model) {
+        model.addAttribute("warehouses", warehouseAdminService.searchWarehouses(q, active, type));
         model.addAttribute("q", q);
         model.addAttribute("active", active);
+        model.addAttribute("type", type);
+        model.addAttribute("types", warehouseAdminService.warehouseTypes());
         return "warehouses/list";
     }
 

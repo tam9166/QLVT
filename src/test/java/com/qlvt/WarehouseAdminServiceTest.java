@@ -3,6 +3,7 @@ package com.qlvt;
 import com.qlvt.entity.StorageLocation;
 import com.qlvt.entity.Warehouse;
 import com.qlvt.enums.LocationType;
+import com.qlvt.enums.WarehouseType;
 import com.qlvt.form.StorageLocationForm;
 import com.qlvt.form.WarehouseForm;
 import com.qlvt.repository.StorageLocationRepository;
@@ -114,6 +115,24 @@ class WarehouseAdminServiceTest {
                 .thenReturn(List.of(active, inactive));
 
         assertEquals(List.of(inactive), fixture.service.searchWarehouses(" kho ", false));
+    }
+
+    @Test
+    void searchWarehousesCombinesKeywordStatusAndType() {
+        Fixture fixture = new Fixture();
+        Warehouse matching = warehouse(1L);
+        matching.setType(WarehouseType.QUARANTINE.name());
+        Warehouse wrongType = warehouse(2L);
+        wrongType.setType(WarehouseType.MAIN.name());
+        Warehouse inactive = warehouse(3L);
+        inactive.setType(WarehouseType.QUARANTINE.name());
+        inactive.setActive(false);
+        when(fixture.warehouseRepository
+                .findByDeletedFalseAndCodeContainingIgnoreCaseOrDeletedFalseAndNameContainingIgnoreCase("kho", "kho"))
+                .thenReturn(List.of(matching, wrongType, inactive));
+
+        assertEquals(List.of(matching),
+                fixture.service.searchWarehouses(" kho ", true, WarehouseType.QUARANTINE));
     }
 
     @Test

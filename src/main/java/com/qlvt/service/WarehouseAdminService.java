@@ -41,6 +41,10 @@ public class WarehouseAdminService {
     }
 
     public List<Warehouse> searchWarehouses(String q, Boolean active) {
+        return searchWarehouses(q, active, null);
+    }
+
+    public List<Warehouse> searchWarehouses(String q, Boolean active, WarehouseType type) {
         List<Warehouse> warehouses;
         if (q == null || q.isBlank()) {
             warehouses = warehouseRepository.findByDeletedFalseOrderByCodeAsc();
@@ -49,8 +53,9 @@ public class WarehouseAdminService {
             warehouses = warehouseRepository.findByDeletedFalseAndCodeContainingIgnoreCaseOrDeletedFalseAndNameContainingIgnoreCase(
                     keyword, keyword);
         }
-        return active == null ? warehouses : warehouses.stream()
-                .filter(warehouse -> warehouse.isActive() == active)
+        return warehouses.stream()
+                .filter(warehouse -> active == null || warehouse.isActive() == active)
+                .filter(warehouse -> type == null || type.name().equals(warehouse.getType()))
                 .toList();
     }
 

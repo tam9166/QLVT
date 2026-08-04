@@ -12,8 +12,15 @@
             <a class="btn btn-primary" th:href="@{/warehouses/new}"><i class="bi bi-plus-lg"></i> Thêm kho</a>
         </div>
         <form class="row g-2 mb-3">
-            <div class="col-md-4"><input class="form-control" name="q" th:value="${q}" placeholder="Tìm mã hoặc tên kho"></div>
-            <div class="col-md-3">
+            <div class="col-md-3"><input class="form-control" name="q" th:value="${q}" placeholder="Tìm mã hoặc tên kho"></div>
+            <div class="col-md-2">
+                <select class="form-select" name="type">
+                    <option value="">Tất cả loại kho</option>
+                    <option th:each="option : ${types}" th:value="${option.name()}" th:text="${option.label}"
+                            th:selected="${type == option}"></option>
+                </select>
+            </div>
+            <div class="col-md-2">
                 <select class="form-select" name="active">
                     <option value="">Tất cả trạng thái</option>
                     <option value="true" th:selected="${active == true}">Đang dùng</option>
@@ -21,7 +28,7 @@
                 </select>
             </div>
             <div class="col-auto"><button class="btn btn-outline-light">Tìm</button></div>
-            <div class="col-auto" th:if="${active != null or (q != null and !#strings.isEmpty(#strings.trim(q)))}">
+            <div class="col-auto" th:if="${type != null or active != null or (q != null and !#strings.isEmpty(#strings.trim(q)))}">
                 <a class="btn btn-link" th:href="@{/warehouses}">Xóa bộ lọc</a>
             </div>
         </form>
