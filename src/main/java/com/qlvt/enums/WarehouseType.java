@@ -29,11 +29,12 @@ public enum WarehouseType {
         if (persistedName == null || persistedName.isBlank()) {
             return null;
         }
-        try {
-            return valueOf(persistedName);
-        } catch (IllegalArgumentException exception) {
-            return null;
+        for (WarehouseType type : values()) {
+            if (type.name().equalsIgnoreCase(persistedName.trim())) {
+                return type;
+            }
         }
+        return null;
     }
 
     @Override

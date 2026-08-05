@@ -16,4 +16,10 @@ class WarehouseTypeTest {
         assertThat(WarehouseType.MAIN.getLabel()).isEqualTo("Kho chính");
         assertThat(WarehouseType.QUARANTINE.toString()).isEqualTo("Kho cách ly");
     }
+
+    @Test
+    void resolvesPersistedNamesCaseInsensitively() {
+        assertThat(WarehouseType.fromPersistedName(" main ")).isEqualTo(WarehouseType.MAIN);
+        assertThat(WarehouseType.labelOf("main")).isEqualTo(WarehouseType.MAIN.getLabel());
+    }
 }
