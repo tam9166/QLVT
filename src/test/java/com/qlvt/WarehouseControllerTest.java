@@ -105,6 +105,21 @@ class WarehouseControllerTest {
     }
 
     @Test
+    void locationsTrimValidWarehouseAndStatusFilters() {
+        WarehouseAdminService service = mock(WarehouseAdminService.class);
+        WarehouseRepository warehouseRepository = mock(WarehouseRepository.class);
+        WarehouseController controller = new WarehouseController(
+                service, warehouseRepository, mock(StorageLocationRepository.class));
+        ExtendedModelMap model = new ExtendedModelMap();
+
+        assertEquals("locations/list", controller.locations(" 12 ", "", " false ", null, model));
+
+        verify(service).locations(12L, "", false, null);
+        assertEquals(12L, model.get("warehouseId"));
+        assertEquals(false, model.get("active"));
+    }
+
+    @Test
     void saveWarehouseRedirectsWithCreateSuccessMessage() {
         WarehouseAdminService service = mock(WarehouseAdminService.class);
         WarehouseController controller = new WarehouseController(

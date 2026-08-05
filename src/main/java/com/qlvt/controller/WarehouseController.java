@@ -165,10 +165,14 @@ public class WarehouseController {
     }
 
     private Boolean parseBoolean(String value) {
-        if ("true".equalsIgnoreCase(value)) {
+        if (value == null) {
+            return null;
+        }
+        String normalized = value.trim();
+        if ("true".equalsIgnoreCase(normalized)) {
             return true;
         }
-        if ("false".equalsIgnoreCase(value)) {
+        if ("false".equalsIgnoreCase(normalized)) {
             return false;
         }
         return null;
@@ -179,7 +183,7 @@ public class WarehouseController {
             return null;
         }
         try {
-            return Long.valueOf(value);
+            return Long.valueOf(value.trim());
         } catch (NumberFormatException exception) {
             return null;
         }
