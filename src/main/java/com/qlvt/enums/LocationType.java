@@ -21,22 +21,20 @@ public enum LocationType {
         if (persistedName == null || persistedName.isBlank()) {
             return "-";
         }
-        try {
-            return valueOf(persistedName).getLabel();
-        } catch (IllegalArgumentException exception) {
-            return persistedName;
-        }
+        LocationType type = fromPersistedName(persistedName);
+        return type == null ? persistedName : type.getLabel();
     }
 
     public static LocationType fromPersistedName(String persistedName) {
         if (persistedName == null || persistedName.isBlank()) {
             return null;
         }
-        try {
-            return valueOf(persistedName);
-        } catch (IllegalArgumentException exception) {
-            return null;
+        for (LocationType type : values()) {
+            if (type.name().equalsIgnoreCase(persistedName.trim())) {
+                return type;
+            }
         }
+        return null;
     }
 
     @Override

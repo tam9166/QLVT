@@ -20,4 +20,10 @@ class LocationTypeTest {
         assertThat(LocationType.labelOf(null)).isEqualTo("-");
         assertThat(LocationType.labelOf("LEGACY_TYPE")).isEqualTo("LEGACY_TYPE");
     }
+
+    @Test
+    void resolvesPersistedNamesCaseInsensitively() {
+        assertThat(LocationType.fromPersistedName(" shelf ")).isEqualTo(LocationType.SHELF);
+        assertThat(LocationType.labelOf("shelf")).isEqualTo(LocationType.SHELF.getLabel());
+    }
 }
