@@ -55,7 +55,7 @@ public class WarehouseAdminService {
         }
         return warehouses.stream()
                 .filter(warehouse -> active == null || warehouse.isActive() == active)
-                .filter(warehouse -> type == null || type.name().equalsIgnoreCase(warehouse.getType()))
+                .filter(warehouse -> type == null || type == WarehouseType.fromPersistedName(warehouse.getType()))
                 .toList();
     }
 
@@ -73,7 +73,7 @@ public class WarehouseAdminService {
                 : locationRepository.findByWarehouse_IdAndDeletedFalseOrderByCodeAsc(warehouseId);
         return locations.stream()
                 .filter(location -> active == null || location.isActive() == active)
-                .filter(location -> type == null || type.name().equalsIgnoreCase(location.getLocationType()))
+                .filter(location -> type == null || type == LocationType.fromPersistedName(location.getLocationType()))
                 .filter(location -> matchesKeyword(location, q))
                 .toList();
     }
