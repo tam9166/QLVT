@@ -1,6 +1,6 @@
 # Deploy QLVT len Vercel
 
-QLVT la ung dung Spring Boot server-side dung Thymeleaf va SQL Server, vi vay khong deploy nhu web tinh. Cach phu hop tren Vercel la deploy bang container tu `Dockerfile.vercel` va route traffic bang `vercel.json`.
+QLVT la ung dung Spring Boot server-side dung Thymeleaf va SQL Server, vi vay khong deploy nhu web tinh. Cach phu hop tren Vercel la deploy bang container tu `Dockerfile.vercel` o thu muc goc. Vercel tu dong nhan dien file nay va route traffic HTTP vao container.
 
 ## Dieu kien truoc khi deploy
 
@@ -24,7 +24,7 @@ Khong dat `DB_URL` tro ve `localhost`, vi `localhost` luc do la container tren V
 
 ## Build
 
-Vercel se build container tu `Dockerfile.vercel`. File `vercel.json` route tat ca request `/(.*)` vao service `qlvt`, tranh tinh trang deploy thanh static site va bi 404.
+Vercel se tu dong build container tu `Dockerfile.vercel`. Voi mot ung dung duy nhat, khong can khai bao `services` trong `vercel.json` va khong can doi Framework Preset sang Services.
 
 Dockerfile nay:
 
@@ -32,6 +32,12 @@ Dockerfile nay:
 - build jar bang Maven;
 - chay profile `prod`;
 - doc cong tu bien `PORT` do nen tang deploy cap.
+
+Trong Project Settings -> Build and Deployment:
+
+- de Framework Preset o `Other` hoac che do tu dong nhan dien;
+- de Root Directory la thu muc goc repository;
+- khong dat Output Directory cho ung dung Spring Boot nay.
 
 ## Lenh CLI tuy chon
 
