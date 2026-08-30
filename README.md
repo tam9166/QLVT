@@ -146,6 +146,10 @@ Nếu Maven báo `PKIX path building failed` khi tải Surefire từ Maven Centr
 .\mvnw.cmd -DskipTests package
 ```
 
+## Deploy Vercel
+
+Project là Spring Boot server-side, cần deploy bằng container thay vì web tĩnh. Xem hướng dẫn chi tiết tại `docs/DEPLOY_VERCEL.md`.
+
 ## Tài Khoản Mẫu
 
 Các tài khoản demo chỉ dùng cho môi trường dev/demo. Đặt mật khẩu demo bằng `APP_DEMO_DEFAULT_PASSWORD`; không commit mật khẩu thật vào source.

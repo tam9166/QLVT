@@ -1,0 +1,14 @@
+.git
+.github
+.idea
+.vscode
+target
+uploads
+*.log
+*.out.log
+*.err.log
+hs_err_pid*.log
+replay_pid*.log
+README.md
+docs
+database

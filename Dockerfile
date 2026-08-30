@@ -1,0 +1,21 @@
+FROM maven:3.9.9-eclipse-temurin-17 AS build
+
+WORKDIR /workspace
+COPY pom.xml .
+COPY src ./src
+RUN mvn -q -DskipTests package
+
+FROM eclipse-temurin:17-jre-alpine
+
+WORKDIR /app
+RUN addgroup -S qlvt && adduser -S qlvt -G qlvt
+
+COPY --from=build /workspace/target/qlvt-1.0.0.jar /app/qlvt.jar
+
+ENV SPRING_PROFILES_ACTIVE=prod
+ENV JAVA_OPTS="-XX:MaxRAMPercentage=75.0"
+
+EXPOSE 8080
+USER qlvt
+
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -Dserver.port=${PORT:-8080} -jar /app/qlvt.jar"]
